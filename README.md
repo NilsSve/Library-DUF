@@ -1,6 +1,5 @@
 # DUF - DbUpdateFramework
  Database Update Framework for DataFlex
- [Link Text](https://www.example.com)
 
 [Click here to see the Introduction Video at Youtube](https://www.youtube.com/watch?v=D2o0zjPEr_I)
 
