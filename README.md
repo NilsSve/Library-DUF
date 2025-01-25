@@ -1,7 +1,7 @@
 # DUF - DbUpdateFramework
  Database Update Framework for DataFlex
 
-[Click here to see the Introduction Video at Youtube](<a href="https://www.youtube.com/watch?v=D2o0zjPEr_I target="_blank">GitHub</a>)
+[Click here to see the Introduction Video at Youtube](<a href="https://www.youtube.com/watch?v=D2o0zjPEr_I" target="_blank">GitHub</a>)
 
 The Database Update Framework is a code based framework for making automated database updates. It is designed to make it easy to update databases at customer site when e.g. installing a new revision of a software that depends on changes have been made to the database before the new software version can run.
 
