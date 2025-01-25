@@ -24,8 +24,11 @@ It is suggested to read the following help sections:
 
 These can be found in the `Developer5.chm` Help file located in the `/Help` folder. Of just press F1 while running one of the programs.
 
+
 ![This is how the DUFCodeGenerator.src program looks like:](Bitmaps/DUFCodeGenerator.png)
 
+
 ![This is what the DUFFilelistRepair.src program looks like:](Bitmaps/DUFFilelistRepairer.png)
+
 
 The workspace also uses other libraries that are published on NilsSve's GitHub page. This should not be of any concern to you as this should all be automatic when cloning this repository. Those libraries are used as submodules in git.
