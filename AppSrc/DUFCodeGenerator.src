@@ -67,11 +67,11 @@ Object oMain is a Panel
 
         Procedure OnCreateCommandBars
             Integer eTheme
-#IF (!@ < 191)
-            Move xtpThemeWhidbey to eTheme
-#ELSE
-            Move xtpThemeOffice2016Word to eTheme
-#ENDIF
+            #IF (!@ > 240)
+                Move xtpThemeNativeWindows11 to eTheme
+            #ELSE
+                Move xtpThemeOffice2016Word to eTheme
+            #ENDIF
             Set peVisualTheme to eTheme
             Send ComRecalcLayout of ghoCommandBars
             Send DisplayTabWorkspace

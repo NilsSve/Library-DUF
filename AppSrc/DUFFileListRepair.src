@@ -95,9 +95,13 @@ Object oMain is a Panel
 
     Object oCommandBarSystem is a cCJCommandBarSystem
         Set pbTimerUpdate to True
-        Set peVisualTheme to xtpThemeOffice2016Word
         Set pbAutoResizeIcons to True
         Set pbLargeIcons to True
+#IF (!@ > 240)
+        Set peVisualTheme to xtpThemeNativeWindows11 
+#ELSE
+        Set peVisualTheme to xtpThemeOffice2016Word
+#ENDIF
 
         Procedure OnCreateCommandBars
             Handle hoOptions

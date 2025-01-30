@@ -147,7 +147,11 @@ Object oMain is a Panel
         Procedure OnCreateCommandBars
             Handle hoOptions
             Integer iSize
-            Set peVisualTheme to xtpThemeOffice2016Word
+            #IF (!@ > 240)
+                Set peVisualTheme to xtpThemeNativeWindows11 
+            #ELSE
+                Set peVisualTheme to xtpThemeOffice2016Word
+            #ENDIF
             Send DoChangeToolTipFormat
             Get OptionsObject to hoOptions
             Move 32 to iSize

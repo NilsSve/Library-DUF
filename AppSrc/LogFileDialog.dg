@@ -1,13 +1,9 @@
-Use Windows.pkg
+﻿Use Windows.pkg
 Use cRDCButtonDPI.pkg
 Use cRichEdit.pkg
+Use cMyApplication.pkg
 Use seq_chnl.pkg
 Use vWin32fh.pkg
-
-#IFNDEF clGreenGrey
-    Define clGreenGrey                for (RGB(64, 84, 93))
-    Define clGreenGreyLight           for (RGB(7, 117, 104))
-#ENDIF
 
 Object oLogFileDialog_dg is a ModalPanel
     Set Size to 230 435
@@ -26,7 +22,9 @@ Object oLogFileDialog_dg is a ModalPanel
         Set TextColor to clBlack
         Set peAnchors to anAll
         Set Label_Row_Offset to 3
-        Set Label_TextColor to clGreenGreyLight
+        Set Color to clEditorBackGround
+        Set Label_TextColor to clStatusBarColor
+        Set TextColor to clAlternateRowBgColor
         Set Label_FontItalics to True
         Set piFontSize to 200
         Set psTypeFace to 'Consolas'
