@@ -4,7 +4,7 @@ Version=25.0
 ConfigFile=.\Programs\Config.ws
 [Conditionals]
 Is$WebApp=False
-Is$Win64=False
+Is$Win64=True
 [Projects]
 Project0=DUFCodeGenerator.src
 Project1=DUFFileListRepair.src
