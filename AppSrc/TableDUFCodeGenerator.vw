@@ -1,5 +1,5 @@
 ﻿Use Windows.pkg
-Use DFClient.pkg
+Use cRDCDbView.pkg
 Use Cursor.pkg
 Use Batchdd.pkg
 Use cCJGrid.pkg
@@ -40,7 +40,7 @@ Struct tGeneratorRow
 End_Struct
 
 Activate_View Activate_oTableDUFCodeGenerator for oTableDUFCodeGenerator
-Object oTableDUFCodeGenerator is a dbView
+Object oTableDUFCodeGenerator is a cRDCDbView
     Set Size to 328 501
     Set Label to "Code Generator"
     Set Icon to "SqlScript.ico"
