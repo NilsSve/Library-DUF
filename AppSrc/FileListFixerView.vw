@@ -215,9 +215,11 @@ Object oFilelistFixerView is a dbView
         End_Procedure 
         
         Function IsEnabled Returns Boolean
-            String sDatabase
-            Get psDatabase of ghoDUF to sDatabase
-            Function_Return (sDatabase <> "")
+            Boolean bExists
+            String sFileName
+            Get psConnIdFile to sFileName
+            File_Exist sFileName bExists
+            Function_Return bExists
         End_Function
 
     End_Object
@@ -240,9 +242,11 @@ Object oFilelistFixerView is a dbView
         End_Procedure
     
         Function IsEnabled Returns Boolean
-            String sDatabase
-            Get psDatabase of ghoDUF to sDatabase
-            Function_Return (sDatabase <> "")
+            Boolean bExists
+            String sFileName
+            Get Value of oFilelist_fm to sFileName
+            File_Exist sFileName bExists
+            Function_Return bExists
         End_Function
 
     End_Object
@@ -421,9 +425,11 @@ Object oFilelistFixerView is a dbView
             Set pbAutoEnable to True
 
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
         
         End_Object
@@ -435,9 +441,11 @@ Object oFilelistFixerView is a dbView
             Set pbAutoEnable to True
 
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
     
         End_Object
@@ -462,9 +470,11 @@ Object oFilelistFixerView is a dbView
             End_Procedure
 
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
     
         End_Object
@@ -491,12 +501,16 @@ Object oFilelistFixerView is a dbView
             End_Procedure
             
             Function IsEnabled Returns Boolean
-                String sDatabase
+                Boolean bExists
+                String sDatabase sFileName
+
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
                 Get psDatabase of ghoDUF to sDatabase
                 If (sDatabase <> "") Begin
                     Send UpdateCollatingSequence sDatabase
                 End
-                Function_Return (sDatabase <> "")
+                Function_Return (sDatabase <> "" and bExists = True)
             End_Function
     
         End_Object
@@ -543,9 +557,11 @@ Object oFilelistFixerView is a dbView
             End_Procedure
     
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
     
         End_Object
@@ -630,9 +646,9 @@ Object oFilelistFixerView is a dbView
             End_Function
                 
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                String sCollation
+                Get value of oCollatingSequence_fm to sCollation
+                Function_Return (sCollation <> "")
             End_Function
     
         End_Object
@@ -645,9 +661,11 @@ Object oFilelistFixerView is a dbView
             Set Checked_State to True
             
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
     
         End_Object
@@ -822,9 +840,11 @@ Object oFilelistFixerView is a dbView
             End_Procedure
                           
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
 
         End_Object
@@ -857,9 +877,11 @@ Object oFilelistFixerView is a dbView
             End_Procedure
                           
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
 
         End_Object
@@ -889,9 +911,11 @@ Object oFilelistFixerView is a dbView
             End_Procedure
                           
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
 
         End_Object
@@ -930,9 +954,11 @@ Object oFilelistFixerView is a dbView
             End_Procedure
                           
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
 
         End_Object
@@ -970,9 +996,11 @@ Object oFilelistFixerView is a dbView
             End_Procedure
             
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
 
         End_Object
@@ -1014,9 +1042,11 @@ Object oFilelistFixerView is a dbView
 //            End_Procedure
 //            
 //            Function IsEnabled Returns Boolean
-//                String sDatabase
-//                Get psDatabase of ghoDUF to sDatabase
-//                Function_Return (sDatabase <> "")
+//                Boolean bExists
+//                String sFileName
+//                Get psConnIdFile to sFileName
+//                File_Exist sFileName bExists
+//                Function_Return bExists
 //            End_Function
 //
 //        End_Object
@@ -1030,9 +1060,11 @@ Object oFilelistFixerView is a dbView
             Set pbCreateInfoItem to False
 
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
     
         End_Object
@@ -1046,9 +1078,11 @@ Object oFilelistFixerView is a dbView
             Set pbCreateInfoItem to False
 
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
     
         End_Object
@@ -1116,9 +1150,11 @@ Object oFilelistFixerView is a dbView
             End_Procedure
             
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
 
         End_Object
@@ -1158,9 +1194,11 @@ Object oFilelistFixerView is a dbView
             End_Procedure
             
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
 
         End_Object
@@ -1197,9 +1235,11 @@ Object oFilelistFixerView is a dbView
             End_Procedure  
             
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
 
         End_Object
@@ -1251,9 +1291,11 @@ Object oFilelistFixerView is a dbView
             End_Procedure
         
             Function IsEnabled Returns Boolean
-                String sDatabase
-                Get psDatabase of ghoDUF to sDatabase
-                Function_Return (sDatabase <> "")
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
             End_Function
 
         End_Object  
