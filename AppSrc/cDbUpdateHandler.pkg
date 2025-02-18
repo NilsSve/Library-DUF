@@ -135,15 +135,15 @@
 //                updated.
 //    2016-10-03  Changed the class name from cDatabaseUpdateHandler to cDbUpdateHandler,
 //                as it is more in line with the child class cDbUpdateVersion name.
-//    2016-10-06  Moved constant declarations, structs etc. to separate cDbUpdateHandler.inc file
+//    2016-10-06  Moved constant declarations, structs etc. to separate cDbUpdateHandler.h.pkg file
 //****************************************************************************
 Use VdfBase.pkg
 Use Dferror.pkg
 Use seq_chnl.pkg
 Use Datadict.pkg
 Use RDCStatusPanel.pkg
-Use DUFLanguageConstants.inc
-Use cDbUpdateHandler.inc // Contains cDbUpdateHandler class constants, structs etc.
+Use DUFLanguageConstants.h.pkg
+Use cDbUpdateHandler.h.pkg // Contains cDbUpdateHandler class constants, structs etc.
 Use cDbUpdateLogFile.pkg
 Use cDbUpdateVersion.pkg
 Use cDbUpdateUserCount.pkg

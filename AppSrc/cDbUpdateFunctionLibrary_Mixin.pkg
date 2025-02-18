@@ -1,4 +1,4 @@
-// *** Mixin Class For the cDbUpdateFunctionLibrary Class ***
+﻿// *** Mixin Class For the cDbUpdateFunctionLibrary Class ***
 //
 // We need to create a mixin class for the library.
 // Why? Because we import the library to the cDbUpdateVersion class; that imports
@@ -14,8 +14,8 @@ Use MSSqldrv.pkg
 Use db2_drv.pkg
 Use odbc_drv.pkg
 Use DFBTRDRV.PKG
-Use cSQLConnectionIniFile.inc
-Use cDbUpdateFunctionLibrary.inc
+Use cSQLConnectionIniFile.h.pkg
+Use cDbUpdateFunctionLibrary.h.pkg
 
 Class cDbUpdateFunctionLibrary_Mixin is a Mixin
 

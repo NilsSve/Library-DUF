@@ -26,7 +26,7 @@ Use LanguageText.pkg
     Define CS_DUF_UpdateFromVersion         for "from version"
     Define CS_DUF_UpdateToVersion           for "to version:"
     Define CS_DUF_DbUpdateTableMissing      for "Cannot open the 'DbVersion' table that is used when updating the database! Cannot continue!"
-    // *** cDbUpdateHandler.inc Language Constants ***
+    // *** cDbUpdateHandler.h.pkg Language Constants ***
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("The database needs to be updated." + "\n\nATTENTION! The database may not be in use while this work is performed. Make sure that nobody else is using the application before clicking 'Yes' below.\n\n" + "Start update now?")
     Define CS_DUF_HeaderUpdateText          for "Important!"
@@ -66,7 +66,7 @@ Use LanguageText.pkg
     Define CS_DUF_UpdateFromVersion         for "van versie"
     Define CS_DUF_UpdateToVersion           for "naar versie:"
     Define CS_DUF_DbUpdateTableMissing for "Kan de 'DbVersion' tabel niet openen, die wordt gebruikt bij het bijwerken van de database! Kan niet doorgaan!"
-    // *** cDbUpdateHandler.inc Class Language Constants ***
+    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("De database moet worden bijgewerkt." + "\n\nNB! De database mag niet in gebruik zijn, terwijl deze bewerking wordt uitgevoerd. Zorg ervoor dat niemand anders de toepassing gebruikt voordat u hieronder 'Ja' klikt.\n\n" + "Beginnen met bijwerken?")
     Define CS_DUF_HeaderUpdateText          for "Belangrijk!"
@@ -106,7 +106,7 @@ Use LanguageText.pkg
     Define CS_DUF_UpdateFromVersion         for "från version"
     Define CS_DUF_UpdateToVersion           for "till version:"
     Define CS_DUF_DbUpdateTableMissing      for "Kan inte öppna 'DbVersion' tabellen som används då databasen ska uppdateras! Kan inte fortsätta!"
-    // *** cDbUpdateHandler.inc Class Language Constants ***
+    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("Databasen behöver uppdateras." + "\n\nOBS! Databasen får ej användas medan detta arbete sker. Var god och säkerställ att ingen annan kör programmet eller på annat sätt använder databasen som används för programmet innan du klicka på 'Ja' nedan.\n\n" + "Starta uppdateringen nu?")
     Define CS_DUF_HeaderUpdateText          for "Viktigt!"
@@ -146,7 +146,7 @@ Use LanguageText.pkg
     Define CS_DUF_UpdateFromVersion         for "von Version"
     Define CS_DUF_UpdateToVersion           for "auf Version:"
     Define CS_DUF_DbUpdateTableMissing      for "Kann die Tabelle 'DbVersion' nicht öffnen, die zum Aktualisieren der Datenbank benutzt wird! Fortfahren nicht möglich!"
-    // *** cDbUpdateHandler.inc Class Language Constants ***
+    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("Die Datenbank muss aktualisiert werden." + "\n\nNB! Die Datenbank darf während dieses Prozesses nicht in Benutzung sein. Stellen Sie sicher, dass niemand das Programm benutzt, bevor Sie unten 'Ja' klicken.\n\n" + "Jetzt starten?")
     Define CS_DUF_HeaderUpdateText          for "Wichtig!"
@@ -186,7 +186,7 @@ Use LanguageText.pkg
     Define CS_DUF_UpdateFromVersion         for "from version"
     Define CS_DUF_UpdateToVersion           for "to version:"
     Define CS_DUF_DbUpdateTableMissing      for "Cannot open the 'DbVersion' table that is used when updating the database! Cannot continue!"
-    // *** cDbUpdateHandler.inc Class Language Constants ***
+    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("The database needs to be updated." + "\n\nATTENTION! The database may not be in use while this work is performed. Make sure that nobody else is using the application before clicking 'Yes' below.\n\n" + "Start update now?")
     Define CS_DUF_HeaderUpdateText          for "Important!"
@@ -226,7 +226,7 @@ Use LanguageText.pkg
     Define CS_DUF_UpdateFromVersion         for "da versÒo"
     Define CS_DUF_UpdateToVersion           for "para a versÒo:"
     Define CS_DUF_DbUpdateTableMissing      for "NÒo foi possiel abrir a tabela 'DbVersion' que Ú utilizada durante o processo de atualizaþÒo do banco de dados.! ImpossÝvel continuar!"
-    // *** cDbUpdateHandler.inc Class Language Constants ***
+    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("O banco de dados precisa ser atualizado." + "\n\nAtenþÒo! O banco de dados nÒo pode ser utilizado enquanto essa tarefa Ú executada. Certifique-se de que ninguÚm mais esteja utilizando a aplicaþÒo antes de clicar em 'Sim' abaixo.\n\n" + "Iniciar a atualizaþÒo agora?")
     Define CS_DUF_HeaderUpdateText          for "Importante!"
@@ -266,7 +266,7 @@ Use LanguageText.pkg
     Define CS_DUF_UpdateFromVersion         for "from version"
     Define CS_DUF_UpdateToVersion           for "to version:"
     Define CS_DUF_DbUpdateTableMissing      for "Cannot open the 'DbVersion' table that is used when updating the database! Cannot continue!"
-    // *** cDbUpdateHandler.inc Class Language Constants ***
+    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("The database needs to be updated." + "\n\nATTENTION! The database may not be in use while this work is performed. Make sure that nobody else is using the application before clicking 'Yes' below.\n\n" + "Start update now?")
     Define CS_DUF_HeaderUpdateText          for "Important!"
@@ -306,7 +306,7 @@ Use LanguageText.pkg
     Define CS_DUF_UpdateFromVersion         for "from version"
     Define CS_DUF_UpdateToVersion           for "to version:"
     Define CS_DUF_DbUpdateTableMissing      for "Cannot open the 'DbVersion' table that is used when updating the database! Cannot continue!"
-    // *** cDbUpdateHandler.inc Class Language Constants ***
+    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("The database needs to be updated." + "\n\nATTENTION! The database may not be in use while this work is performed. Make sure that nobody else is using the application before clicking 'Yes' below.\n\n" + "Start update now?")
     Define CS_DUF_HeaderUpdateText          for "Important!"
@@ -346,7 +346,7 @@ Use LanguageText.pkg
     Define CS_DUF_UpdateFromVersion         for "desde versión"
     Define CS_DUF_UpdateToVersion           for "hasta versión:"
     Define CS_DUF_DbUpdateTableMissing      for "No se puede abrir la tabla 'DbVersion' que se utiliza al actualizar la base de datos! No se puede continuar!"
-    // *** cDbUpdateHandler.inc Class Language Constants ***
+    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("La base de datos necesita ser actualizada." + "\n\nNB! La base datos no puede estar en uso mientras se ejecuta esta tarea. Asegúrese de que nadie más esté usando la aplicación antes de hacer clic en 'Sí'.\n\n" + "Iniciar actualización ahora")
     Define CS_DUF_HeaderUpdateText          for "Importante!"
@@ -386,7 +386,7 @@ Use LanguageText.pkg
     Define CS_DUF_UpdateFromVersion         for "fra versjon"
     Define CS_DUF_UpdateToVersion           for "til versjon:"
     Define CS_DUF_DbUpdateTableMissing      for "Kan ikke ├Ñpne 'DbVersion'-tabellen som brukes ved oppdatering av databasen! Kan ikke fortsette!"
-    // *** cDbUpdateHandler.inc Class Language Constants ***
+    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("Database m├Ñ oppdateres." + "\n\nNB! Databasen m├Ñ ikke v├ªre i bruk mens dette p├Ñg├Ñr. P├Ñse at ingen andre bruker databasen/programmet f├©r du velger 'Ja' nedenfor.\n\n" + "Starte oppdatering n├Ñ?")
     Define CS_DUF_HeaderUpdateText          for "Viktig!"
@@ -426,7 +426,7 @@ Use LanguageText.pkg
     Define CS_DUF_UpdateFromVersion         for "from version"
     Define CS_DUF_UpdateToVersion           for "to version:"
     Define CS_DUF_DbUpdateTableMissing      for "Cannot open the 'DbVersion' table that is used when updating the database! Cannot continue!"
-    // *** cDbUpdateHandler.inc Class Language Constants ***
+    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("The database needs to be updated." + "\n\nATTENTION! The database may not be in use while this work is performed. Make sure that nobody else is using the application before clicking 'Yes' below.\n\n" + "Start update now?")
     Define CS_DUF_HeaderUpdateText          for "Important!"
@@ -466,7 +466,7 @@ Use LanguageText.pkg
     Define CS_DUF_UpdateFromVersion         for "from version"
     Define CS_DUF_UpdateToVersion           for "to version:"
     Define CS_DUF_DbUpdateTableMissing      for "Cannot open the 'DbVersion' table that is used when updating the database! Cannot continue!"
-    // *** cDbUpdateHandler.inc Class Language Constants ***
+    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("The database needs to be updated." + "\n\nATTENTION! The database may not be in use while this work is performed. Make sure that nobody else is using the application before clicking 'Yes' below.\n\n" + "Start update now?")
     Define CS_DUF_HeaderUpdateText          for "Important!"
@@ -506,7 +506,7 @@ Use LanguageText.pkg
     Define CS_DUF_UpdateFromVersion         for "from version"
     Define CS_DUF_UpdateToVersion           for "to version:"
     Define CS_DUF_DbUpdateTableMissing      for "Cannot open the 'DbVersion' table that is used when updating the database! Cannot continue!"
-    // *** cDbUpdateHandler.inc Class Language Constants ***
+    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("The database needs to be updated." + "\n\nATTENTION! The database may not be in use while this work is performed. Make sure that nobody else is using the application before clicking 'Yes' below.\n\n" + "Start update now?")
     Define CS_DUF_HeaderUpdateText          for "Important!"

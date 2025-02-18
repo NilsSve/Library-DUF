@@ -1,4 +1,4 @@
-//****************************************************************************
+﻿//****************************************************************************
 // $Module type: Class
 // $Module name: cDbUpdateUserCount.pkg
 // $Author     : Emil Stojanov Quantaris B.V.
@@ -24,7 +24,7 @@
 //                Added the ApplicationPath message.
 //****************************************************************************
 Use LanguageText.pkg
-Use cDbUpdateUserCount.inc
+Use cDbUpdateUserCount.h.pkg
 Use vWin32fh.pkg
 Use seq_chnl.pkg
 

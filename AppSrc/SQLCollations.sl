@@ -3,7 +3,7 @@ Use DFClient.pkg
 Use cCJGridColumnRowIndicator.pkg 
 Use cRDCCJGrid.pkg
 Use cCJGridColumn.pkg
-Use cDbUpdateFunctionLibrary.inc
+Use cDbUpdateFunctionLibrary.h.pkg
 Use cRDCCJGridColumnSuggestion.pkg
 Use cRDCRichEditor.pkg
 

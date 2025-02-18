@@ -1,4 +1,4 @@
-//****************************************************************************
+﻿//****************************************************************************
 // $Module type: Class
 // $Module name: cDbUpdateVersion
 // $Author     : Nils G. Svedmyr, RDC Tools International, <mailto:support@rdctools.com>
@@ -16,7 +16,7 @@
 //    2016-09-27  Module header created
 //****************************************************************************
 Use UI
-Use DUFLanguageConstants.inc
+Use DUFLanguageConstants.h.pkg
 Use cDbUpdateFunctionLibrary.pkg
 Use for_all.pkg // Handy to have available in the OnUpdate event.
 

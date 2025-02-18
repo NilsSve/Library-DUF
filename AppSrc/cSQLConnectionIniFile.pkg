@@ -18,7 +18,7 @@
 // GNU Lesser General Public License - see the "GNU Lesser General Public License.txt"
 // in the help folder for more details.
 //
-Use cSQLConnectionIniFile.inc
+Use cSQLConnectionIniFile.h.pkg
 Use cDbUpdateDatabaseDriver.pkg
 
 #IF (!@ > 190)
