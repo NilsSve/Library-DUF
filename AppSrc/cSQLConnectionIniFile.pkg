@@ -143,7 +143,7 @@ Class cSQLConnectionIniFile is a cIniFile
         Function_Return (EQ)
     End_Function
 
-    Function SQLIniFileNumberOfConnections Returns Integer
+    Function NumberOfIniFileConnections Returns Integer
         Handle hoSections
         Integer iItems
 
@@ -162,14 +162,14 @@ Class cSQLConnectionIniFile is a cIniFile
 //
 //        Move False to Err
 //        Get psIniSectionName to sSection
-//        Get SQLIniFileNumberOfConnections to iCount
+//        Get NumberOfIniFileConnections to iCount
 //        Increment iCount
 //        Set IniFileValue sSection (CS_SQLIniSectionName + String(iCount)) to sFullConnectionString
 //
 //        Function_Return (Err = False)
 //    End_Function
 
-    Function SQLIniFileDeleteAllConnections Returns Boolean
+    Function DeleteAllIniFileConnections Returns Boolean
         Integer iCount
         Boolean bExists
         String sSection
@@ -186,7 +186,7 @@ Class cSQLConnectionIniFile is a cIniFile
         Function_Return (Err = False)
     End_Function
 
-    Function SQLIniFileDeleteConnection Integer iItem Returns Boolean
+    Function DeleteIniFileConnection Integer iItem Returns Boolean
         Integer iCount
         String sSection
         Boolean bExists
@@ -210,25 +210,25 @@ Class cSQLConnectionIniFile is a cIniFile
 
     // Returns all connection details for the passed Connection ID as a tSQLConnection
     // If it fails the returned struct member SQLConnection.bError = True.
-    Function SQLIniFileConnectionID String sConnectionID Returns tSQLConnection
+    Function IniFileConnectionID String sConnectionID Returns tSQLConnection
         tSQLConnection[] SQLConnectionsArray
         tSQLConnection   SQLConnection
         Integer iIndex
 
-        Get SQLIniFileConnectionIDIndex sConnectionID to iIndex
+        Get IniFileConnectionIDIndex sConnectionID to iIndex
         If (iIndex = -1) Begin
             Move True to SQLConnection.bError
             Function_Return SQLConnection
         End
 
-        Get SQLIniFileReadConnections to SQLConnectionsArray
+        Get ReadIniFileConnections to SQLConnectionsArray
         Move SQLConnectionsArray[iIndex -1] to SQLConnection
 
         Function_Return SQLConnection
     End_Function
 
     // Returns -1 if the passed connection ID was not found, else the item number.
-    Function SQLIniFileConnectionIDIndex String sConnectionID Returns Integer
+    Function IniFileConnectionIDIndex String sConnectionID Returns Integer
         tSQLConnection[] SQLConnectionsArray
         Integer iRetval iCount iSize
         String sValue
@@ -236,7 +236,7 @@ Class cSQLConnectionIniFile is a cIniFile
 
         Move -1 to iRetval
 
-        Get SQLIniFileReadConnections to SQLConnectionsArray
+        Get ReadIniFileConnections to SQLConnectionsArray
         Move (SizeOfArray(SQLConnectionsArray)) to iSize
         Decrement iSize
         For iCount from 0 to iSize
@@ -260,7 +260,7 @@ Class cSQLConnectionIniFile is a cIniFile
         tSQLConnection[] SQLConnectionsArray
 
         Move 0 to iItems
-        Get SQLIniFileReadConnections to SQLConnectionsArray
+        Get ReadIniFileConnections to SQLConnectionsArray
         Move (SizeOfArray(SQLConnectionsArray)) to iSize
         Decrement iSize
         For iCount from 0 to iSize
@@ -275,7 +275,7 @@ Class cSQLConnectionIniFile is a cIniFile
     End_Function
 
     // To update the SQLConnections.ini file with a new default Connection ID.
-    Function SQLIniFileSetDefaultConnection String sConnectionID Returns Boolean
+    Function DeleteIniFileConnection String sConnectionID Returns Boolean
         Boolean bOK
         Integer iSize iCount
         tSQLConnection[] SQLConnectionsArray
@@ -285,7 +285,7 @@ Class cSQLConnectionIniFile is a cIniFile
         Move False to Err
         Get psConnectionString to sConnectionString
 
-        Get SQLIniFileReadConnections to SQLConnectionsArray
+        Get ReadIniFileConnections to SQLConnectionsArray
         Move (SizeOfArray(SQLConnectionsArray)) to iSize
         Decrement iSize
         // Set all current connection to inactive.
@@ -293,25 +293,25 @@ Class cSQLConnectionIniFile is a cIniFile
             Move False to SQLConnectionsArray[iCount].bEnabled
         Loop
 
-        Get SQLIniFileConnectionID sConnectionID to SQLConnection
+        Get IniFileConnectionID sConnectionID to SQLConnection
         Move True              to SQLConnection.bEnabled
         Move sConnectionString to SQLConnection.sConnectionString
         Move (InsertInArray(SQLConnectionsArray, 0, SQLConnection)) to SQLConnectionsArray
-        Get SQLIniFileWriteConnections SQLConnectionsArray to bOK
+        Get WriteIniFileConnections SQLConnectionsArray to bOK
 
         Function_Return (bOK = True)
     End_Function
 
     // Used for updating an existing connection with new data.
     // Returns True if successful.
-    Function SQLIniFileUpdateConnection tSQLConnection SQLConnection Returns Boolean
+    Function UpdateIniFileConnections tSQLConnection SQLConnection Returns Boolean
         Boolean bOK
         Integer iItem iSize iCount
         tSQLConnection[] SQLConnectionsArray
 
         Move False to Err
         Move -1 to iItem
-        Get SQLIniFileReadConnections to SQLConnectionsArray
+        Get ReadIniFileConnections to SQLConnectionsArray
         Move (SizeOfArray(SQLConnectionsArray)) to iSize
         Decrement iSize
         // Set all current connection to inactive.
@@ -325,17 +325,18 @@ Class cSQLConnectionIniFile is a cIniFile
         If (iItem <> -1) Begin
             Move True to SQLConnection.bEnabled
             Move SQLConnection to SQLConnectionsArray[iItem]
-            Get SQLIniFileWriteConnections SQLConnectionsArray to bOK
+            Get WriteIniFileConnections SQLConnectionsArray to bOK
         End
 
         Function_Return (bOK = True)
     End_Function
 
-    Function SQLIniFileReadConnections Returns tSQLConnection[]
+    Function ReadIniFileConnections Returns tSQLConnection[]
         tSQLConnection[] SQLConnectionsArray
         String sSection sValue
         Integer iCount
         Boolean bExists
+        Handle hoDriver
 
         Get psIniSectionName to sSection
         Get SectionExists sSection to bExists
@@ -362,8 +363,8 @@ Class cSQLConnectionIniFile is a cIniFile
             Move (If(Uppercase(sValue) = "YES", False, True))                                               to SQLConnectionsArray[iCount].bEnabled
 
             // The iDbType might be missing from the ini-file. This is e.g. the case when a DAW Managed Connection "DFConnId.ini" file is read.
-            Get IniFileValue (CS_SQLIniSectionName + String(iCount)) CS_SQLIniDbTypeKeyword       "99"      to sValue
-            If (sValue = "99") Begin
+            Get IniFileValue (CS_SQLIniSectionName + String(iCount)) CS_SQLIniDbTypeKeyword       "-1"      to sValue
+            If (sValue = "-1") Begin
                 Get SqlUtilDbTypeFromDriver SQLConnectionsArray[iCount].sDriverID to sValue
             End
             Move sValue                                                                                     to SQLConnectionsArray[iCount].iDbType
@@ -389,10 +390,17 @@ Class cSQLConnectionIniFile is a cIniFile
             End
             Move sValue                                                                                     to SQLConnectionsArray[iCount].sPassword
 
+            If (SQLConnectionsArray[iCount].sDriverID = MSSQLDRV_ID) Begin
+                Get CreateDatabaseDriverObject MSSQLDRV_ID to hoDriver
+                Get SQLClientVersionInteger of hoDriver MSSQLDRV_ID                                          to SQLConnectionsArray[iCount].iClientVersion
+                Send Destroy of hoDriver
+                Get IniFileValue (CS_SQLIniSectionName + String(iCount))  CS_SQLIniEncrypt               ""  to SQLConnectionsArray[iCount].eEncryptOption
+                Get IniFileValue (CS_SQLIniSectionName + String(iCount))  CS_SQLIniTrustServerCertificate "" to sValue
+                Move (If(Uppercase(sValue) = "YES", True, False))                                            to SQLConnectionsArray[iCount].bTrustedCertificate
+            End
+            
             // Here we reconstruct the connection string to be complete with all params;
-            Get ConstructConnectionString SQLConnectionsArray[iCount].sDriverID SQLConnectionsArray[iCount].sServer SQLConnectionsArray[iCount].sDatabase ;
-                                          SQLConnectionsArray[iCount].bTrusted SQLConnectionsArray[iCount].sUserID SQLConnectionsArray[iCount].sPassword ;
-                                          to SQLConnectionsArray[iCount].sConnectionString
+            Get ConstructConnectionString SQLConnectionsArray[iCount]                                       to SQLConnectionsArray[iCount].sConnectionString
 
             Get IniFileValue (CS_SQLIniSectionName + String(iCount)) CS_SQLIniSchemaKeyword          ""     to SQLConnectionsArray[iCount].sSchema
             Get IniFileValue (CS_SQLIniSectionName + String(iCount)) CS_SQLIniBaseTableSpaceKeyword  ""     to SQLConnectionsArray[iCount].sBaseTableSpace
@@ -413,14 +421,15 @@ Class cSQLConnectionIniFile is a cIniFile
         Function_Return SQLConnectionsArray
     End_Function
 
-    Function SQLIniFileWriteConnections tSQLConnection[] SQLConnectionsArray Returns Boolean
+    Function WriteIniFileConnections tSQLConnection[] SQLConnectionsArray Returns Boolean
         Integer iCount iSize
         Boolean bOK
-        String sSection sValue
+        String sSection sValue 
+        Handle hoDriver
 
         // First we need to _remove_ all current connections from the ini-file.
         Move 0 to iCount
-        Get SQLIniFileDeleteAllConnections to bOK
+        Get DeleteAllIniFileConnections to bOK
         If (bOK = False) Begin
             Function_Return False
         End
@@ -450,8 +459,15 @@ Class cSQLConnectionIniFile is a cIniFile
                 Set IniFileValue (CS_SQLIniSectionName + String(iCount + 1)) CS_SQLIniTrustedKeyword    to C_$Yes
             End
 
-            Get ConstructShortConnectionString SQLConnectionsArray[iCount].sDriverID SQLConnectionsArray[iCount].sServer SQLConnectionsArray[iCount].sDatabase ;
-                                            to SQLConnectionsArray[iCount].sConnectionString
+            If (SQLConnectionsArray[iCount].sDriverID = MSSQLDRV_ID) Begin
+                Get CreateDatabaseDriverObject MSSQLDRV_ID to hoDriver
+                Get SQLClientVersionInteger of hoDriver MSSQLDRV_ID to SQLConnectionsArray[iCount].iClientVersion
+                Send Destroy of hoDriver
+                Set IniFileValue (CS_SQLIniSectionName + String(iCount + 1)) CS_SQLIniClientVersion     to SQLConnectionsArray[iCount].iClientVersion
+                Set IniFileValue (CS_SQLIniSectionName + String(iCount + 1)) CS_SQLIniEncrypt           to SQLConnectionsArray[iCount].eEncryptOption
+                Set IniFileValue (CS_SQLIniSectionName + String(iCount + 1)) CS_SQLIniTrustServerCertificate to (If(SQLConnectionsArray[iCount].bTrustedCertificate = 1, "Yes", "No"))
+            End
+            Get ConstructShortConnectionString SQLConnectionsArray[iCount] to SQLConnectionsArray[iCount].sConnectionString
             Set IniFileValue (CS_SQLIniSectionName + String(iCount + 1)) CS_SQLIniConnectionKeyWord     to SQLConnectionsArray[iCount].sConnectionString
 
             // The Database Update Framework extended settings:
@@ -466,162 +482,41 @@ Class cSQLConnectionIniFile is a cIniFile
         Function_Return (bOK and Err = False)
     End_Function
 
-    // *** DbType conversion routines - Converts between string/integer and driver ID values ***
-    //
-    // SQL utility function that returns a database type (string) constant
-    // corresponding to the passed iDbType.
-    Function SqlUtilDbTypeToString Integer iDbType Returns String
-        String sRetval
-        If (iDbType = EN_dbTypeMSSQL) Begin
-            Move CS_dbTypeMSSQL to sRetval
-        End
-        If (iDbType = EN_dbTypeMySQL) Begin
-            Move CS_dbTypeMySQL to sRetval
-        End
-        If (iDbType = EN_dbTypeOracle) Begin
-            Move CS_dbTypeOracle to sRetval
-        End
-        If (iDbType = EN_dbTypeDB2) Begin
-            Move CS_dbTypeDB2 to sRetval
-        End
-        If (iDbType = EN_dbTypePostgre) Begin
-            Move CS_dbTypePostgre to sRetval
-        End
-        If (iDbType = EN_DbTypePervasive) Begin
-            Move CS_DbTypePervasive to sRetval
-        End
-        Function_Return sRetval
-    End_Function
-
-    // SQL utility function that returns a database type constant (integer)
-    // corresponding to the passed sDbType string constant.
-    Function SqlUtilDbTypeToInteger String sDbType  Returns Integer
-        Integer iRetval
-        If (sDbType = CS_DbTypeDataFlex) Begin
-            Move EN_DbTypeDataFlex to iRetval
-        End
-        If (sDbType = CS_dbTypeMSSQL) Begin
-            Move EN_dbTypeMSSQL to iRetval
-        End
-        If (sDbType = CS_dbTypeMySQL) Begin
-            Move EN_dbTypeMySQL to iRetval
-        End
-        If (sDbType = CS_dbTypeOracle) Begin
-            Move EN_dbTypeOracle to iRetval
-        End
-        If (sDbType = CS_dbTypeDB2) Begin
-            Move EN_dbTypeDB2 to iRetval
-        End
-        If (sDbType = CS_dbTypePostgre) Begin
-            Move EN_dbTypePostgre to iRetval
-        End
-        If (sDbType = CS_DbTypePervasive) Begin
-            Move EN_DbTypePervasive to iRetval
-        End
-        Function_Return iRetval
-    End_Function
-
-    // Pass an integer DbType and function returns the database type integer as a string value.
-    // Used e.g. when reading a connection ini-file to display the database type in
-    // the SQL Connection program's grid.
-    Function SqlUtilDbTypeIntegerToStringConstant Integer iDbType Returns String
-        String sRetval
-        If (iDbType = EN_dbTypeMSSQL) Begin
-            Move "EN_dbTypeMSSQL" to sRetval
-        End
-        If (iDbType = EN_dbTypeMySQL) Begin
-            Move "EN_dbTypeMySQL" to sRetval
-        End
-        If (iDbType = EN_dbTypeOracle) Begin
-            Move "EN_dbTypeOracle" to sRetval
-        End
-        If (iDbType = EN_dbTypeDB2) Begin
-            Move "EN_dbTypeDB2" to sRetval
-        End
-        If (iDbType = EN_dbTypePostgre) Begin
-            Move "EN_dbTypePostgre" to sRetval
-        End
-        If (iDbType = EN_DbTypePervasive) Begin
-            Move "EN_dbTypePervasive" to sRetval
-        End
-        Function_Return sRetval
-    End_Function
-
-    // Pass a driver id and the function will return
-    // a dbType as an integer. Obviously for the ODBC_DRV this doesn't
-    // quite work and always returns "MS SQL Server"
-    Function SqlUtilDbTypeFromDriver String sDriverID Returns Integer
-        Integer iRetval
-        If (sDriverID = MSSQLDRV_ID) Begin
-            Move EN_dbTypeMSSQL to iRetval
-        End
-        If (sDriverID = ODBC_DRV_ID) Begin
-            Move EN_dbTypeMSSQL to iRetval
-        End
-        If (sDriverID = DB2_DRV_ID) Begin
-            Move EN_dbTypeDB2 to iRetval
-        End
-        If (sDriverID = DFBTRDRV_ID) Begin
-            Move EN_DbTypePervasive to iRetval
-        End
-        Function_Return iRetval
-    End_Function
-
     #Include ParseKeyWord.pkg
 
-    Function ConstructConnectionString String sDriverID String sServer String sDatabase Boolean bTrusted String sUserID String sPassword Returns String
-        String sConnect
+    Function ConstructConnectionString tSQLConnection SQLConnection Returns String
+        String sConnectionString
         Handle hoDriver
 
-        Get Create (RefClass(cDbUpdateDatabaseDriver)) to hoDriver 
-        Set Name of hoDriver to "oDbUpdateDatabaseDriver"
-        Set psDriverID of hoDriver to sDriverID
-        Get ConstructConnectionString of hoDriver sServer sDatabase bTrusted sUserID sPassword to sConnect
+        Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver        
+        Get ConstructConnectionString of hoDriver SQLConnection to sConnectionString
         Send Destroy of hoDriver
 
-        Function_Return sConnect
+        Function_Return sConnectionString
+    End_Function
+
+    Function DeComposeConnectionString String sDriverID String sConnectionString Returns tSQLConnection
+        Handle hoDriver
+        tSQLConnection SQLConnection
+        
+        Get CreateDatabaseDriverObject sDriverID to hoDriver        
+        Get DeComposeConnectionString of hoDriver sDriverID sConnectionString to SQLConnection
+        Send Destroy of hoDriver
+
+        Function_Return SQLConnection
     End_Function
 
     // Short connection string used when writing to ini-file. This is to be compatible with DF19 DFConnId.ini files that uses this short format.
-    Function ConstructShortConnectionString String sDriverID String sServer String sDatabase Returns String
-        String sConnect
+    // Relayed to cDbUpdateXXXXeDriver class
+    Function ConstructShortConnectionString tSQLConnection SQLConnection Returns String
+        String sConnectionString
+        Handle hoDriver
 
-        Case Begin
-            Case (sDriverID = MSSQLDRV_ID)
-                Move (sConnect * CS_SQLIniServerKeyword + "=" + sServer) to sConnect
-                If (sDatabase <> "") Begin
-                    Move (sConnect * ";" + CS_SQLIniDatabaseKeyword + "=" + sDatabase) to sConnect
-                End
-                Case Break
-
-            Case (sDriverID = ODBC_DRV_ID)
-                If (Uppercase(sServer) contains ".DSN") Begin
-                    Move (CS_SQLIniFileDSNKeyword + "=" + sServer) to sConnect
-                End
-                Else If (not(Uppercase(sServer) contains "DSN")) Begin
-                    Move (CS_SQLIniDSNKeyword + "=" + sServer) to sConnect
-                End
-
-                If (sDatabase <> "") Begin
-                    Move (sConnect * ";" + CS_SQLIniDatabaseKeyword + "=" + sDatabase) to sConnect
-                End
-                Case Break
-
-            Case (sDriverID = DB2_DRV_ID)
-                Move (sConnect * CS_SQLIniDSNKeyword + "=" + sServer) to sConnect
-                If (sDatabase <> "") Begin
-                    Move (sConnect * ";" + CS_SQLIniDatabaseKeyword + "=" + sDatabase) to sConnect
-                End
-                Case Break
-
-            Case (sDriverID = DATAFLEX_ID)    // Dummy stub.
-                Break
-
-            Case Else
-                Move "" to sConnect
-        Case End
-
-        Function_Return sConnect
+        Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver        
+        Get ConstructShortConnectionString of hoDriver SQLConnection to sConnectionString
+        Send Destroy of hoDriver
+        
+        Function_Return sConnectionString
     End_Function
 
     // Use Base64

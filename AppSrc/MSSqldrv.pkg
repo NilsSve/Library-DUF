@@ -246,18 +246,29 @@ Class cMSSQLHandler is a cCLIHandler
     End_Function
     
     //   Enumerate database in a given server.
-    Function EnumerateDatabases String sServer String sUser String sPassWord Returns Integer
+    Function EnumerateDatabases String sServer String sUser String sPassWord Boolean bTrustCert Integer eEncrOpt Returns Integer
         Integer hoSQL
         String  sConnect
-        String  sDatabase
+        String  sDatabase sOptions
         Integer hdbc
         Integer hstmt
         Integer iFetchResult iDriver iClientVersion
+        Integer eEncryptionOption 
+        Boolean bTrustedCertificate
         
         If (Num_Arguments < 3) ;
             Move "" to sPassWord
         If (Num_Arguments < 2) ;
             Move "" to sUser
+        
+        Move False to bTrustedCertificate
+        If (num_arguments > 3) Begin
+            Move bTrustCert to bTrustedCertificate        
+        End
+        Move 0 to eEncryptionOption
+        If (num_arguments > 4) Begin
+            Move eEncrOpt to eEncryptionOption
+        End
         
         If (sUser <> "") ;
             Move ("SERVER=" + Trim(sServer) + ";UID=" + Trim(sUser) + ";PWD=" + Trim(sPassword) + ";") to sConnect
@@ -267,8 +278,12 @@ Class cMSSQLHandler is a cCLIHandler
         Get DriverIndex MSSQLDRV_ID to iDriver
         Get_Attribute DF_DRIVER_SQLSERVER_CLIENT_VERSION of iDriver to iClientVersion
         If (iClientVersion >= 18) Begin
-            Append sConnect ";Encrypt=Optional;TrustServerCertificate=Yes"
-            Move (Replaces(" ", sConnect, "")) to sConnect
+            If (iClientVersion >= 18) Begin   
+                Get EncryptOptionToText eEncryptionOption to sOptions
+                Append sOptions (If(bTrustedCertificate = True, ("TrustServerCertificate=yes"), ("TrustServerCertificate=no")))
+                Append sConnect ";" sOptions
+                Move (Replaces(" ", sConnect, "")) to sConnect
+            End
         End
         
         Object oEnumDBSQLmanager is a cSQLHandleManager
@@ -304,6 +319,23 @@ Class cMSSQLHandler is a cCLIHandler
         Function_Return (Item_Count(Current_Object))
     End_Function
     
+    Function EncryptOptionToText Integer eEncryptionOption Returns String
+        String sEncryptionWord 
+
+        Move ("Encrypt" + "=") to sEncryptionWord
+        If (eEncryptionOption = 0) Begin
+            Append sEncryptionWord "Optional"
+        End
+        Else If (eEncryptionOption = 1) Begin
+            Append sEncryptionWord "Mandatory"
+        End
+        Else If (eEncryptionOption = 2) Begin
+            Append sEncryptionWord "Strict"
+        End
+        Append sEncryptionWord ";" 
+        Function_Return sEncryptionWord
+    End_Function
+
     Function SqlServerClientVersionName Integer iClientVersion  Returns String
         String  sSqlServerClientVersionName
         

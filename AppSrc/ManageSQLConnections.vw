@@ -44,27 +44,9 @@ Object oSQLMaintainConnection is a dbView
     Object oSQLConnections_grd is a cRDCCJGrid
         Set Size to 98 503
         Set Location to 25 19
-//        Set peAnchors to anAll
-//        Set pbShowRowFocus to True
-//        Set pbUseAlternateRowBackgroundColor to True
-//        Set pbSelectionEnable to True
-//        Set pbRestoreLayout to True
-//        Set psLayoutSection to "oSQLConnections_grd"
-//        Set piLayoutBuild to 13
         Set pbShowFooter to True
-//        Set pbAllowAppendRow to False
-//        Set pbAllowEdit to False
-//        Set pbAllowInsertRow to False
-//        Set pbAutoAppend to False
         Set pbAutoSave to False
         Set pbEditOnTyping to False
-//        #IF (!@ > 180)
-//            #IF (!@ < 230)
-//                Set peVisualTheme to xtpReportThemeExplorer
-//            #ELSE
-//                Set peVisualTheme to xtpGridThemeExplorer
-//            #ENDIF
-//        #ENDIF
         
         Object oCJGridColumnRowIndicator is a cCJGridColumnRowIndicator
             Set piWidth to 18
@@ -171,11 +153,18 @@ Object oSQLMaintainConnection is a dbView
             Set pbVisible to False
         End_Object
 
-//        Object oDisabled_Col is a cCJGridColumn
-//            Set piWidth to 50
-//            Set psCaption to "Disabled"
-//            Set pbVisible to False
-//        End_Object
+        Object oEncrypt_Col is a cCJGridColumn
+            Set piWidth to 50
+            Set psCaption to "Encrypt"
+            Set pbVisible to False
+        End_Object
+
+        Object obTrustedCertificate_Col is a cCJGridColumn
+            Set piWidth to 50
+            Set psCaption to "bTrustedCertificate"
+            Set pbCheckbox to True
+            Set pbVisible to False
+        End_Object
 
         Object oCJContextMenu is a cCJContextMenu
             Set pbShowPopupBarToolTips of ghoCommandBars to True
@@ -423,6 +412,9 @@ Object oSQLMaintainConnection is a dbView
             Move SQLConnection.sLongTableSpace      to TheRow.sValue[piColumnId(oLongTableSpace_Col(Self))]
             Move SQLConnection.sIndexTableSpace     to TheRow.sValue[piColumnId(oIndexTableSpace_Col(Self))]
             Move SQLConnection.bSilentLogin         to TheRow.sValue[piColumnId(oSilentLogin_Col(Self))]
+            
+            Move SQLConnection.eEncryptOption       to TheRow.sValue[piColumnId(oEncrypt_Col(Self))]
+            Move SQLConnection.bTrustedCertificate  to TheRow.sValue[piColumnId(obTrustedCertificate_Col(Self))]
 //            Move SQLConnection.bDisabled            to TheRow.sValue[piColumnId(oDisabled_Col(Self))]
 
             Function_Return TheRow
@@ -452,6 +444,8 @@ Object oSQLMaintainConnection is a dbView
             Move TheRow.sValue[piColumnId(oLongTableSpace_Col(Self))]       to SQLConnection.sLongTableSpace
             Move TheRow.sValue[piColumnId(oIndexTableSpace_Col(Self))]      to SQLConnection.sIndexTableSpace
             Move TheRow.sValue[piColumnId(oSilentLogin_Col(Self))]          to SQLConnection.bSilentLogin
+            Move TheRow.sValue[piColumnId(oEncrypt_Col(Self))]              to SQLConnection.eEncryptOption
+            Move TheRow.sValue[piColumnId(obTrustedCertificate_Col(Self))]  to SQLConnection.bTrustedCertificate
 //            Move TheRow.sValue[piColumnId(oDisabled_Col(Self))]             to SQLConnection.bDisabled
 
             Function_Return SQLConnection
@@ -627,7 +621,7 @@ Object oSQLMaintainConnection is a dbView
             Handle ho
 
             Get phoSQLConnectionIniFile of ghoSQLConnectionHandler to ho
-            Get SQLIniFileReadConnections of ho to SQLConnectionsArray
+            Get ReadIniFileConnections of ho to SQLConnectionsArray
 
             Function_Return SQLConnectionsArray
         End_Function
@@ -685,7 +679,7 @@ Object oSQLMaintainConnection is a dbView
                 Move SQLConnection to SQLConnectionArray[iCount]
             Loop
 
-            Get SQLIniFileWriteConnections of ho SQLConnectionArray to bOK
+            Get WriteIniFileConnections of ho SQLConnectionArray to bOK
             If (bOK = False) Begin
                 Send ChangeStatusRowText "Sorry, an error occured while saving the file and changes were not saved."
                 Procedure_Return

@@ -167,7 +167,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             //...and perhaps also the SQLConnections.ini file setting.
             If (bPermanantly = True) Begin
                 If (ghoSQLConnectionHandler <> 0) Begin
-                    Get SQLIniFileSetDefaultConnection of ghoSQLConnectionHandler sConnectionID to bOK
+                    Get DeleteIniFileConnection of ghoSQLConnectionHandler sConnectionID to bOK
                 End
             End
         End
@@ -2001,7 +2001,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // corresponding to the passed iDbType.
     Function SqlUtilDbTypeToString Integer iDbType Returns String
         String sRetval
-        Get SqlUtilDbTypeToString of (phoSQLConnectionIniFile(ghoSQLConnectionHandler)) iDbType to sRetval
+        Get SqlUtilDbTypeToString of ghoSQLConnectionHandler iDbType to sRetval
         Function_Return sRetval
     End_Function
 
@@ -2009,7 +2009,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // corresponding to the passed sDbType string constant.
     Function SqlUtilDbTypeToInteger String sDbType Returns Integer
         Integer iRetval
-        Get SqlUtilDbTypeToInteger of (phoSQLConnectionIniFile(ghoSQLConnectionHandler)) sDbType to iRetval
+        Get SqlUtilDbTypeToInteger of ghoSQLConnectionHandler sDbType to iRetval
         Function_Return iRetval
     End_Function
 
@@ -2018,7 +2018,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // the SQL Connection program's grid.
     Function SqlUtilDbTypeIntegerToStringConstant Integer iDbType Returns String
         String sRetval
-        Get SqlUtilDbTypeIntegerToStringConstant of (phoSQLConnectionIniFile(ghoSQLConnectionHandler)) iDbType to sRetval
+        Get SqlUtilDbTypeIntegerToStringConstant of ghoSQLConnectionHandler iDbType to sRetval
         Function_Return sRetval
     End_Function
 
@@ -2027,7 +2027,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // quite work and always returns "MS SQL Server"
     Function SqlUtilDbTypeFromDriver String sDriverID Returns Integer
         Integer iRetval
-        Get SqlUtilDbTypeFromDriver of (phoSQLConnectionIniFile(ghoSQLConnectionHandler)) sDriverID to iRetval
+        Get SqlUtilDbTypeFromDriver of ghoSQLConnectionHandler sDriverID to iRetval
         Function_Return iRetval
     End_Function
 
@@ -9044,10 +9044,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Move bOK to bExists
         End
 
-        Get Create (RefClass(cDbUpdateDatabaseDriver)) to hoDriver
-        Set Name of hoDriver to "oDbUpdateDatabaseDriver"
-        Set psDriverID of hoDriver to SQLConnection.sDriverID
-        Get DbLogin of hoDriver sConnectionString SQLConnection.sServer SQLConnection.sDatabase SQLConnection.bTrusted SQLConnection.sUserID SQLConnection.sPassword to bOK
+        Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver        
+        Get DbLogin of hoDriver SQLConnection to bOK
         Send Destroy of hoDriver
 
         Function_Return (bExists = True)

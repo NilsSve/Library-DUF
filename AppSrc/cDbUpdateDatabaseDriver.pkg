@@ -1,10 +1,13 @@
 ﻿Use cSQLConnectionIniFile.h.pkg
 
+// Important: See the 'CreateDatabaseDriverObject' message at the bottom of this package,
+//            on how to create one of these classes.
 Class cDbUpdateGenericDatabaseDriver is a cObject
     Procedure Construct_Object
         Forward Send Construct_Object
-        { MethodType=Property Category="Database" InitialValue="Default" }
+        { MethodType=Property Category="Database" }
         { EnumList="DATAFLEX_ID, MSSQLDRV_ID, DB2_DRV_ID, ODBC_DRV_ID, DFBTRDRV_ID SQL_DRV, MDSPGSQL, MDSMYSQL, ORA_DRV" }
+        { InitialValue=DATAFLEX_ID }
         Property String psDriverID DATAFLEX_ID
     End_Procedure
 
@@ -20,53 +23,231 @@ Class cDbUpdateGenericDatabaseDriver is a cObject
         Function_Return sRetval
     End_Function
 
-    Function ConstructConnectionString String sServer String sDatabase Boolean bTrusted String sUserID String sPassword Returns String
-        String sConnect sServerKeyWord sDriverID
+    Function ConstructConnectionString tSQLConnection SQLConnection Returns String
+        String sConnectionString sServerKeyWord sDriverID sOptions
         Integer iClientVersion
         
         Get psDriverID to sDriverID
-        Get ServerKeyword sServer to sServerKeyWord
-        Move (sConnect + sServerKeyWord + "=" + sServer) to sConnect
+        Get ServerKeyword SQLConnection.sServer to sServerKeyWord
+        Move (sConnectionString + sServerKeyWord + "=" + SQLConnection.sServer) to sConnectionString
         If (sServerKeyWord = CS_SQLIniDSNKeyword or sServerKeyWord = CS_SQLIniFileDSNKeyword) Begin
-            Move "" to sDatabase
+            Move "" to SQLConnection.sDatabase
         End
         
-        If (sDatabase <> "") Begin
-            Move (sConnect + ";" + CS_SQLIniDatabaseKeyword + "=" + sDatabase) to sConnect
+        If (SQLConnection.sDatabase <> "") Begin
+            Append sConnectionString  (";" + CS_SQLIniDatabaseKeyword + "=" + SQLConnection.sDatabase)
         End
-        If (bTrusted = True) Begin
-            Move (sConnect + ";" + CS_SQLIniTrustedKeyword + "=Yes") to sConnect
+        If (SQLConnection.bTrusted = True) Begin
+            Append sConnectionString (";" + CS_SQLIniTrustedKeyword + "=Yes") 
         End
         Else Begin
-            Move (sConnect + ";" + CS_SQLIniUIDKeyword + "=" + sUserID + ";" + CS_SQLIniPWDKeyword + "=" + sPassword) to sConnect
+            Append sConnectionString (";" + CS_SQLIniUIDKeyword + "=" + SQLConnection.sUserID + ";" + CS_SQLIniPWDKeyword + "=" + SQLConnection.sPassword) 
         End
         
         If (sDriverID = MSSQLDRV_ID) Begin
             Get SQLClientVersionInteger MSSQLDRV_ID to iClientVersion
-            If (iClientVersion >= 18) Begin
-                Append sConnect ";Encrypt=Optional;TrustServerCertificate=Yes"
-                Move (Replaces(" ", sConnect, "")) to sConnect
+            If (iClientVersion >= 18) Begin                
+                Get EncryptOptionToText SQLConnection.eEncryptOption to sOptions
+                Move (CS_SQLIniEncrypt + "=" + sOptions + ";") to sOptions
+                If (SQLConnection.sServer = "" and SQLConnection.eEncryptOption = 0) Begin
+                    Append sOptions (CS_SQLIniTrustServerCertificate + "=yes")
+                End 
+                Else Begin
+                    Append sOptions (If(SQLConnection.bTrustedCertificate = True, (CS_SQLIniTrustServerCertificate + "=yes"), (CS_SQLIniTrustServerCertificate + "=no")))
+                End
+                Append sConnectionString ";" sOptions
+                Move (Replaces(" ", sConnectionString, "")) to sConnectionString
             End
         End
         
-        Function_Return sConnect
+        Function_Return sConnectionString
+    End_Function
+    
+    // Sample sConnString: "SERVER=(local)\SQLEXPRESS;UID=dbuser;PWD=secret;DATABASE=OrderEntry;, 0"
+    // Pass a complete driver connection string
+    // Returns the following as a struct:
+    //   sServer, sDatabase, sUser, sPassword & True if Trusted_Connection is used.
+    // Finally also returns a boolean TRUE if trusted_connection=yes, else false is returned.
+    //
+    Function DeComposeConnectionString String sDriverID String sConnectionString Returns tSQLConnection
+        tSQLConnection SQLConnection 
+        String sValue sConnectionID sServer sDatabase sUserID sPassword sEncrypt sTrustServerCertificate
+        Boolean bTrusted bSilent bOK
+        Integer iPos iSize iCount iClientVersion
+
+        Get _SqlCheckCurrentDriver sDriverID to bOK
+        If (bOK = False) Begin
+            Function_Return SQLConnection
+        End
+
+        Move False to bTrusted
+        Move False to bSilent
+
+        Case Begin
+            Case (sDriverID = MSSQLDRV_ID)
+                Get ParseKeyWord sConnectionString (CS_SQLIniServerKeyword + "=")   to sServer
+                Get ParseKeyWord sConnectionString (CS_SQLIniDatabaseKeyword + "=") to sDatabase
+                Get ParseKeyWord sConnectionString (CS_SQLIniTrustedKeyword + "=")  to sValue
+                Move (If(Uppercase(sValue) = "YES", True, False))                   to bTrusted
+                If (bTrusted = False) Begin
+                    Get ParseKeyWord sConnectionString (CS_SQLIniUIDKeyword + "=")  to sUserID
+                    Get ParseKeyWord sConnectionString (CS_SQLIniPWDKeyword + "=")  to sPassword
+                End
+                Get ParseKeyWord sConnectionString (CS_SQLIniEncrypt + "=")            to sEncrypt
+                Get ParseKeyWord sConnectionString (CS_SQLIniTrustServerCertificate + "=") to sTrustServerCertificate
+                Case Break
+
+            Case (sDriverID = ODBC_DRV_ID)
+                If (uppercase(sConnectionString) contains ("." + CS_SQLIniDSNKeyword)) Begin
+                    Get ParseKeyWord sConnectionString (CS_SQLIniFileDSNKeyword + "=")  to sServer
+                End
+                Else Begin
+                    Get ParseKeyWord sConnectionString (CS_SQLIniDSNKeyword + "=")      to sServer
+                End
+
+                Get ParseKeyWord sConnectionString (CS_SQLIniTrustedKeyword + "=")  to sValue
+                Move (If(Uppercase(sValue) = "YES", True, False))                   to bTrusted
+                If (bTrusted = False) Begin
+                    Get ParseKeyWord sConnectionString (CS_SQLIniUIDKeyword + "=")  to sUserID
+                    Get ParseKeyWord sConnectionString (CS_SQLIniPWDKeyword + "=")  to sPassword
+                End
+                Case Break
+
+            Case (sDriverID = DB2_DRV_ID)
+                Get ParseKeyWord sConnectionString (CS_SQLIniDSNKeyword + "=")      to sServer
+                Get ParseKeyWord sConnectionString (CS_SQLIniUIDKeyword + "=")      to sUserID
+                Get ParseKeyWord sConnectionString (CS_SQLIniPWDKeyword + "=")      to sPassword
+                Case Break
+
+            Case (sDriverID = DATAFLEX_ID)    // Dummy stub.
+                Break
+        Case End
+
+        Get ParseKeyWord sConnectionString (Uppercase(CS_SQLConnectionIDText))  to sConnectionID
+
+        // bSilent?
+        Move (Pos(",0", sConnectionString))                                     to iPos
+        If (iPos = 0) Begin
+            Move (Pos(",1", sConnectionString))                                 to iPos
+        End
+        If (iPos = 0) Begin
+            Move "0"                                                            to sValue
+        End
+        Else Begin
+            Move (Mid(sConnectionString, 1, (iPos +1)))                         to sValue
+        End
+        Move (If(sValue = 1, True, False))                                      to bSilent
+
+        Move (Trim(sDriverID))                                                  to SQLConnection.sDriverID
+        Move (Trim(sConnectionID))                                              to SQLConnection.sConnectionID
+        Move (Trim(sConnectionString))                                          to SQLConnection.sConnectionString
+        Move (Trim(sServer))                                                    to SQLConnection.sServer
+        Move (Trim(sDatabase))                                                  to SQLConnection.sDatabase
+        Move bTrusted                                                           to SQLConnection.bTrusted
+        Move (Trim(sUserID))                                                    to SQLConnection.sUserID
+        Move (Trim(sPassword))                                                  to SQLConnection.sPassword
+        Move bSilent                                                            to SQLConnection.bSilentLogin
+        If (sDriverID = MSSQLDRV_ID) Begin
+            Get SQLClientVersionInteger MSSQLDRV_ID to iClientVersion
+            Move iClientVersion                                                    to SQLConnection.iClientVersion
+            If (iClientVersion >= 18) Begin
+                Get EncryptOptionFromText sEncrypt                                 to SQLConnection.eEncryptOption
+                Move (If(Lowercase(sTrustServerCertificate) = "yes", True, False)) to SQLConnection.bTrustedCertificate
+            End
+        End
+
+        Function_Return SQLConnection
     End_Function
 
-    Function DbLogin String sConnectionString String sServer String sDatabase Boolean bTrusted String sUserID String sPassword Returns Boolean
+    // Short connection string used when writing to ini-file. This is to be compatible with DF19 DFConnId.ini files that uses this short format.
+    Function ConstructShortConnectionString tSQLConnection SQLConnection Returns String
+        String sConnectionString
+
+        Case Begin
+            Case (SQLConnection.sDriverID = MSSQLDRV_ID)
+                Move (sConnectionString * CS_SQLIniServerKeyword + "=" + SQLConnection.sServer) to sConnectionString
+                If (SQLConnection.sDatabase <> "") Begin
+                    Append sConnectionString (";" + CS_SQLIniDatabaseKeyword + "=" + SQLConnection.sDatabase)
+                End
+                Case Break
+
+            Case (SQLConnection.sDriverID = ODBC_DRV_ID)
+                If (Uppercase(SQLConnection.sServer) contains ".DSN") Begin
+                    Move (CS_SQLIniFileDSNKeyword + "=" + SQLConnection.sServer) to sConnectionString
+                End
+                Else If (not(Uppercase(SQLConnection.sServer) contains "DSN")) Begin
+                    Move (CS_SQLIniDSNKeyword + "=" + SQLConnection.sServer) to sConnectionString
+                End
+
+                If (SQLConnection.sDatabase <> "") Begin
+                    Append sConnectionString (";" + CS_SQLIniDatabaseKeyword + "=" + SQLConnection.sDatabase)
+                End
+                Case Break
+
+            Case (SQLConnection.sDriverID = DB2_DRV_ID)
+                Move (sConnectionString * CS_SQLIniDSNKeyword + "=" + SQLConnection.sServer) to sConnectionString
+                If (SQLConnection.sDatabase <> "") Begin
+                    Move (sConnectionString * ";" + CS_SQLIniDatabaseKeyword + "=" + SQLConnection.sDatabase) to sConnectionString
+                End
+                Case Break
+
+            Case (SQLConnection.sDriverID = DATAFLEX_ID)    // Dummy stub.
+                Break
+
+            Case Else
+                Move "" to sConnectionString
+        Case End
+
+        Function_Return sConnectionString
+    End_Function
+
+    Function EncryptOptionToText Integer eEncryptOption Returns String
+        String sEncryptionWord 
+
+        If (eEncryptOption = eOptional) Begin
+            Move CS_SQLIniEncryptOptional to sEncryptionWord
+        End
+        Else If (eEncryptOption = eMandatory) Begin
+            Move CS_SQLIniEncryptMandatory to sEncryptionWord
+        End
+        Else If (eEncryptOption = eStrict) Begin
+            Move CS_SQLIniEncryptStrictShort to sEncryptionWord
+        End
+        Function_Return sEncryptionWord
+    End_Function
+
+    Function EncryptOptionFromText String sEncryptOption Returns Integer
+        Integer eOption
+
+        If (sEncryptOption = CS_SQLIniEncryptOptional) Begin
+            Function_Return eOptional
+        End
+        If (sEncryptOption = CS_SQLIniEncryptMandatory) Begin
+            Function_Return eMandatory
+        End
+        Else If (sEncryptOption = CS_SQLIniEncryptStrictShort) Begin
+            Function_Return eStrict
+        End
+        Function_Return -1 // Unknown
+    End_Function
+
+    // ToDo: NOT FINISHED!
+    Function DbLogin tSQLConnection SQLConnection Returns Boolean
         Boolean bLoginSuccessful
         String sDriverID
 
         Get psDriverID to sDriverID
         If (sDriverID = DATAFLEX_ID or sDriverID = "") Begin
             Function_Return True
-        End
+        End    
+Send Info_Box "To be finished..."        
         Move 0 to LastErr  // Do NOT use the Err flag, it will be set true by the login command although it is successful.
-        If (bTrusted = False and sDatabase <> "") Begin
-            Move (SFormat("SERVER=%1;DATABASE=%2", sServer, sDatabase)) to sServer
-            Login sServer sUserId sPassword sDriverID  
+        If (SQLConnection.bTrusted = False and SQLConnection.sDatabase <> "") Begin
+            Move (SFormat("SERVER=%1;DATABASE=%2", SQLConnection.sServer, SQLConnection.sDatabase)) to SQLConnection.sServer
+            Login SQLConnection.sServer SQLConnection.sUserID SQLConnection.sPassword SQLConnection.sDriverID  
         End
         Else Begin
-            Login sConnectionString "" "" sDriverID
+            Login SQLConnection.sConnectionString "" "" sDriverID
         End
         Move (LastErr = 0) to bLoginSuccessful
         Function_Return bLoginSuccessful
@@ -76,7 +257,8 @@ Class cDbUpdateGenericDatabaseDriver is a cObject
         Integer iNumberOfDrivers iCount iDriver iClientVersion
         String sDriver
         
-        Move 0 to iDriver
+        Move 0 to iDriver  
+        Move 0 to iClientVersion
         Get_Attribute DF_NUMBER_DRIVERS to iNumberOfDrivers
         If (iNumberOfDrivers = 1) Begin
             Load_Driver sDriverID
@@ -100,69 +282,82 @@ Class cDbUpdateGenericDatabaseDriver is a cObject
 End_Class
 
 Class cDbUpdateMSSQLDriver is a cDbUpdateGenericDatabaseDriver
+    
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        
+    End_Procedure
+    
     Function ServerKeyword String sServer Returns String
         Function_Return CS_SQLIniServerKeyword
     End_Function
 
-    Function DbLogin String sConnectionString String sServer String sDatabase Boolean bTrusted String sUserID String sPassword Returns Boolean
+    Function DbLogin tSQLConnection SQLConnection Returns Boolean
         Integer iClientVersion
-        String sConnect
+        String sConnectionString
         Boolean bLoginSuccessful
         
-        Move (sConnect * "SERVER=" + sServer) to sConnect
-        If (sDatabase <> "") Begin
-            Move (sConnect * ";DATABASE=" + sDatabase) to sConnect
-        End
-        If (bTrusted = True) Begin
-            Move (sConnect * ";TRUSTED_CONNECTION=Yes") to sConnect
-        End
-        Else Begin
-            Move (sConnect * ";UID=" + sUserID * ";PWD=" + sPassword) to sConnect
-        End
-
-        Get SQLClientVersionInteger MSSQLDRV_ID to iClientVersion
-        If (iClientVersion >= 18) Begin
-            Append sConnect ";Encrypt=Optional;TrustServerCertificate=Yes"
-            Move (Replaces(" ", sConnect, "")) to sConnect
-        End
+//        If (SQLConnection.sConnectionString = "")
+//        Move (sConnectionString * "SERVER=" + SQLConnection.sServer) to sConnectionString
+//        If (SQLConnection.sDatabase <> "") Begin
+//            Move (sConnectionString * ";DATABASE=" + SQLConnection.sDatabase) to sConnectionString
+//        End
+//        If (SQLConnection.bTrusted = True) Begin
+//            Move (sConnectionString * ";TRUSTED_CONNECTION=Yes") to sConnectionString
+//        End
+//        Else Begin
+//            Move (sConnectionString * ";UID=" + SQLConnection.sUserID * ";PWD=" + SQLConnection.sPassword) to sConnectionString
+//        End
+//
+//        If (SQLConnection.sDriverID = MSSQLDRV_ID and SQLConnection.iClientVersion = 0) Begin
+//            Get SQLClientVersionInteger MSSQLDRV_ID to SQLConnection.iClientVersion
+//            If (SQLConnection.iClientVersion >= 18) Begin
+//        // ToDo: NEEDS IMPROVEMENT! ****
+//                Append sConnectionString ";Encrypt=Optional;TrustServerCertificate=Yes"
+//                Move (Replaces(" ", sConnectionString, "")) to sConnectionString
+//            End
+//        End  
         
-        Login sConnect "" "" MSSQLDRV_ID
+        Get ConstructConnectionString SQLConnection to sConnectionString
+        
+        Login sConnectionString "" "" MSSQLDRV_ID
 
         Move (not(Err)) to bLoginSuccessful
         Function_Return bLoginSuccessful
     End_Function
 
-    Function SQLClientVersionInteger String sDriverID Returns Integer
-        Integer iNumberOfDrivers iCount iDriver iClientVersion
-        String sDriver
-        
-        Move 0 to iDriver
-        Get_Attribute DF_NUMBER_DRIVERS to iNumberOfDrivers
-        If (iNumberOfDrivers = 1) Begin
-            Load_Driver sDriverID
-            Get_Attribute DF_NUMBER_DRIVERS to iNumberOfDrivers
-        End
-        For iCount from 1 to iNumberOfDrivers
-            Get_Attribute DF_DRIVER_NAME of iCount to sDriver
-            If (Uppercase(sDriver) = Uppercase(sDriverID)) Begin
-                Move iCount to iDriver
-                Move iNumberOfDrivers to iCount // We're done.
-            End
-        Loop
-    
-        // This info is (at current) only available for the MS SQL driver:
-        If (iDriver <> 0 and sDriverID = MSSQLDRV_ID) Begin
-            Get_Attribute DF_DRIVER_SQLSERVER_CLIENT_VERSION of iDriver to iClientVersion
-        End
-        Function_Return iClientVersion
-    End_Function
+//    Function SQLClientVersionInteger String sDriverID Returns Integer
+//        Integer iNumberOfDrivers iCount iDriver iClientVersion
+//        String sDriver
+//        
+//        Move 0 to iDriver
+//        Get_Attribute DF_NUMBER_DRIVERS to iNumberOfDrivers
+//        If (iNumberOfDrivers = 1) Begin
+//            Load_Driver sDriverID
+//            Get_Attribute DF_NUMBER_DRIVERS to iNumberOfDrivers
+//        End
+//        For iCount from 1 to iNumberOfDrivers
+//            Get_Attribute DF_DRIVER_NAME of iCount to sDriver
+//            If (Uppercase(sDriver) = Uppercase(sDriverID)) Begin
+//                Move iCount to iDriver
+//                Move iNumberOfDrivers to iCount // We're done.
+//            End
+//        Loop
+//    
+//        // This info is (at current) only available for the MS SQL driver:
+//        If (iDriver <> 0 and sDriverID = MSSQLDRV_ID) Begin
+//            Get_Attribute DF_DRIVER_SQLSERVER_CLIENT_VERSION of iDriver to iClientVersion
+//        End
+//        Function_Return iClientVersion
+//    End_Function
     
 End_Class
 
 Class cDbUpdateODBCDriver is a cDbUpdateGenericDatabaseDriver
-    Function DbLogin String sConnectionString String sServer String sDatabase Boolean bTrusted String sUserID String sPassword Returns Boolean
+    Function DbLogin tSQLConnection SQLConnection Returns Boolean
         Boolean bLoginSuccessful
         String sDriverID
+
 
         Get psDriverID to sDriverID
         Move (Trim(sDriverID)) to sDriverID
@@ -170,17 +365,17 @@ Class cDbUpdateODBCDriver is a cDbUpdateGenericDatabaseDriver
             Function_Return True
         End
         Move 0 to LastErr  // Do NOT use the Err flag, it will be set true by the login command although it is successful.
-        If (bTrusted = False) Begin
-            If (Uppercase(sServer) contains ("." + String(CS_SQLIniDSNKeyword))) Begin
-                Move (CS_SQLIniFileDSNKeyword + "=" + sServer) to sServer
+        If (SQLConnection.bTrusted = False) Begin
+            If (Uppercase(SQLConnection.sServer) contains ("." + String(CS_SQLIniDSNKeyword))) Begin
+                Move (CS_SQLIniFileDSNKeyword + "=" + SQLConnection.sServer) to SQLConnection.sServer
             End
-            Else If (not(Uppercase(sServer) contains CS_SQLIniDSNKeyword)) Begin
-                Move (CS_SQLIniDSNKeyword + "=" + sServer) to sServer
+            Else If (not(Uppercase(SQLConnection.sServer) contains CS_SQLIniDSNKeyword)) Begin
+                Move (CS_SQLIniDSNKeyword + "=" + SQLConnection.sServer) to SQLConnection.sServer
             End
-            Login sServer sUserId sPassword sDriverID  
+            Login SQLConnection.sServer SQLConnection.sUserID SQLConnection.sPassword SQLConnection.sDriverID
         End
         Else Begin
-            Login sConnectionString "" "" sDriverID
+            Login SQLConnection.sConnectionString "" "" sDriverID
         End
         Move (LastErr = 0) to bLoginSuccessful
 
@@ -189,16 +384,16 @@ Class cDbUpdateODBCDriver is a cDbUpdateGenericDatabaseDriver
 End_Class
 
 Class cDbUpdateDB2Driver is a cDbUpdateGenericDatabaseDriver
-    Function DbLogin String sConnectionString String sServer String sDatabase Boolean bTrusted String sUserID String sPassword Returns Boolean
+    Function DbLogin tSQLConnection SQLConnection Returns Boolean
         Boolean bLoginSuccessful
         String sDriverID
 
         Move False to Err
         Get psDriverID to sDriverID
-        If (not(Uppercase(sServer) contains CS_SQLIniDSNKeyword)) Begin
-            Move (CS_SQLIniDSNKeyword + "=" + sServer) to sServer
+        If (not(Uppercase(SQLConnection.sServer) contains CS_SQLIniDSNKeyword)) Begin
+            Move (CS_SQLIniDSNKeyword + "=" + SQLConnection.sServer) to SQLConnection.sServer
         End
-        Login sServer sUserId sPassword sDriverID
+        Login SQLConnection.sServer SQLConnection.sUserID SQLConnection.sPassword sDriverID
 
         Move (not(Err)) to bLoginSuccessful
         Function_Return bLoginSuccessful
@@ -206,7 +401,7 @@ Class cDbUpdateDB2Driver is a cDbUpdateGenericDatabaseDriver
 End_Class
 
 Class cDbUpdatePSQLDriver is a cDbUpdateGenericDatabaseDriver
-    Function DbLogin String sConnectionString String sServer String sDatabase Boolean bTrusted String sUserID String sPassword Returns Boolean
+    Function DbLogin tSQLConnection SQLConnection Returns Boolean
         Boolean bLoginSuccessful
         String sDriverID
 
@@ -215,7 +410,7 @@ Class cDbUpdatePSQLDriver is a cDbUpdateGenericDatabaseDriver
 //        If (not(Uppercase(sServer) contains CS_SQLIniDSNKeyword)) Begin
 //            Move (CS_SQLIniDSNKeyword + "=" + sServer) to sServer
 //        End
-        Login sServer sUserId sPassword sDriverID
+        Login SQLConnection.sServer SQLConnection.sUserID SQLConnection.sPassword sDriverID
 
         Move (not(Err)) to bLoginSuccessful
         Function_Return bLoginSuccessful
@@ -223,81 +418,39 @@ Class cDbUpdatePSQLDriver is a cDbUpdateGenericDatabaseDriver
 End_Class
 
 Class cDbUpdateDataFlexDriver is a cDbUpdateGenericDatabaseDriver
-    Function ConstructConnectionString String sServer String sDatabase Boolean bTrusted String sUserID String sPassword Returns String
+    Function ConstructConnectionString tSQLConnection SQLConnection Returns String
         Function_Return ""
     End_Function
 End_Class
 
-Class cDbUpdateDatabaseDriver is a cObject
-    Procedure Construct_Object
-        Forward Send Construct_Object
-        Property String psDriverID DATAFLEX_ID
-        Property Handle phoDriverSpecificObject 
-    End_Procedure
+// *** MAIN construction message for driver objects! ***
+Function CreateDatabaseDriverObject Global String sDriverID Returns Handle
+    Handle hcDriverClass hoDriver
+    String sObjectName
 
-    Function CreateDriver Returns Handle
-        String sDriverID sObjectName
-        Handle hoDriver hcDriverClass
+    Case Begin
+        Case (sDriverID = MSSQLDRV_ID)
+            Move (RefClass(cDbUpdateMSSQLDriver))    to hcDriverClass
+            Move "oDbUpdateMSSQLDriver" to sObjectName
+            Case Break
+        Case (sDriverID = ODBC_DRV_ID)
+            Move (RefClass(cDbUpdateODBCDriver))     to hcDriverClass
+            Move "oDbUpdateODBCDriver" to sObjectName
+            Case Break
+        Case (sDriverID = DB2_DRV_ID)
+            Move (RefClass(cDbUpdateDB2Driver))      to hcDriverClass
+            Move "oDbUpdateDB2Driver" to sObjectName
+            Case Break               
+        Case Else
+            // DATAFLEX_ID = Default driver
+            Move (RefClass(cDbUpdateDataFlexDriver)) to hcDriverClass
+            Move "oDbUpdateDataFlexDriver" to sObjectName
+            Move DATAFLEX_ID to sDriverID
+    Case End
 
-        Get psDriverID to sDriverID
-        Case Begin
-            Case (sDriverID = MSSQLDRV_ID)
-                Move (RefClass(cDbUpdateMSSQLDriver))    to hcDriverClass
-                Move "oDbUpdateMSSQLDriver" to sObjectName
-                Case Break
-            Case (sDriverID = ODBC_DRV_ID)
-                Move (RefClass(cDbUpdateODBCDriver))     to hcDriverClass
-                Move "oDbUpdateODBCDriver" to sObjectName
-                Case Break
-            Case (sDriverID = DB2_DRV_ID)
-                Move (RefClass(cDbUpdateDB2Driver))      to hcDriverClass
-                Move "oDbUpdateDB2Driver" to sObjectName
-                Case Break               
-            Case Else
-                // DATAFLEX_ID = Default driver
-                Move (RefClass(cDbUpdateDataFlexDriver)) to hcDriverClass
-                Move "oDbUpdateDataFlexDriver" to sObjectName
-                Move DATAFLEX_ID to sDriverID
-        Case End
-
-        Get Create hcDriverClass to hoDriver
-        Set Name of hoDriver to sObjectName
-        Set psDriverID of hoDriver to sDriverID
-        Set phoDriverSpecificObject to hoDriver
-
-        Function_Return hoDriver
-    End_Function
-
-    Procedure DestroyDriver
-        If (phoDriverSpecificObject(Self)) Begin
-            Send Destroy of (phoDriverSpecificObject(Self))
-        End
-    End_Procedure
-
-    Function ConstructConnectionString String sServer String sDatabase Boolean bTrusted String sUserID String sPassword Returns String
-        String sConnect
-        Handle hoDriver
-
-        Get phoDriverSpecificObject to hoDriver
-        If (hoDriver = 0) Begin
-            Get CreateDriver to hoDriver
-        End
-        Get ConstructConnectionString of hoDriver sServer sDatabase bTrusted sUserID sPassword to sConnect
-        Send DestroyDriver
-        Function_Return sConnect
-    End_Function
-
-    Function DbLogin String sConnectionString String sServer String sDatabase Boolean bTrusted String sUserID String sPassword Returns Boolean
-        Boolean bLoginSuccessful
-        Handle hoDriver
-
-        Get phoDriverSpecificObject to hoDriver
-        If (hoDriver = 0) Begin
-            Get CreateDriver to hoDriver
-        End
-        Get DbLogin of hoDriver sConnectionString sServer sDatabase bTrusted sUserID sPassword to bLoginSuccessful
-        Send DestroyDriver
-        Function_Return bLoginSuccessful
-    End_Function
-
-End_Class
+    Get Create hcDriverClass to hoDriver
+    Set Name of hoDriver to sObjectName
+    Set psDriverID of hoDriver to sDriverID
+    
+    Function_Return hoDriver    
+End_Function

@@ -547,7 +547,7 @@ Object oMain is a Panel
                 Set pbControlBeginGroup to True
 
                 Procedure OnExecute Variant vCommandBarControl
-                    Runprogram Shell Background "https://github.com/NilsSve/Library-DUF/issues"
+                    Runprogram Shell Background "https://github.com/NilsSve/Library-DUF/issues/1"
                 End_Procedure
 
             End_Object

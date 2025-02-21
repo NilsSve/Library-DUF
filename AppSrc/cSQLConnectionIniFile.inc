@@ -1,6 +1,6 @@
 ﻿//****************************************************************************
 // $Module type: Include file
-// $Module name: cSQLConnectionIniFile.inc
+// $Module name: cSQLConnectionIniFile.h.pkg
 //
 // $Author     : Nils Svedmyr, RDC Tools International.
 // Copyright (c) 2012 RDC Tools International
@@ -31,7 +31,7 @@ Use odbc_drv.pkg
 Use DFBtrDrv.pkg
 Use vWin32fh.pkg
 
-Use DUFLanguageConstants.inc
+Use DUFLanguageConstants.h.pkg
 
 #IFNDEF DATAFLEX_ID
     Define DATAFLEX_ID for "DATAFLEX"
@@ -123,6 +123,16 @@ Define CS_SQLIniDisabledKeyword         for "Disabled"      // For compatability
 
 Define CS_SQLIniConnectionPWD           for "PWD"
 
+Define CS_SQLEncryptOptional  for "Optional"
+Define CS_SQLEncryptMandatory for "Mandatory"
+Define CS_SQLEncryptStrict    for "Strict (SQL Server 2022 and Azure SQL)"
+
+Enum_List
+    Integer eOptional
+    Integer eMandatory
+    Integer eStrict    
+End_Enum_List
+
 Struct tSQLConnection
     Boolean bEnabled                // 1. There can only be one active/enabled connection at a time.
     String sConnectionID            // 2. The name of the connection ID.
@@ -131,7 +141,7 @@ Struct tSQLConnection
     String sServer                  // 5. SQL Server/DSN/ODBC source name. (In DF19 this is the "sString" member of the tConnection struct.)
     String sDatabase                // 6. SQL Database
     String sConnectionString        // 7. Full connection string as is needed by e.g. the login command.
-    Boolean bTrusted                // 8. Trusted connection (then is UID & PWD not used)
+    Boolean bTrusted                // 8. Windows Authentication. Trusted connection (then is UID & PWD not used)
     String sUserID                  // 9. User ID
     String sPassword                // 10. Password
     String sSchema                  // 11. DB2 (and perhaps ODBC specific)
@@ -141,6 +151,8 @@ Struct tSQLConnection
     Boolean bSilentLogin            // 15. True=Silent login. (i.e. don't show Database login dialog if database login to fails). Same as driver "Options" parameter.
     Boolean bError                  // 16. Set to true on error.
     Boolean bDAWConnection          // 17. True if a DFConnId.ini file (from DAW) has been used instead of a DUF SQLConnections.ini file.
+    Boolean bTrustedCertificate     // 18. True = "Trust server certificate"
+    Integer eEncryptionOption       // 19. Enumeration; eOptional, eMandatory, eStrict
 End_Struct
 
 Struct tFilelist

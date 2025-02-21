@@ -1,6 +1,7 @@
-Use Windows.pkg
+﻿Use Windows.pkg
 Use DFClient.pkg
 Use cDbScrollingContainer.pkg
+Use cDbUpdateDatabaseDriver.pkg
 Use cDbUpdateFunctionLibrary.pkg
 Use cRDCButtonDPI.pkg
 Use DatabaseSelection.dg
@@ -42,7 +43,7 @@ Object oSQLConnections_vw is a dbView
                         tSQLConnection[] SQLConnectionArray
 
                         Get phoSQLConnectionIniFile of ghoSQLConnectionHandler to hoIniFile
-                        Get SQLIniFileReadConnections of hoIniFile to SQLConnectionArray
+                        Get ReadIniFileConnections of hoIniFile to SQLConnectionArray
                         Get Value to sCurrentVal
                         Get Prompt_Object to ho
                         Set psTheData of ho to SQLConnectionArray
@@ -292,7 +293,9 @@ Object oSQLConnections_vw is a dbView
                         String sServer sDatabase sDriverID sUserID sPassword sConnectionID sConnectionString
                         Boolean bTrusted bLoginSuccessful
                         Integer iDriverID
-                        Handle hoDriver
+                        Handle hoDriver ho
+
+                        Move (phoSQLConnectionIniFile(ghoSQLConnectionHandler)) to ho
 
                         Get Value of oDriverID_cf        to SQLConnection.sDriverID
                         Get Value of oConnectionID_fm    to SQLConnection.sConnectionID
@@ -301,8 +304,10 @@ Object oSQLConnections_vw is a dbView
                         Get Checked_State of oTrusted_cb to SQLConnection.bTrusted
                         Get Value of oUserID_fm          to SQLConnection.sUserID
                         Get Value of oPassword_fm        to SQLConnection.sPassword
-
-                        Get ConstructConnectionString of (phoSQLConnectionIniFile(ghoSQLConnectionHandler)) SQLConnection.sDriverID SQLConnection.sServer SQLConnection.sDatabase SQLConnection.bTrusted SQLConnection.sUserID SQLConnection.sPassword to sConnectionString
+                        If (SQLConnection.sDriverID = MSSQLDRV_ID) Begin
+                            Get SQLClientVersionInteger MSSQLDRV_ID of ho to SQLConnection.iClientVersion
+                        End
+                        Get ConstructConnectionString of ho SQLConnection to SQLConnection.sConnectionString
 
                         Get DriverIndex of ghoSQLConnectionHandler SQLConnection.sDriverID to iDriverID
                         If (iDriverID = 0) Begin
@@ -312,14 +317,13 @@ Object oSQLConnections_vw is a dbView
 
                         Set_Attribute DF_DRIVER_SILENT_LOGIN of iDriverID to True
                         Send Ignore_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
-                        Get Create (RefClass(cDbUpdateDatabaseDriver)) to hoDriver
-                        Set psDriverID of hoDriver to SQLConnection.sDriverID
-                        Get DbLogin    of hoDriver sConnectionString SQLConnection.sServer SQLConnection.sDatabase SQLConnection.bTrusted SQLConnection.sUserID SQLConnection.sPassword to bLoginSuccessful
-                        Send Destroy   of hoDriver
+                        Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver        
+                        Get DbLogin  of hoDriver SQLConnection to bLoginSuccessful
+                        Send Destroy of hoDriver
 
                         Send Trap_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
                         If (LastErr <> CLIERR_LOGIN_UNSUCCESSFUL) Begin
-                            Move (Replace(("PWD=" + SQLConnection.sPassword), sConnectionString, "PWD=***")) to sConnectionString
+                            Move (Replace(("PWD=" + SQLConnection.sPassword), SQLConnection.sConnectionString, "PWD=***")) to sConnectionString
                             Set Value of oConnectionString_fm to sConnectionString
                             Send Info_Box "Login Successful!"
                         End

@@ -1828,7 +1828,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         Get pSQLConnection  of ghoSQLConnectionHandler to SQLConnection
 
         Send Ignore_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
-        Get EnumerateDatabases of hoSQLHandler SQLConnection.sServer SQLConnection.sUserID SQLConnection.sPassword to iSize
+        Get EnumerateDatabases of hoSQLHandler SQLConnection.sServer SQLConnection.sUserID SQLConnection.sPassword SQLConnection.bTrustedCertificate SQLConnection.eEncryptOption to iSize
         Decrement iSize
 
         For iCount from 0 to iSize

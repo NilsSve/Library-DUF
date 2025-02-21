@@ -40,44 +40,6 @@ End_Object
 // cDbUpdateHandler main object including cDbUpdateVersion child objects.
 Use oDbUpdateHandler.pkg
 
-//Object oDbUpdateHandler is a cDbUpdateHandler
-//    Set pbAutoCreateDbVersionTable to True
-//    Set piDbVersionFileNumber  to 255
-//    Set piDbVersionFieldNumber to 1
-//    Set pbUseIntFilesBackup to True 
-//    Set piIntFilesFileNumber to 256 
-//    Set pbCheckIntFiles to False
-//    
-//    Set pbExitIfDebuggerActive to False
-//    Set phoDbUpdateHandler of ghoApplication to Self
-//    // Note: Tell the SQL driver to *not* create cache-files (.cch):
-//    Set pbUseDriverCacheFiles to False
-////    Set pbIgnoreDriverUcaseSupport to True
-//
-////    Procedure OnCreate
-////        Send SetupIgnoreUcaseSupport
-////    End_Procedure
-//
-//    Procedure SetupIgnoreUcaseSupport
-//        String sDriver
-//        Integer iDriver
-//        Get psDriverID to sDriver
-//        Get DriverIndex sDriver to iDriver
-//        // Note: If Ignore_Ucase_Support is set to false, the Connectivity Kit will 
-//        //       behave the same as earlier driver versions.
-//        //       This means that "U_" columns will be kept during a restructure.
-//        Set_Attribute DF_DRIVER_IGNORE_UCASE_SUPPORT of iDriver to True
-//    End_Procedure
-//    
-//    Procedure OnPreUpdate
-//    End_Procedure  
-//
-//    Object oDbUpdateVersion1_0 is a cDbUpdateVersion
-//        Set pnVersionNumber to 1.0
-//    End_Object
-//
-//End_Object
-
 Use cRDCTooltipController.pkg
 Object oToolTipController is a cRDCTooltipController
 End_Object
@@ -283,7 +245,7 @@ Object oMain is a Panel
                 Set pbControlBeginGroup to True
 
                 Procedure OnExecute Variant vCommandBarControl
-                    Runprogram Shell Background "https://github.com/NilsSve/Library-DUF/issues"
+                    Runprogram Shell Background "https://github.com/NilsSve/Library-DUF/issues/1"
                 End_Procedure
 
             End_Object

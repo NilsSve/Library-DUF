@@ -15,6 +15,7 @@ Use SchemasSelection.dg
 Use cRDCHeaderGroup.pkg  
 Use DriverSettings.dg
 Use CreateDatabase.dg
+Use dfLine.pkg
 
 Define CS_LoadingServers        for "Enumerating servers..."
 Define CS_LoadingDatabases      for "Enumerating databases..."
@@ -28,7 +29,7 @@ Define CS_DF_File_Owner         for "Owner"
 
 Object oSQLMaintainConnections_dg is a ModalPanel
     Set Label to "Edit SQL Connection"
-    Set Size to 315 324 //309 324
+    Set Size to 377 324
     Set Location to 4 6
     Set piMaxSize to (Hi(Size(Self))) (Low(Size(Self)) + 300)
     Set piMinSize to (Hi(Size(Self))) (Low(Size(Self)))
@@ -46,8 +47,8 @@ Object oSQLMaintainConnections_dg is a ModalPanel
     Property String psUncryptedPw      // Used if  pbDFConnId = True to temporary save the un-encrypted password.
 
     Object oSettings_grp is a cRDCHeaderGroup
-        Set Size to 202 303
-        Set Location to 77 11 //71 11
+        Set Size to 263 303
+        Set Location to 77 11
         Set psImage to "Settings.ico"
         Set psLabel to "SQL Connection Settings"
         Set peAnchors to anTopLeftRight
@@ -389,25 +390,9 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
         End_Object
 
-        Object oConnOptions_fm is a cSQLForm
-            Set Size to 13 61
-            Set Location to 92 219
-            Set Label to "Options"
-            Set piItem to 10
-            Set Password_State to True
-            Set peAnchors to anTopRight
-            Set Label_Col_Offset to 0
-            Set Status_Help to "This text string value is added to the SQL connection string if needed. This is an addition to MS-SQL ODBC client software version 18 and up."
-
-            Procedure DbTypeUpdate Integer iDbType String sDriverID
-                Set Enabled_State to (sDriverID = MSSQLDRV_ID)
-            End_Procedure
-
-        End_Object
-
         Object oUserID_fm is a cSQLForm
             Set Size to 13 114
-            Set Location to 107 82
+            Set Location to 108 82
             Set Label to "User ID"
             Set psToolTip to "Enter the user name to use for authentication when you log on to the database."
             Set piItem to 9
@@ -415,9 +400,9 @@ Object oSQLMaintainConnections_dg is a ModalPanel
         End_Object
 
         Object oPassword_fm is a cSQLForm
-            Set Size to 13 61
-            Set Location to 107 219
-            Set Label to "Pw"
+            Set Size to 13 114
+            Set Location to 123 82
+            Set Label to "Password"
             Set psToolTip to "Enter the password for your user name. The password will automatically be encrypted & decrypted when writing/reading from the ini file. Of Special Note: If the cConnection class is used with DataFlex 19 or later and such an .ini file is edited with this program you will get a question if you would like the program to 'touch' the password or not. If you answer No, the ini-file will keep working with the DataFlex tools. You should probably never try to change the password with this program for a DFConnid.ini file as the two programs uses different encryption/decryption algorithms."
             Set piItem to 10
             Set Password_State to True
@@ -425,18 +410,9 @@ Object oSQLMaintainConnections_dg is a ModalPanel
             Set Label_Col_Offset to 0
         End_Object
 
-        Object oShowInfo_tb is a TextBox
-            Set Auto_Size_State to False
-            Set Size to 10 112
-            Set Location to 122 82
-            Set TextColor to clGreen
-            Set Justification_Mode to JMode_Center
-            Set peAnchors to anTopRight
-        End_Object
-
         Object oViewPassword_btn is a cRDCButton
             Set Size to 13 15
-            Set Location to 107 283
+            Set Location to 123 210
             Set psToolTip to "View/hide password"
             Set psImage to "ViewPassword.ico"
             Set piImageMarginLeft to 2
@@ -456,9 +432,49 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
         End_Object
 
+        Object oSecurity_tb is a TextBox
+            Set Size to 10 65
+            Set Location to 141 11
+            Set Label to "Connection Security"
+        End_Object
+
+        Object oConnectionSecurity_line is a LineControl
+            Set Size to 2 204
+            Set Location to 146 82
+        End_Object
+
+        Object oEncryption_cf is a cSQLComboForm
+            Set Size to 13 203
+            Set Location to 153 82
+            Set Label to "Encryption:"
+            Set piItem to 16
+        
+            Procedure Combo_Fill_List
+                Send Combo_Add_Item CS_SQLIniEncryptOptional
+                Send Combo_Add_Item CS_SQLIniEncryptMandatory
+                Send Combo_Add_Item CS_SQLIniEncryptStrictLong
+            End_Procedure
+
+        End_Object
+
+        Object oTrustedCertifcate_cb is a cSQLCheckBox
+            Set Size to 10 50
+            Set Location to 170 81
+            Set Label to "Trust server certificate"
+            Set piItem to 17
+        End_Object
+
+        Object oLoginInfo_tb is a TextBox
+            Set Auto_Size_State to False
+            Set Size to 13 83
+            Set Location to 168 200
+            Set TextColor to clGreen
+            Set Justification_Mode to JMode_Left
+        End_Object
+
         Object oCheckLogin_btn is a cRDCButton
-            Set Size to 13 78
-            Set Location to 123 210
+            Set Size to 13 67
+            Set Location to 183 219
             Set Label to "Check &Login"
             Set psImage to "ActionLogin.ico"
             Set psToolTip to "You should always use this button when adding a new SQL Connection to ensure that the entered credentials are correct. (Ctrl+L)"
@@ -470,6 +486,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
                 Boolean bLoginSuccessful 
                 Integer iDriverID
                 Handle hoErrorObj
+                tSQLConnection SQLConnection
 
                 Send Cursor_Wait of Cursor_Control // Note: The Cursor_Wait changes the Err flag!
                 Move Error_Object_Id to hoErrorObj
@@ -499,14 +516,14 @@ Object oSQLMaintainConnections_dg is a ModalPanel
                 Set_Attribute DF_DRIVER_SILENT_LOGIN of iDriverID to True
 
                 Move False to Err
-                Send CreateConnParamsFromConnectionString of ghoSQLConnectionHandler sDriverID sConnectionString
+                Get DeComposeConnectionString of ghoSQLConnectionHandler sDriverID sConnectionString to SQLConnection
 
                 Move (Err = False) to bLoginSuccessful
                 If bLoginSuccessful Begin
                     Set TextColor of oLoginInfo_tb to clGreen
                     Set Value of oLoginInfo_tb to CS_LoginSuccessful 
                     Set psDriverID of ghoDbUpdateFunctionLibrary to sDriverID
-                    Set psConnectionString of ghoDbUpdateFunctionLibrary to sConnectionString
+                    Set psConnectionString of ghoDbUpdateFunctionLibrary to SQLConnection.sConnectionString
                 End
                 Else Begin
                     Set TextColor of oLoginInfo_tb to clRed
@@ -529,116 +546,31 @@ Object oSQLMaintainConnections_dg is a ModalPanel
             
         End_Object
 
-        Object oIndexTableSpace_fm is a cSQLForm
-            Set Size to 13 114
-            Set Location to 133 82
-            Set Label to "Index Table Space"
-            Set piItem to 14
-            Set psToolTip to "To set the name of the table space where indexes will be stored. Only applicable for IBM DB2, Oracle and PostgreSQL databases."
-            Set Prompt_Button_Mode to PB_PromptOn
-            Set Prompt_Object to (oTableSpaceSelection_sl(Self))
-            Set peAnchors to anTopLeftRight
-
-            Procedure Prompt
-                String[] sTheData
-                Handle ho
-                tSQLConnection SQLConnection
-
-                Set Label of oShowInfo_tb to CS_LoadingTableSpaces
-                Get ReadCurrentSQLSettings to SQLConnection
-
-                Get _SqlUtilEnumerateTablespaces of ghoDbUpdateFunctionLibrary SQLConnection.sDriverID SQLConnection.iDbType SQLConnection.sConnectionString to sTheData
-
-                Get Prompt_Object to ho
-                Set psTheData     of ho to sTheData
-                Set Label of oShowInfo_tb to ""
-
-                Forward Send Prompt
-            End_Procedure
-
-            Procedure DbTypeUpdate Integer iDbType String sDriverID
-                Set Enabled_State to ((iDbType = EN_dbTypeDB2 or iDbType = EN_dbTypeOracle or iDbType = EN_dbTypePostgre) and sDriverID <> ODBC_DRV_ID)
-            End_Procedure
-
-        End_Object
-
-        Object oLoginInfo_tb is a TextBox
-            Set Auto_Size_State to False
-            Set Size to 9 78
-            Set Location to 140 210
-            Set TextColor to clGreen
+        Object oConnOptions_fm is a cSQLForm
+            Set Size to 13 203
+            Set Location to 203 83
+            Set Label to "Additional Connect String Options"
+            Set piItem to 10
             Set peAnchors to anTopRight
-            Set Justification_Mode to JMode_Left
-        End_Object
-
-        Object oBaseTableSpace_fm is a cSQLForm
-            Set Size to 13 114
-            Set Location to 148 82
-            Set Label to "Table Space"
-            Set piItem to 12
-            Set psToolTip to "Sets the name of the table space where the data will be stored. Applicable for IBM DB2, Oracle and PostgreSQL databases. Table spaces allow you to assign a physical location to logical objects (tables). They can be used to improve performance or to increase the page size, thus increasing the maximum size of a record that can be stored in the table space. You can specify what table space must be used to store table, index or long data. The index and long data table space will only be set when the table tables pace is also set."
-            Set Prompt_Button_Mode to PB_PromptOn
-            Set Prompt_Object to (oTableSpaceSelection_sl(Self))
-            Set peAnchors to anTopLeftRight
-
-            Procedure Prompt
-                String[] sTheData
-                Handle ho
-                tSQLConnection SQLConnection
-
-                Set Label of oShowInfo_tb to CS_LoadingTableSpaces
-                Get ReadCurrentSQLSettings to SQLConnection
-                Get _SqlUtilEnumerateTablespaces of ghoDbUpdateFunctionLibrary SQLConnection.sDriverID SQLConnection.iDbType SQLConnection.sConnectionString to sTheData
-
-                Get Prompt_Object to ho
-                Set psTheData  of ho to sTheData
-                Set Label of oShowInfo_tb to ""
-
-                Forward Send Prompt
-            End_Procedure
+            Set Label_Col_Offset to 0
+            Set Status_Help to "This text string value is added to the SQL connection string if needed. This is an addition to MS-SQL ODBC client software version 18 and up."
+            Set Label_Row_Offset to 1
+            Set Label_Justification_Mode to JMode_Top
 
             Procedure DbTypeUpdate Integer iDbType String sDriverID
-                Set Enabled_State to ((iDbType = EN_dbTypeDB2 or iDbType = EN_dbTypeOracle or iDbType = EN_dbTypePostgre) and sDriverID <> ODBC_DRV_ID)
+                Set Enabled_State to (sDriverID = MSSQLDRV_ID)
             End_Procedure
 
         End_Object
 
-        Object oLongTableSpace_fm is a cSQLForm
-            Set Size to 13 114
-            Set Location to 163 82
-            Set Label to "Long Table Space"
-            Set piItem to 13
-            Set psToolTip to "Only applicable for IBM DB2 databases. If you are unsure on what to enter your best bet is to use the same value as for the 'Table Space' above."
-            Set Prompt_Button_Mode to PB_PromptOn
-            Set Prompt_Object to (oTableSpaceSelection_sl(Self))
-            Set peAnchors to anTopLeftRight
-
-            Procedure Prompt
-                String[] sTheData
-                Handle ho
-                tSQLConnection SQLConnection
-
-                Set Label of oShowInfo_tb to CS_LoadingTableSpaces
-                Get ReadCurrentSQLSettings to SQLConnection
-
-                Get _SqlUtilEnumerateTablespaces of ghoDbUpdateFunctionLibrary SQLConnection.sDriverID SQLConnection.iDbType SQLConnection.sConnectionString to sTheData
-
-                Get Prompt_Object to ho
-                Set psTheData     of ho to sTheData
-                Set Label of oShowInfo_tb to ""
-
-                Forward Send Prompt
-            End_Procedure
-
-            Procedure DbTypeUpdate Integer iDbType String sDriverID
-                Set Enabled_State to (iDbType = EN_dbTypeDB2)
-            End_Procedure
-
+        Object oDatabase_Line is a LineControl
+            Set Size to 2 271
+            Set Location to 220 11
         End_Object
 
         Object oSchema_fm is a cSQLForm
-            Set Size to 13 78
-            Set Location to 163 210
+            Set Size to 13 114
+            Set Location to 226 82
             Set Label to "Schema"
             Set psToolTip to "The name of the schema the table belongs to. A schema is a collection of names or objects. A schema can contain tables, views, and triggers. Schemas provide a logical classification of objects in the database. It can have a slightly different meaning depending on the selected database type. Please consult your database manager to ensure the correct value is selected. Applicable for IBM DB2, Oracle and PostgreSQL databases. For IBM DB2 not specifying a schema will result in the user name being used. Microsoft SQL Server has a completely different approach to security and privileges and uses owners instead."
             Set piItem to 11
@@ -646,9 +578,6 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
             Property String psSchemaToolTip "The name of the schema the table belongs to. A schema is a collection of names or objects. A schema can contain tables, views, and triggers. Schemas provide a logical classification of objects in the database. It can have a slightly different meaning depending on the selected database type. Please consult a database manager to ensure the correct value is selected. Applicable for IBM DB2, Oracle and PostgreSQL databases. For IBM DB2 not specifying a schema will result in the user name being used. Microsoft SQL Server has a completely different approach to security and privileges and uses owners instead."
             Property String psOwnerTooltip  "The owner name to use within the database where the tables must be placed. If you want to specify an owner of the table that will be converted you can do so, not specifying an owner will result in the default owner being used. The suggested owner name to use is 'dbo'"
-
-            Set peAnchors to anTopRight
-            Set Label_Justification_Mode to JMode_Top
             Set Label_Col_Offset to 0
 
             Procedure Prompt
@@ -700,7 +629,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
         Object oDatabase_fm is a cSQLForm
             Set Size to 13 114
-            Set Location to 177 82
+            Set Location to 242 82
             Set Label to "Database"
             Set peAnchors to anTopLeftRight
             Set psToolTip to "Name of the SQL database. Note: If you are setting up your first connection for a workspace and your SQL database doesn't exist yet, leave the default 'Master' as it is always available. The 'SqlDatabaseCreate' function will take care of the rest when creating your new SQL database."
@@ -717,7 +646,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
                 Set Label of oShowInfo_tb to CS_LoadingDatabases
                 Get ReadCurrentSQLSettings to SQLConnection
-
+                Set pSQLConnection of ghoSQLConnectionHandler to SQLConnection
                 Get SqlUtilEnumerateDatabases of ghoDbUpdateFunctionLibrary SQLConnection.sDriverID to sTheData
 
                 Get Prompt_Object to ho
@@ -727,36 +656,36 @@ Object oSQLMaintainConnections_dg is a ModalPanel
                 Forward Send Prompt
             End_Procedure
 
-            Procedure DbTypeUpdate Integer iDbType String sDriverID
-                Boolean bAdd
-                String sValue
-                Handle ho
-                
-                If (sDriverID <> "") Begin
-                    Set Enabled_State to (sDriverID = MSSQLDRV_ID or (sDriverID = ODBC_DRV_ID and iDbType <> EN_DbTypeOracle))
-                    If (Enabled_State(Self) = True) Begin
-                        Move (piCurrentRow(Self) = -1) to bAdd
-                        Get Value to sValue
-                        If (bAdd = True and sValue = "" and iDbType = EN_dbTypeMSSQL) Begin
-                            Set Value to "master"
-                        End
-                        Else Begin
-                            If (Value(Self) = "master") Begin
-                                Set Value to ""
-                            End
-                        End
-                    End
-                    If (Enabled_State(Self) = False) Begin
-//                        Set Value to ""
-                    End
-                End
-            End_Procedure
+//            Procedure DbTypeUpdate Integer iDbType String sDriverID
+//                Boolean bAdd
+//                String sValue
+//                Handle ho
+//                
+//                If (sDriverID <> "") Begin
+//                    Set Enabled_State to (sDriverID = MSSQLDRV_ID or (sDriverID = ODBC_DRV_ID and iDbType <> EN_DbTypeOracle))
+//                    If (Enabled_State(Self) = True) Begin
+//                        Move (piCurrentRow(Self) = -1) to bAdd
+//                        Get Value to sValue
+//                        If (bAdd = True and sValue = "" and iDbType = EN_dbTypeMSSQL) Begin
+//                            Set Value to "master"
+//                        End
+//                        Else Begin
+//                            If (Value(Self) = "master") Begin
+//                                Set Value to ""
+//                            End
+//                        End
+//                    End
+//                    If (Enabled_State(Self) = False) Begin
+////                        Set Value to ""
+//                    End
+//                End
+//            End_Procedure
 
         End_Object
 
         Object oCreateDatabase_btn is a cRDCButton
             Set Size to 13 78
-            Set Location to 178 210
+            Set Location to 243 210
             Set Label to "Create Database..."
             Set psImage to "ActionCreateDatabase.ico"
             Set pbAutoEnable to True
@@ -788,6 +717,116 @@ Object oSQLMaintainConnections_dg is a ModalPanel
         
         End_Object
 
+        Object oShowInfo_tb is a TextBox
+            Set Auto_Size_State to False
+            Set Size to 10 46
+            Set Location to 264 8
+            Set TextColor to clGreen
+            Set Justification_Mode to JMode_Center
+            Set peAnchors to anTopRight
+        End_Object
+
+        Object oIndexTableSpace_fm is a cSQLForm
+            Set Size to 13 35
+            Set Location to 264 65
+            Set Label to "Index Table Space"
+            Set piItem to 14
+            Set psToolTip to "To set the name of the table space where indexes will be stored. Only applicable for IBM DB2, Oracle and PostgreSQL databases."
+            Set Prompt_Button_Mode to PB_PromptOn
+            Set Prompt_Object to (oTableSpaceSelection_sl(Self))
+            Set peAnchors to anTopLeftRight 
+            Set Visible_State to False 
+
+            Procedure Prompt
+                String[] sTheData
+                Handle ho
+                tSQLConnection SQLConnection
+
+                Set Label of oShowInfo_tb to CS_LoadingTableSpaces
+                Get ReadCurrentSQLSettings to SQLConnection
+
+                Get _SqlUtilEnumerateTablespaces of ghoDbUpdateFunctionLibrary SQLConnection.sDriverID SQLConnection.iDbType SQLConnection.sConnectionString to sTheData
+
+                Get Prompt_Object to ho
+                Set psTheData     of ho to sTheData
+                Set Label of oShowInfo_tb to ""
+
+                Forward Send Prompt
+            End_Procedure
+
+            Procedure DbTypeUpdate Integer iDbType String sDriverID
+                Set Enabled_State to ((iDbType = EN_dbTypeDB2 or iDbType = EN_dbTypeOracle or iDbType = EN_dbTypePostgre) and sDriverID <> ODBC_DRV_ID)
+            End_Procedure
+
+        End_Object
+
+        Object oBaseTableSpace_fm is a cSQLForm
+            Set Size to 13 35
+            Set Location to 264 148
+            Set Label to "Table Space"
+            Set piItem to 12
+            Set psToolTip to "Sets the name of the table space where the data will be stored. Applicable for IBM DB2, Oracle and PostgreSQL databases. Table spaces allow you to assign a physical location to logical objects (tables). They can be used to improve performance or to increase the page size, thus increasing the maximum size of a record that can be stored in the table space. You can specify what table space must be used to store table, index or long data. The index and long data table space will only be set when the table tables pace is also set."
+            Set Prompt_Button_Mode to PB_PromptOn
+            Set Prompt_Object to (oTableSpaceSelection_sl(Self))
+            Set peAnchors to anTopLeftRight
+            Set Visible_State to False 
+
+            Procedure Prompt
+                String[] sTheData
+                Handle ho
+                tSQLConnection SQLConnection
+
+                Set Label of oShowInfo_tb to CS_LoadingTableSpaces
+                Get ReadCurrentSQLSettings to SQLConnection
+                Get _SqlUtilEnumerateTablespaces of ghoDbUpdateFunctionLibrary SQLConnection.sDriverID SQLConnection.iDbType SQLConnection.sConnectionString to sTheData
+
+                Get Prompt_Object to ho
+                Set psTheData  of ho to sTheData
+                Set Label of oShowInfo_tb to ""
+
+                Forward Send Prompt
+            End_Procedure
+
+            Procedure DbTypeUpdate Integer iDbType String sDriverID
+                Set Enabled_State to ((iDbType = EN_dbTypeDB2 or iDbType = EN_dbTypeOracle or iDbType = EN_dbTypePostgre) and sDriverID <> ODBC_DRV_ID)
+            End_Procedure
+
+        End_Object
+
+        Object oLongTableSpace_fm is a cSQLForm
+            Set Size to 13 35
+            Set Location to 264 253
+            Set Label to "Long Table Space"
+            Set piItem to 13
+            Set psToolTip to "Only applicable for IBM DB2 databases. If you are unsure on what to enter your best bet is to use the same value as for the 'Table Space' above."
+            Set Prompt_Button_Mode to PB_PromptOn
+            Set Prompt_Object to (oTableSpaceSelection_sl(Self))
+            Set peAnchors to anTopLeftRight
+            Set Visible_State to False 
+
+            Procedure Prompt
+                String[] sTheData
+                Handle ho
+                tSQLConnection SQLConnection
+
+                Set Label of oShowInfo_tb to CS_LoadingTableSpaces
+                Get ReadCurrentSQLSettings to SQLConnection
+
+                Get _SqlUtilEnumerateTablespaces of ghoDbUpdateFunctionLibrary SQLConnection.sDriverID SQLConnection.iDbType SQLConnection.sConnectionString to sTheData
+
+                Get Prompt_Object to ho
+                Set psTheData     of ho to sTheData
+                Set Label of oShowInfo_tb to ""
+
+                Forward Send Prompt
+            End_Procedure
+
+            Procedure DbTypeUpdate Integer iDbType String sDriverID
+                Set Enabled_State to (iDbType = EN_dbTypeDB2)
+            End_Procedure
+
+        End_Object
+
         Procedure DbTypeUpdate Integer iDbType String sDriverID
             String sDbType
             Get SqlUtilDbTypeToString of ghoDbUpdateFunctionLibrary iDbType to sDbType
@@ -799,13 +838,13 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
     Object oOK_Btn is a cRDCButton
         Set Label    to C_$OK
-        Set Location to 287 208 //281 208
+        Set Location to 349 208
         Set peAnchors to anBottomRight
 
         Procedure OnClick
             String sLoginText
             String[] sConnectionData
-            tSQLConnection SQLIniFileConnection
+            tSQLConnection SQLConnection
             Boolean bNew bOK bShouldSave
             Integer iRetval
 
@@ -819,46 +858,46 @@ Object oSQLMaintainConnections_dg is a ModalPanel
             Broadcast Recursive Send WriteConnectionData of (Parent(Self)) (&sConnectionData)
 
             Get pbNew to bNew
-            Get MoveStringArrayToSQLConnection sConnectionData to SQLIniFileConnection
+            Get MoveStringArrayToSQLConnection sConnectionData to SQLConnection
             Case Begin
-                Case (SQLIniFileConnection.sDriverID = DB2_DRV_ID or SQLIniFileConnection.sDriverID = ODBC_DRV_ID)
-                    If (SQLIniFileConnection.sDriverID = DB2_DRV_ID) Begin
-                        Move "" to SQLIniFileConnection.sDatabase
+                Case (SQLConnection.sDriverID = DB2_DRV_ID or SQLConnection.sDriverID = ODBC_DRV_ID)
+                    If (SQLConnection.sDriverID = DB2_DRV_ID) Begin
+                        Move "" to SQLConnection.sDatabase
                     End
-                    If (SQLIniFileConnection.bTrusted = True) Begin
-                        If (SQLIniFileConnection.bEnabled = True) Begin
-                        Move (SQLIniFileConnection.sConnectionID <> "" and SQLIniFileConnection.sServer <> "") to bOK
+                    If (SQLConnection.bTrusted = True) Begin
+                        If (SQLConnection.bEnabled = True) Begin
+                        Move (SQLConnection.sConnectionID <> "" and SQLConnection.sServer <> "") to bOK
                         End
                         Else Begin
-                            Move (SQLIniFileConnection.sServer <> "") to bOK
+                            Move (SQLConnection.sServer <> "") to bOK
                         End
                     End
                     Else Begin
                         // It should probably be allowed to use an UID but no password...
-                        If (SQLIniFileConnection.bEnabled = True) Begin
-                        Move (SQLIniFileConnection.sConnectionID <> "" and SQLIniFileConnection.sServer <> "" and SQLIniFileConnection.sUserID <> "") to bOK
+                        If (SQLConnection.bEnabled = True) Begin
+                            Move (SQLConnection.sConnectionID <> "" and SQLConnection.sServer <> "" and SQLConnection.sUserID <> "") to bOK
                         End
                         Else Begin
-                            Move (SQLIniFileConnection.sServer <> "" and SQLIniFileConnection.sUserID <> "") to bOK
+                            Move (SQLConnection.sServer <> "" and SQLConnection.sUserID <> "") to bOK
                         End
                     End
                     Case Break
-                Case (SQLIniFileConnection.sDriverID = MSSQLDRV_ID)
-                    If (SQLIniFileConnection.bTrusted = True) Begin
-                        If (SQLIniFileConnection.bEnabled = True) Begin
-                        Move (SQLIniFileConnection.sConnectionID <> "" and SQLIniFileConnection.sServer <> "" and SQLIniFileConnection.sDatabase <> "") to bOK
+                Case (SQLConnection.sDriverID = MSSQLDRV_ID)
+                    If (SQLConnection.bTrusted = True) Begin
+                        If (SQLConnection.bEnabled = True) Begin
+                            Move (SQLConnection.sConnectionID <> "" and SQLConnection.sServer <> "" and SQLConnection.sDatabase <> "") to bOK
                         End
                         Else Begin
-                            Move (SQLIniFileConnection.sServer <> "" and SQLIniFileConnection.sDatabase <> "") to bOK
+                            Move (SQLConnection.sServer <> "" and SQLConnection.sDatabase <> "") to bOK
                         End
                     End
                     Else Begin
                         // It should probably be allowed to use an UID but no password...
-                        If (SQLIniFileConnection.bEnabled = True) Begin
-                        Move (SQLIniFileConnection.sConnectionID <> "" and SQLIniFileConnection.sServer <> "" and SQLIniFileConnection.sDatabase <> "" and SQLIniFileConnection.sUserID <> "") to bOK
+                        If (SQLConnection.bEnabled = True) Begin
+                            Move (SQLConnection.sConnectionID <> "" and SQLConnection.sServer <> "" and SQLConnection.sDatabase <> "" and SQLConnection.sUserID <> "") to bOK
                         End
                         Else Begin
-                            Move (SQLIniFileConnection.sServer <> "" and SQLIniFileConnection.sDatabase <> "" and SQLIniFileConnection.sUserID <> "") to bOK
+                            Move (SQLConnection.sServer <> "" and SQLConnection.sDatabase <> "" and SQLConnection.sUserID <> "") to bOK
                         End
                     End
                     Case Break
@@ -881,7 +920,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
                 Procedure_Return
             End
 
-            Set pSQLConnectionData to SQLIniFileConnection
+            Set pSQLConnectionData to SQLConnection
             Set pbChanged to True
             Send Close_Panel
         End_Procedure
@@ -890,7 +929,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
     Object oCancel_Btn is a cRDCButton
         Set Label    to C_$Cancel
-        Set Location to 287 264 //281 264
+        Set Location to 349 264
         Set peAnchors to anBottomRight
 
         Procedure OnClick
@@ -902,7 +941,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
     Object oHelp_Btn is a cRDCButton
         Set Label to C_$Help
-        Set Location to 287 11 //281 11
+        Set Location to 349 11
         Set peAnchors to anBottomLeft
         Set psImage to "ActionHelp.ico"
 
@@ -1059,18 +1098,30 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
     Function ReadCurrentSQLSettings Returns tSQLConnection
         tSQLConnection SQLConnection
-
+        String sValue 
+        Handle hoDriver
+        
         Get Value of oDriverID_cf        to SQLConnection.sDriverID
+        
         Get SelectedDbType of oDbType_cf to SQLConnection.iDbType
-
+        Get Value of oConnectionID_fm    to SQLConnection.sConnectionID
         Get Checked_State of oTrusted_cb to SQLConnection.bTrusted
         Get Value of oDriverID_cf        to SQLConnection.sDriverID
         Get Value of oServer_fm          to SQLConnection.sServer
         Get Value of oUserID_fm          to SQLConnection.sUserID
-        Get Value of oPassword_fm        to SQLConnection.sPassword     
+        Get Value of oPassword_fm        to SQLConnection.sPassword
+
+        If (SQLConnection.sDriverID = MSSQLDRV_ID) Begin
+            Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver
+            Get Value of oEncryption_cf to sValue
+            Get EncryptOptionFromText of hoDriver sValue to SQLConnection.eEncryptOption
+            Get SQLClientVersionInteger of hoDriver SQLConnection.sDriverID to SQLConnection.iClientVersion
+            Send Destroy of hoDriver
+            Get Checked_State of oTrustedCertifcate_cb to SQLConnection.bTrustedCertificate
+        End
+
         Move False to Err
-        Get ConstructConnectionString of (phoSQLConnectionIniFile(ghoSQLConnectionHandler)) ;
-            SQLConnection.sDriverID SQLConnection.sServer "" SQLConnection.bTrusted SQLConnection.sUserID SQLConnection.sPassword to SQLConnection.sConnectionString
+        Get ConstructConnectionString of ghoSQLConnectionHandler SQLConnection to SQLConnection.sConnectionString
         Set pSQLConnection of ghoSQLConnectionHandler to SQLConnection
         Move Err to SQLConnection.bError
         
@@ -1166,29 +1217,32 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
         Move 0                                  to TheRow.sValue[0]
         Move SQLConnection.bEnabled             to TheRow.sValue[1]
-        Move SQLConnection.sConnectionID        to TheRow.sValue[2]
-        Move SQLConnection.sDriverID            to TheRow.sValue[3]
-
-        // We only show three asterisks ("***") instead of the password in the grid.
-        Move (Replace(SQLConnection.sPassword, SQLConnection.sConnectionString, "***")) to sValue
-        Move sValue                             to TheRow.sValue[4]
-
+        Move SQLConnection.sConnectionID        to TheRow.sValue[2] 
         Move SQLConnection.iDbType to iDbType
         Get SqlUtilDbTypeToString of ghoDbUpdateFunctionLibrary iDbType to sValue
-        Move sValue                             to TheRow.sValue[5]
-        Move SQLConnection.sServer              to TheRow.sValue[6]
-        Move SQLConnection.sDatabase            to TheRow.sValue[7]
+        Move sValue                             to TheRow.sValue[3]
+        Move SQLConnection.sDriverID            to TheRow.sValue[4]
+
+        Move SQLConnection.sServer              to TheRow.sValue[5]
+        Move SQLConnection.sDatabase            to TheRow.sValue[6]
+        Move SQLConnection.sConnectionString    to TheRow.sValue[7] // "Untouched" connection string.
+        Move SQLConnection.bTrusted             to TheRow.sValue[8]
+        Move SQLConnection.sUserID              to TheRow.sValue[9]
+        // We only show three asterisks ("***") instead of the password in the grid.
+        Move (Replace(SQLConnection.sPassword, SQLConnection.sConnectionString, "***")) to sValue
+        Move sValue                             to TheRow.sValue[10]
+
 
         // Hidden columns (to make Should_Save function work)
-        Move SQLConnection.sConnectionString    to TheRow.sValue[8] // "Untouched" connection string.
-        Move SQLConnection.bTrusted             to TheRow.sValue[9]
-        Move SQLConnection.sUserID              to TheRow.sValue[10]
-        Move SQLConnection.sPassword            to TheRow.sValue[11]
-        Move SQLConnection.sSchema              to TheRow.sValue[12]
-        Move SQLConnection.sBaseTableSpace      to TheRow.sValue[13]
-        Move SQLConnection.sLongTableSpace      to TheRow.sValue[14]
-        Move SQLConnection.sIndexTableSpace     to TheRow.sValue[15]
-        Move SQLConnection.bSilentLogin         to TheRow.sValue[16]
+        Move SQLConnection.sSchema              to TheRow.sValue[11]
+        Move SQLConnection.sBaseTableSpace      to TheRow.sValue[12]
+        Move SQLConnection.sLongTableSpace      to TheRow.sValue[13]
+        Move SQLConnection.sIndexTableSpace     to TheRow.sValue[14]
+        Move SQLConnection.bSilentLogin         to TheRow.sValue[15]
+        Move SQLConnection.eEncryptOption       to TheRow.sValue[16]
+        Move SQLConnection.bTrustedCertificate  to TheRow.sValue[17] 
+        // The unmasked password:
+        Move SQLConnection.sPassword            to TheRow.sValue[18]
 //        Move SQLConnection.bDisabled            to TheRow.sValue[17]
 //        Move SQLConnection.iDriverIndex         to TheRow.sValue[18]
 
@@ -1227,25 +1281,30 @@ Object oSQLMaintainConnections_dg is a ModalPanel
             End
         End
 
-        Move SQLConnection.sSchema           to sConnectionData[11]
-        Move SQLConnection.sBaseTableSpace   to sConnectionData[12]
-        Move SQLConnection.sLongTableSpace   to sConnectionData[13]
-        Move SQLConnection.sIndexTableSpace  to sConnectionData[14]
-        Move SQLConnection.bSilentLogin      to sConnectionData[15]
+        Move SQLConnection.sSchema             to sConnectionData[11]
+        Move SQLConnection.sBaseTableSpace     to sConnectionData[12]
+        Move SQLConnection.sLongTableSpace     to sConnectionData[13]
+        Move SQLConnection.sIndexTableSpace    to sConnectionData[14]
+        Move SQLConnection.bSilentLogin        to sConnectionData[15]
+        Move SQLConnection.eEncryptOption      to sConnectionData[16] 
+        Move SQLConnection.bTrustedCertificate to sConnectionData[17] 
 
         Function_Return sConnectionData
     End_Function
 
     Function MoveStringArrayToSQLConnection String[] sConnectionData Returns tSQLConnection
-        tSQLConnection SQLConnection
+        tSQLConnection SQLConnection 
+        String sValue
+        Handle hoDriver
 
         Move sConnectionData[1]  to SQLConnection.bEnabled
         Move sConnectionData[2]  to SQLConnection.sConnectionID
         Get SqlUtilDbTypeToInteger of ghoDbUpdateFunctionLibrary sConnectionData[3] to SQLConnection.iDbType
         Move sConnectionData[4]  to SQLConnection.sDriverID
+        
         Move sConnectionData[5]  to SQLConnection.sServer
-        Move sConnectionData[6]  to SQLConnection.sDatabase
-
+        Move sConnectionData[6]  to SQLConnection.sDatabase 
+        //                  [7] = SQLConnection.sConnectionString and not used here.
         Move sConnectionData[8]  to SQLConnection.bTrusted
         Move sConnectionData[9]  to SQLConnection.sUserID
 
@@ -1263,35 +1322,42 @@ Object oSQLMaintainConnections_dg is a ModalPanel
         Move sConnectionData[13] to SQLConnection.sLongTableSpace
         Move sConnectionData[14] to SQLConnection.sIndexTableSpace
         Move sConnectionData[15] to SQLConnection.bSilentLogin
-
+        
+        If (SQLConnection.sDriverID = MSSQLDRV_ID) Begin
+            Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver
+            Get SQLClientVersionInteger of hoDriver SQLConnection.sDriverID to SQLConnection.iClientVersion
+            Move sConnectionData[16] to sValue
+            Get EncryptOptionFromText of hoDriver sValue to SQLConnection.eEncryptOption
+            Send Destroy of hoDriver
+            Move sConnectionData[17] to SQLConnection.bTrustedCertificate
+        End
+        
         // Connection string:
-        Get ConstructConnectionString of ghoSQLConnectionHandler SQLConnection.sDriverID SQLConnection.sServer SQLConnection.sDatabase ;
-                                                                 SQLConnection.bTrusted  SQLConnection.sUserID SQLConnection.sPassword ;
-                                      to SQLConnection.sConnectionString
-
+        Get ConstructConnectionString of ghoSQLConnectionHandler SQLConnection to SQLConnection.sConnectionString
         Function_Return SQLConnection
     End_Function
 
     Procedure Popup
-        tSQLConnection SQLIniFileConnection
+        tSQLConnection SQLConnection
         String[] sConnectionData
-        String sDriverID
-        Integer iDbType
-        Boolean bAdd
+        String sDriverID sOption
+        Integer iDbType iClientVersion
+        Boolean bAdd 
+        Handle hoDriver
 
         Move (piCurrentRow(Self) = -1) to bAdd
-        Get pSQLConnectionData to SQLIniFileConnection             
+        Get pSQLConnectionData to SQLConnection             
         // we need these as the oConnectionType_grp has been moved to be the last object(s) in the dialog.
-        Set Value of oDbType_cf   to SQLIniFileConnection.iDbType
+        Set Value of oDbType_cf   to SQLConnection.iDbType
         Set Value of oDriverID_cf to ""
-        If (SQLIniFileConnection.bEnabled = False and bAdd = True) Begin
-            Move True to SQLIniFileConnection.bEnabled
+        If (SQLConnection.bEnabled = False and bAdd = True) Begin
+            Move True to SQLConnection.bEnabled
         End
-        Get MoveSQLConnectionToStringArray SQLIniFileConnection to sConnectionData
+        Get MoveSQLConnectionToStringArray SQLConnection to sConnectionData
 
-        If (SQLIniFileConnection.sDriverID <> "") Begin
-            Set Value of oDriverID_cf to SQLIniFileConnection.sDriverID
-            Set Value of oDbType_cf   to SQLIniFileConnection.iDbType
+        If (SQLConnection.sDriverID <> "") Begin
+            Set Value of oDriverID_cf to SQLConnection.sDriverID
+            Set Value of oDbType_cf   to SQLConnection.iDbType
         End
         Broadcast Recursive Send ReadConnectionData sConnectionData
 
@@ -1302,9 +1368,26 @@ Object oSQLMaintainConnections_dg is a ModalPanel
             If (sDriverID = "") Begin
                 Move MSSQLDRV_ID to sDriverID
             End
-            Broadcast Recursive Send DbTypeUpdate of oSettings_grp iDbType sDriverID
+            Broadcast Recursive Send DbTypeUpdate of oSettings_grp SQLConnection.iDbType SQLConnection.sDriverID
         End
-
+        
+        Set Value of oDatabase_fm to SQLConnection.sDatabase
+        
+        If (SQLConnection.sDriverID = MSSQLDRV_ID) Begin
+            Get CreateDatabaseDriverObject MSSQLDRV_ID to hoDriver
+            Get SQLClientVersionInteger of hoDriver MSSQLDRV_ID to iClientVersion
+            If (iClientVersion >= 18) Begin
+                Get EncryptOptionToText of hoDriver SQLConnection.eEncryptOption to sOption
+                Set Value of oEncryption_cf to sOption
+                Set Checked_State of oTrustedCertifcate_cb to SQLConnection.bTrustedCertificate
+            End
+            Else Begin
+                Set Enabled_State of oEncryption_cf to False
+                Set Enabled_State of oTrustedCertifcate_cb to False
+            End
+        End
+        Send Destroy of hoDriver
+        
         Set Password_State of oPassword_fm to True
         Set Value of oLoginInfo_tb to ""
         Set Statusbar_Id to (phoDialogCommandbar(Self))
@@ -1337,16 +1420,18 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
         Get pbReadOnly to bReadOnly
         If (bReadOnly = True) Begin
-            Broadcast Recursive Set Enabled_State    to (not(bReadOnly))
-            Set Enabled_State of oConnectionType_grp to True
-            Set Enabled_State of oSettings_grp       to True
-            Set Enabled_State of oPassword_fm        to True
-            Set Enabled_State of oViewPassword_btn   to True
-            Set Enabled_State of oCheckLogin_btn     to True
-            Set Enabled_State of oCancel_Btn         to True
-            Set Enabled_State of oHelp_Btn           to True
+            Broadcast Recursive Set Enabled_State        to (not(bReadOnly))
+            Set Enabled_State of oConnectionType_grp     to True
+            Set Enabled_State of oSettings_grp           to True
+            Set Enabled_State of oPassword_fm            to True
+            Set Enabled_State of oViewPassword_btn       to True
+            Set Enabled_State of oCheckLogin_btn         to True
+            Set Enabled_State of oCancel_Btn             to True
+            Set Enabled_State of oHelp_Btn               to True
             Set Enabled_State of oShowDriverSettings_btn to True
-            Set Enabled_State of oCreateDatabase_btn to False
+            Set Enabled_State of oCreateDatabase_btn     to False
+            Set Enabled_State of oEncryption_cf          to False
+            Set Enabled_State of oTrustedCertifcate_cb   to False
             Send Activate of oCancel_Btn
         End
     End_Procedure

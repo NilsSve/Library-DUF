@@ -98,7 +98,7 @@ Define CS_SQLIniConnectionSection       for "SQL Connections" // Obsolete!
 Define CS_SQLIniSectionName             for "Connection"
 Define CS_SQLODBCIniSectionName         for "ODBC"
 
-// DF 19 ini-file settings:
+// DF ini-file settings keywords:
 Define CS_SQLIniConnectionIdKeyword     for "Id"
 Define CS_SQLIniDriverKeyword           for "Driver"
 Define CS_SQLIniConnectionKeyWord       for "Connection"
@@ -112,7 +112,7 @@ Define CS_SQLIniDatabaseKeyword         for "DATABASE"
 Define CS_SQLIniTrustedKeyword          for "Trusted_Connection" 
 Define CS_SQLIniDisabledKeyword         for "Disabled"
 
-// Database Update Framework extended settings:
+// Database Update Framework extended settings keywords:
 Define CS_SQLIniDbTypeKeyword           for "DbType"
 Define CS_SQLIniSchemaKeyword           for "Schema"
 Define CS_SQLIniBaseTableSpaceKeyword   for "Base Table Space"
@@ -120,39 +120,44 @@ Define CS_SQLIniLongTableSpaceKeyword   for "Long Table Space"
 Define CS_SQLIniIndexTableSpaceKeyword  for "Index Table Space"
 Define CS_SQLIniSilentLoginKeyword      for "Silent Login"
 Define CS_SQLIniDisabledKeyword         for "Disabled"      // For compatability with DF19.
+Define CS_SQLIniClientVersion           for "ClientVersion"
+Define CS_SQLIniEncrypt                 for "Encrypt"
+Define CS_SQLIniEncryptOptional         for "Optional"
+Define CS_SQLIniEncryptMandatory        for "Mandatory"
+Define CS_SQLIniEncryptStrictShort      for "Strict"
+Define CS_SQLIniEncryptStrictLong       for "Strict (SQL Server 2022 and Azure SQL)"
+Define CS_SQLIniTrustServerCertificate  for "TrustServerCertificate"
 
-Define CS_SQLIniConnectionPWD           for "PWD"
-
-Define CS_SQLEncryptOptional  for "Optional"
-Define CS_SQLEncryptMandatory for "Mandatory"
-Define CS_SQLEncryptStrict    for "Strict (SQL Server 2022 and Azure SQL)"
-
+// Encryption enumeration.
+{EnumList = "eOptional, eMandatory, eStrict" }
+{ InitialValue = eOptional }
 Enum_List
-    Integer eOptional
-    Integer eMandatory
-    Integer eStrict    
+    Define eOptional
+    Define eMandatory
+    Define eStrict    
 End_Enum_List
 
 Struct tSQLConnection
     Boolean bEnabled                // 1. There can only be one active/enabled connection at a time.
-    String sConnectionID            // 2. The name of the connection ID.
+    String  sConnectionID           // 2. The name of the connection ID.
     Integer iDbType                 // 3. Database type; "MS-SQL Server", "DB2", "Oracle", "MySQL", "PostgreSQL"
-    String sDriverID                // 4. Name of the driver. E.g. MSSQLDRV, DB2_DRV, ODBC_DRV or PSQLDRV_ID.
-    String sServer                  // 5. SQL Server/DSN/ODBC source name. (In DF19 this is the "sString" member of the tConnection struct.)
-    String sDatabase                // 6. SQL Database
-    String sConnectionString        // 7. Full connection string as is needed by e.g. the login command.
+    String  sDriverID               // 4. Name of the driver. E.g. MSSQLDRV, DB2_DRV, ODBC_DRV or PSQLDRV_ID.
+    String  sServer                 // 5. SQL Server/DSN/ODBC source name. (In DF19 this is the "sString" member of the tConnection struct.)
+    String  sDatabase               // 6. SQL Database
+    String  sConnectionString       // 7. Full connection string as is needed by e.g. the login command.
     Boolean bTrusted                // 8. Windows Authentication. Trusted connection (then is UID & PWD not used)
-    String sUserID                  // 9. User ID
-    String sPassword                // 10. Password
-    String sSchema                  // 11. DB2 (and perhaps ODBC specific)
-    String sBaseTableSpace          // 12. DB2 specific
-    String sLongTableSpace          // 13. DB2 specific
-    String sIndexTableSpace         // 14. DB2 specific
+    String  sUserID                 // 9. User ID
+    String  sPassword               // 10. Password
+    String  sSchema                 // 11. DB2 (and perhaps ODBC specific)
+    String  sBaseTableSpace         // 12. DB2 specific
+    String  sLongTableSpace         // 13. DB2 specific
+    String  sIndexTableSpace        // 14. DB2 specific
     Boolean bSilentLogin            // 15. True=Silent login. (i.e. don't show Database login dialog if database login to fails). Same as driver "Options" parameter.
     Boolean bError                  // 16. Set to true on error.
     Boolean bDAWConnection          // 17. True if a DFConnId.ini file (from DAW) has been used instead of a DUF SQLConnections.ini file.
-    Boolean bTrustedCertificate     // 18. True = "Trust server certificate"
-    Integer eEncryptionOption       // 19. Enumeration; eOptional, eMandatory, eStrict
+    Integer iClientVersion          // 18. If value is >= 18, the following two params are used.
+    Integer eEncryptOption          // 19. {EnumList = "eOptional, eMandatory, eStrict" }
+    Boolean bTrustedCertificate     // 20. True = "Trust server certificate"
 End_Struct
 
 Struct tFilelist
