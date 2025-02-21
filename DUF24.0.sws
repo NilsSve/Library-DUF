@@ -17,4 +17,4 @@ Project3=DUFTestProgram.src
 Project4=ReadDFDriverDefXML.src
 [ProjectParameters]
 DUFCodeGenerator.src=C:\Projects\DF20\ROW_TEST\ROW_TEST_Cust_2024.sws
-DUFFileListRepair.src=C:\Projects\DF20\ROW_TEST\ROW_TEST_Cust_2024.sws
+DUFFileListRepair.src=&quot;C:\DataFlex 24.0 Examples\OrderEntrySQL\OrderEntrySQL.sws&quot;
