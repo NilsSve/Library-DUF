@@ -149,6 +149,8 @@ Use cDbUpdateVersion.pkg
 Use cDbUpdateUserCount.pkg
 Use cDbUpdateFunctionLibrary.pkg
 
+Register_Function phoDbUpdateHandler Returns Handle
+
 { ClassType=Normal }
 //{ DataBindable=True }
 { OverrideProperty=peNeighborhood Visibility=Private }

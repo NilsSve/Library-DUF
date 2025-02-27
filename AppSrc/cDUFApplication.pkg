@@ -1,0 +1,213 @@
+﻿Use cRDCApplication.pkg
+Use cIniFile.pkg
+Use cDbUpdateFunctionLibrary.pkg
+Use vWin32fh.pkg
+Use cDataBaseFunctions.pkg
+
+Class cDUFApplication is a cApplication
+    
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set peHelpType to htHtmlHelp
+        // Note: The help file settings gets changed by the Help toolbar button(s).
+        Set psHelpFile to "Developer5.chm"
+
+        Property Handle phoDbUpdateHandler 0
+        Property String psFilelistFrom ""
+        Property String private.psFilelistFromOrg ""
+        Property String psOrgOpenPath ""
+    
+    End_Procedure
+
+    Procedure End_Construct_Object
+        Forward Send End_Construct_Object
+
+    End_Procedure
+
+    Procedure OnCreate
+        Integer eOpened iRetval
+        Handle hoCmdLine hoIniFile
+        String sArgument sPath sWsFile sFileList
+        Boolean bExists
+
+        Get phoCommandLine to hoCmdLine
+        Get Argument of hoCmdLine 1 to sArgument
+        // 1. Open the .sws file and look for the config.ws file
+        // 2. Open the config.ws file and read the filelist.cfg param.
+        If (Lowercase(sArgument) contains ".sws") Begin
+            Get Create (RefClass(cIniFile)) to hoIniFile
+            Set psFileName of hoIniFile to sArgument
+            Get ParseFolderName sArgument to sPath  
+            Get RemoveTrailingBackslash sPath to sPath
+            Get ReadString of hoIniFile "WorkspacePaths" "ConfigFile" "" to sWsFile 
+            Move (Replace(".", sWsFile, "")) to sWsFile
+            Move (sPath + sWsFile) to sWsFile
+            Set psFileName of hoIniFile to sWsFile
+            Get ReadString of hoIniFile "Workspace" "Filelist" "" to sFileList
+            Move (Replace(".", sFileList, "")) to sFileList
+            Move (sPath + sFileList) to sFileList
+            Set psFilelistFrom to sFileList 
+            Send Destroy of hoIniFile
+        End
+    End_Procedure
+    
+    Function psWorkspaceHomePath Returns String
+        String sPath 
+        Get psHome of (phoWorkspace(Self)) to sPath
+        Function_Return sPath
+    End_Function
+
+    // Set psOrgOpenPath at startup
+    Procedure Save_DF_OPEN_PATH
+        String sOrgOpenPath sDataPath sFileListPath
+        
+        Get psFileList of (phoWorkspace(Self)) to sFileListPath
+        Set private.psFilelistFromOrg to sFileListPath
+        Get_Attribute DF_OPEN_PATH to sOrgOpenPath
+        // First remove the current Data folder path
+        Get PathAtIndex of (phoWorkspace(Self)) sOrgOpenPath 1 to sDataPath
+        Move (Replace(sDataPath, sOrgOpenPath, "")) to sOrgOpenPath
+        If (Left(sOrgOpenPath, 2) = "\;") Begin
+            Move (Replace("\;", sOrgOpenPath, "")) to sOrgOpenPath
+        End
+        Set psOrgOpenPath to sOrgOpenPath
+    End_Procedure
+
+    Procedure OnWorkspaceOpened 
+        Forward Send OnWorkspaceOpened
+        Send Save_DF_OPEN_PATH
+    End_Procedure
+
+    Procedure Restore_DF_OPEN_PATH
+        String sOrgOpenpath
+        Get psOrgOpenPath to sOrgOpenpath
+        Set_Attribute DF_OPEN_PATH to sOrgOpenPath
+    End_Procedure
+
+    Procedure ResetFilelistPathing
+        String sDriverID sServer sFileList sDataPath
+        Send Restore_DF_OPEN_PATH
+        Close DF_ALL DF_PERMANENT
+        Get psDriverID of ghoDbUpdateFunctionLibrary to sDriverID
+        Get psServer   of ghoDbUpdateFunctionLibrary to sServer  
+        If (sDriverID <> "") Begin
+            Logout sDriverID sServer
+        End
+        Set psDriverID of ghoDbUpdateFunctionLibrary to DATAFLEX_ID
+        Set psServer   of ghoDbUpdateFunctionLibrary to ""
+        Get private.psFilelistFromOrg to sFileList
+        Get ParseFolderName sFileList                      to sDataPath
+        If (Right(sDataPath, 1) = "\") Begin
+            Move (Left(sDataPath, (Length(sDataPath) -1))) to sDataPath
+        End
+        Set psDataPath of (phoWorkspace(Self))  to sDataPath
+        Set psFileList of (phoWorkspace(Self))  to sFileList
+        Set_Attribute DF_FILELIST_NAME          to sFileList
+    End_Procedure
+
+    Function ChangeFilelistPathing String sFileList Returns Boolean
+        String sPath sSQLConnectionsIniName sDataPath sHome sDriverID sServer sOrgOpenPath
+        Boolean bExists bEmbedded bIsSQLDriver bErr bOK bDFConnId
+        tSQLConnection SQLConnection
+        Integer iRetval iDriverID iErrorObject iCurrErrorObject
+        
+        Move False to bDFConnId
+        Move Err to bErr 
+        Move False to Err
+        Move (Trim(sFileList)) to sFileList
+        Get vFilePathExists sFileList to bExists
+        If (bExists = False) Begin
+            Send Info_Box "Can't find Filelist.cfg"
+            Function_Return False
+        End     
+        
+        Send Cursor_wait of Cursor_Control
+        Get psDriverID of ghoDbUpdateFunctionLibrary to sDriverID
+        Get psServer   of ghoDbUpdateFunctionLibrary to sServer
+        Send Restore_DF_OPEN_PATH
+        Close DF_ALL DF_PERMANENT
+        Logout sDriverID sServer
+
+        Get ParseFolderName sFileList                      to sDataPath
+        If (Right(sDataPath, 1) = "\") Begin
+            Move (Left(sDataPath, (Length(sDataPath) -1))) to sDataPath
+        End
+        Get ParseFolderName sDataPath                      to sHome
+        Set psDataPath of (phoWorkspace(Self))  to sDataPath
+        Set psFileList of (phoWorkspace(Self))  to sFileList
+
+        // Temporarily "redirect" the Open path to the current Data folder
+        Get psOrgOpenPath to sOrgOpenPath
+        Set_Attribute DF_OPEN_PATH to (sDataPath + ";" + sOrgOpenPath)
+        Set_Attribute DF_FILELIST_NAME to sFileList
+        Get UtilIsAnyFilelistEntrySQLtable of ghoDbUpdateFunctionLibrary to sDriverID
+        Get IsSQLDriver of ghoDbUpdateFunctionLibrary sDriverID to bIsSQLDriver
+        Send Cursor_Ready of Cursor_Control
+        
+        // If none of the tables in the Filelist.cfg are SQL, we're done. Let's get out of here!
+        If (bIsSQLDriver = False) Begin
+            Function_Return True
+        End
+
+        // Note: We delete all cache files (*.cch) before attempting to open any
+        // tables as a precausion, in case a table has been changed at the SQL back-end,
+        // and then the .cch file will be out-of-sync with the SQL table.
+        Get vDeleteFile (sDataPath + "*.cch") to iRetval
+
+        If (ghoDbUpdateFunctionLibrary <> 0) Begin
+            // As we might be needed to show a login dialog, we need to temporarily
+            // point the error handler to DF's build-in one, as the DUF counter part
+            // writes errors silently to the log file.
+            Move Error_Object_Id to iCurrErrorObject
+            Get piOrgErrorHandlerID to iErrorObject
+            If (iErrorObject <> 0) Begin
+                Move iErrorObject to Error_Object_Id
+            End
+        End
+
+        Send Cursor_Ready of Cursor_Control
+        // Try to make a database connection by reading DUF's SQLConnections.ini file
+        Move CS_SQLIniFileName to sSQLConnectionsIniName
+        Get vFilePathExists (sHome + "Programs\" + sSQLConnectionsIniName) to bExists
+        If (bExists = True) Begin
+            Set pbDFConnId    of ghoSQLConnectionHandler to False
+            Set psIniFilePath of ghoSQLConnectionHandler to sPath
+            Set psIniFileName of ghoSQLConnectionHandler to sSQLConnectionsIniName
+            Get SetupSQLConnection of ghoSQLConnectionHandler False True to SQLConnection
+            Set pSQLConnection     of ghoSQLConnectionHandler to SQLConnection
+        End
+
+        // Else use DAW's 'DFConnId.ini' file
+        Else Begin
+            Move CS_SQLDFConnIdFileName to sSQLConnectionsIniName  
+            Get vFolderFormat sDataPath to sDataPath
+            Get vFilePathExists (sDataPath + sSQLConnectionsIniName) to bDFConnId
+            If (bDFConnId = True) Begin
+                Set pbDFConnId of ghoSQLConnectionHandler to True
+                Send UnRegisterAllConnections of ghoConnection
+                Get AddAllConnections of ghoConnection to bExists     
+                Set psIniFileName of ghoSQLConnectionHandler to sSQLConnectionsIniName
+                Set psIniFilePath of ghoSQLConnectionHandler to sDataPath
+                Get SetupSQLConnection of ghoSQLConnectionHandler True True to SQLConnection
+            End
+        End
+
+        If (ghoDbUpdateFunctionLibrary <> 0) Begin
+            Move iCurrErrorObject to Error_Object_Id
+        End
+        
+        // If *no* SQL connection ini-file was found, there is a serious problem:
+        If (bExists = False and bDFConnId = False) Begin
+            Get UtilIsAllFilelistEntriesDataFlexTables of ghoDbUpdateFunctionLibrary to bEmbedded
+            If (bEmbedded = False) Begin     
+                 Send Info_Box ("Couldn't find a 'DFConnId.ini' file in the Data folder, or a DUF 'SQLConnections.ini' file in the Programs folder. Cannot load workspace SQL connection data!")
+                 Function_Return False
+            End
+        End 
+        
+        Move (not(Err)) to bOK
+        Move bErr to Err
+        Function_Return bOK
+    End_Function
+
+End_Class

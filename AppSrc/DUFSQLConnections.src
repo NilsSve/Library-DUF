@@ -5,7 +5,6 @@ Use DFAllEnt.pkg
 Use cCJStandardCommandBarSystem.pkg
 Use cCJCommandBarSystem.pkg                      
 //Use cCJSkinFramework.pkg   
-Use cMyApplication.pkg
 Use cSQLConnectionIniFile.pkg
 Use vWin32fh.pkg
 
@@ -13,7 +12,8 @@ Object oHtmlHelp is a cHtmlHelp
     Set pbAlwaysOnTop to False
 End_Object
 
-Object oApplication is a cMyApplication
+Use cDUFApplication.pkg
+Object oApplication is a cDUFApplication
     Set psCompany to "RDC Tools International"
     Set psProduct to "DUF - SQL Connections Manager"
     Set psAutoOpenWorkspace to ""
@@ -494,11 +494,10 @@ Procedure CheckIfConnectionExists
 End_Procedure
 Send CheckIfConnectionExists
 
-//  - If you get a compile error: "Can't include the resource COMPILEHEADER.H",
-//    you will need to compile the "WriteDateTimeHeaderFile" program first. ***
-//
 //  - If you get a compile error: "Can't include resource ..\HELP\ABOUT.RTF",
 //    you need to create a "About.rtf" file in the Help folder.
 //    Note that it can be empty, but it needs to exist for the About dialog.
 //    Or you can remark line 1302 in DfAbout.pkg = "Define ShouldEmbeddAboutHelpFile for 0"
+//  - If you get a compile error: "Can't include resource FilelistBackupFile.cfg",
+//    you need to copy the Filelist.cfg in the Data folder to "FilelistBackupFile.cfg".
 Start_UI

@@ -295,6 +295,9 @@ Object oSQLConnections_vw is a dbView
                         Integer iDriverID
                         Handle hoDriver ho
 
+                        Set_Attribute DF_DRIVER_SILENT_LOGIN of iDriverID to True
+                        Send Ignore_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
+                        Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver        
                         Move (phoSQLConnectionIniFile(ghoSQLConnectionHandler)) to ho
 
                         Get Value of oDriverID_cf        to SQLConnection.sDriverID
@@ -305,19 +308,17 @@ Object oSQLConnections_vw is a dbView
                         Get Value of oUserID_fm          to SQLConnection.sUserID
                         Get Value of oPassword_fm        to SQLConnection.sPassword
                         If (SQLConnection.sDriverID = MSSQLDRV_ID) Begin
-                            Get SQLClientVersionInteger MSSQLDRV_ID of ho to SQLConnection.iClientVersion
+                            Get SQLClientVersionInteger of hoDriver MSSQLDRV_ID to SQLConnection.iClientVersion
                         End
-                        Get ConstructConnectionString of ho SQLConnection to SQLConnection.sConnectionString
+                        Get ConstructConnectionString of ghoSQLConnectionHandler SQLConnection to SQLConnection.sConnectionString
 
                         Get DriverIndex of ghoSQLConnectionHandler SQLConnection.sDriverID to iDriverID
                         If (iDriverID = 0) Begin
+                            Send Destroy of hoDriver
                             Send Info_Box ("The driver" * SQLConnection.sDriverID * "could not be loaded. Is the driver installed? And equally imporant; Is the corresponding database server or client software installed?")
                             Procedure_Return
                         End
 
-                        Set_Attribute DF_DRIVER_SILENT_LOGIN of iDriverID to True
-                        Send Ignore_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
-                        Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver        
                         Get DbLogin  of hoDriver SQLConnection to bLoginSuccessful
                         Send Destroy of hoDriver
 

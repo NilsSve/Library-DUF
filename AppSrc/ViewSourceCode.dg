@@ -1,17 +1,16 @@
 ﻿Use Windows.pkg
-Use cRDCButtonDPI.pkg
 Use cRichEdit.pkg 
-Use cMyApplication.pkg
-Use seq_chnl.pkg
+Use seq_chnl.pkg                 
+Use cRDCModalPanel.pkg
+Use cRDCButtonDPI.pkg
 Use vWin32fh.pkg
 
-Object oSourceCodeDialog_dg is a ModalPanel
+Object oSourceCodeDialog_dg is a cRDCModalPanel
     Set Size to 214 395
     Set Label to "View Source Code Dialog"
     Set piMinSize to 89 211
     Set Location to 2 2
-    Set Border_Style To Border_Thick
-    Set Locate_Mode to Center_On_Parent
+    Set Icon to "ViewSourceCode.ico"
 
     Property String psSourceCode ""
     Property Integer piIndent
@@ -77,8 +76,7 @@ Object oSourceCodeDialog_dg is a ModalPanel
 
     End_Object
 
-
-    Object oFirstRun_btn is a cRDCButtonDPI
+    Object oTop_btn is a cRDCButtonDPI
         Set Location to 193 220
         Set Label to "View &Top"
         Set peAnchors to anBottomRight
@@ -89,7 +87,7 @@ Object oSourceCodeDialog_dg is a ModalPanel
 
     End_Object
 
-    Object oLatestRun_btn is a cRDCButtonDPI
+    Object oBottom_btn is a cRDCButtonDPI
         Set Location to 193 277
         Set Label to "View &Bottom"
         Set peAnchors to anBottomRight
@@ -110,7 +108,6 @@ Object oSourceCodeDialog_dg is a ModalPanel
 
     Procedure Page Integer iPageObject
         Forward Send Page iPageObject
-        Set Icon to "ViewSourceCode.ico"
     End_Procedure
 
     // Put a status bar at the bottom of the panel to add a gripper in the lower right corner.
@@ -136,10 +133,10 @@ Object oSourceCodeDialog_dg is a ModalPanel
         End
     End_Procedure
 
-    On_Key Key_Alt+Key_T  Send KeyAction of oFirstRun_btn
-    On_Key Key_Ctrl+Key_T Send KeyAction of oFirstRun_btn
-    On_Key Key_Alt+Key_B  Send KeyAction of oLatestRun_btn
-    On_Key Key_Ctrl+Key_B Send KeyAction of oLatestRun_btn
+    On_Key Key_Alt+Key_T  Send KeyAction of oTop_btn
+    On_Key Key_Ctrl+Key_T Send KeyAction of oTop_btn
+    On_Key Key_Alt+Key_B  Send KeyAction of oBottom_btn
+    On_Key Key_Ctrl+Key_B Send KeyAction of oBottom_btn
     On_Key Key_Alt+Key_C  Send KeyAction of oCancel_Btn
 End_Object
 

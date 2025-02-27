@@ -1,17 +1,16 @@
 ﻿Use Windows.pkg
+Use cRDCModalPanel.pkg
 Use cRDCButtonDPI.pkg
 Use cRichEdit.pkg
-Use cMyApplication.pkg
 Use seq_chnl.pkg
 Use vWin32fh.pkg
 
-Object oLogFileDialog_dg is a ModalPanel
+Object oLogFileDialog_dg is a cRDCModalPanel
     Set Size to 230 435
     Set Label to "Log File Dialog"
     Set piMinSize to 89 211
     Set Location to 2 2
-    Set Border_Style To Border_Thick
-    Set Locate_Mode to Center_On_Parent
+    Set Icon to "ViewReport.ico"
     
     Property String psLogFileName ""  
     Property Integer piIndent 
@@ -77,7 +76,7 @@ Object oLogFileDialog_dg is a ModalPanel
 
     End_Object
 
-    Object oFirstRun_btn is a cRDCButtonDPI
+    Object oTop_btn is a cRDCButtonDPI
         Set Location to 209 260
         Set Label to "Top"
         Set peAnchors to anBottomRight
@@ -89,7 +88,7 @@ Object oLogFileDialog_dg is a ModalPanel
     End_Object
 
     { Description = This is a documentation comment}
-    Object oLatestRun_btn is a cRDCButtonDPI
+    Object oBottom_btn is a cRDCButtonDPI
         Set Location to 209 317
         Set Label to "Bottom"
         Set peAnchors to anBottomRight
@@ -110,11 +109,6 @@ Object oLogFileDialog_dg is a ModalPanel
 //        Send End_of_Data to ho
     End_Procedure
 
-    Procedure Page Integer iPageObject
-        Forward Send Page iPageObject
-        Set Icon to "ViewReportBlack.ico"
-    End_Procedure      
-    
     // Put a status bar at the bottom of the panel to add a gripper in the lower right corner.
     Procedure End_Construct_Object
         Integer iStyle iSize iOffset
@@ -138,10 +132,10 @@ Object oLogFileDialog_dg is a ModalPanel
         End
     End_Procedure
 
-    On_Key Key_Alt+Key_F  Send KeyAction of oFirstRun_btn
-    On_Key Key_Ctrl+Key_F Send KeyAction of oFirstRun_btn
-    On_Key Key_Alt+Key_L  Send KeyAction of oLatestRun_btn
-    On_Key Key_Ctrl+Key_L Send KeyAction of oLatestRun_btn
+    On_Key Key_Alt+Key_F  Send KeyAction of oTop_btn
+    On_Key Key_Ctrl+Key_F Send KeyAction of oTop_btn
+    On_Key Key_Alt+Key_L  Send KeyAction of oBottom_btn
+    On_Key Key_Ctrl+Key_L Send KeyAction of oBottom_btn
     On_Key Key_Alt+Key_C  Send KeyAction of oCancel_Btn
 End_Object
 

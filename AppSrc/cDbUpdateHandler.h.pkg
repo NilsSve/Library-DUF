@@ -9,7 +9,7 @@ Use DUFLanguageConstants.h.pkg
 Define CS_IntFilesTableLogicalName for "IntFilesTable"
 // Do *not* change this name as it is used by the CheckIntFilesIntegrity
 // procedure and the explicit file name is used with the Include_Resource command.
-Define CS_FilelistBackupFile    for "FilelistBackupFile.cfg"
+Define CS_FilelistBackupFile       for "FilelistBackupFile.cfg"
 
 Struct tDUFIntFile
     Integer iID
