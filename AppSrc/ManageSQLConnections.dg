@@ -1374,7 +1374,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
         Set Value of oDatabase_fm to SQLConnection.sDatabase
         
         If (SQLConnection.sDriverID = MSSQLDRV_ID) Begin
-            Get CreateDatabaseDriverObject MSSQLDRV_ID to hoDriver
+            Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver
             Get SQLClientVersionInteger of hoDriver MSSQLDRV_ID to iClientVersion
             If (iClientVersion >= 18) Begin
                 Get EncryptOptionToText of hoDriver SQLConnection.eEncryptOption to sOption
@@ -1385,8 +1385,8 @@ Object oSQLMaintainConnections_dg is a ModalPanel
                 Set Enabled_State of oEncryption_cf to False
                 Set Enabled_State of oTrustedCertifcate_cb to False
             End
+            Send Destroy of hoDriver
         End
-        Send Destroy of hoDriver
         
         Set Password_State of oPassword_fm to True
         Set Value of oLoginInfo_tb to ""

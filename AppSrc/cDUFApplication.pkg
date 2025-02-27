@@ -4,7 +4,7 @@ Use cDbUpdateFunctionLibrary.pkg
 Use vWin32fh.pkg
 Use cDataBaseFunctions.pkg
 
-Class cDUFApplication is a cApplication
+Class cDUFApplication is a cRDCApplication
     
     Procedure Construct_Object
         Forward Send Construct_Object
