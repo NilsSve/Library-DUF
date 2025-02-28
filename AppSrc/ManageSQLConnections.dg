@@ -1488,8 +1488,8 @@ Procedure Activate_SQLMaintainConnections_dg Boolean bNew Integer iCurrentRow tS
     Set piCurrentRow            of ho to iCurrentRow
     Set pbDFConnId              of ho to bDFConnId
     Set pSQLConnectionData      of ho to SQLConnectionData
-    Get psIniFilePath of (phoSQLConnectionIniFile(ghoSQLConnectionHandler)) to sPath
-    Get psIniFileName of (phoSQLConnectionIniFile(ghoSQLConnectionHandler)) to sSQLConnectionsFileName
+    Get psIniFilePath of ghoSQLConnectionHandler to sPath
+    Get psIniFileName of ghoSQLConnectionHandler to sSQLConnectionsFileName
     File_Exist (sPath + sSQLConnectionsFileName) bExists
     If (bExists = True) Begin
         Set Label  of ho to ("Connection Properties" * "[" + String(sPath) + String(sSQLConnectionsFileName) + "]")

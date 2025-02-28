@@ -559,10 +559,11 @@ Class cSQLConnectionHandler is a cObject
     // This is for the new cConnection class used by DF 19 and up (only).
     Function ReadcConnections Returns tSQLConnection
         tConnection Connection
-        tSQLConnection SQLConnection SQLConnectionEmpty
+        tSQLConnection SQLConnection SQLConnectionEmpty SQLConnectionNew
         Integer iRetval iDbType
         Boolean bOK bConnected
-        String sConnectionID
+        String sConnectionID 
+        Handle hoDriver
 
         #IFDEF get_ComparetConnectionById
             tConnection[] Connections
@@ -626,6 +627,14 @@ Class cSQLConnectionHandler is a cObject
             Move (If(Connection.iOptions = 0, False, True))  to SQLConnection.bSilentLogin
             Move Connection.sConnectionString                to SQLConnection.sConnectionString
             Move Connection.sDriver                          to SQLConnection.sDriverID
+            If (SQLConnection.sDriverID = MSSQLDRV_ID) Begin
+                Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver
+                Get SQLClientVersionInteger of hoDriver SQLConnection.sDriverID to SQLConnection.iClientVersion
+                Get DeComposeConnectionString of hoDriver SQLConnection.sDriverID SQLConnection.sConnectionString to SQLConnectionNew
+                Move SQLConnectionNew.eEncryptOption      to SQLConnection.eEncryptOption
+                Move SQLConnectionNew.bTrustedCertificate to SQLConnection.bTrustedCertificate
+                Send Destroy of hoDriver
+            End
             Move Connection.sId                              to SQLConnection.sConnectionID
             Move Connection.sUID                             to SQLConnection.sUserID
             Move Connection.sPWD                             to SQLConnection.sPassword
@@ -868,7 +877,7 @@ Class cSQLConnectionHandler is a cObject
 
     // *** Main Connection Message ***
     Procedure CreateSQLConnection tSQLConnection SQLConnection Boolean bShowError
-        Boolean bExitProgram eEncryptionOption bTrustedCertificate
+        Boolean bExitProgram eEncryptionOption bTrustedCertificate 
         Boolean bTrusted bSilent bLoginSuccessful
         Handle hoDriver
         String sUserID sPassword sConnectionString sError
