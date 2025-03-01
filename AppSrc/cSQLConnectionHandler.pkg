@@ -629,7 +629,7 @@ Class cSQLConnectionHandler is a cObject
             Move Connection.sDriver                          to SQLConnection.sDriverID
             If (SQLConnection.sDriverID = MSSQLDRV_ID) Begin
                 Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver
-                Get SQLClientVersionInteger of hoDriver SQLConnection.sDriverID to SQLConnection.iClientVersion
+                Get SQLClientVersionInteger   of hoDriver SQLConnection.sDriverID to SQLConnection.iClientVersion
                 Get DeComposeConnectionString of hoDriver SQLConnection.sDriverID SQLConnection.sConnectionString to SQLConnectionNew
                 Move SQLConnectionNew.eEncryptOption      to SQLConnection.eEncryptOption
                 Move SQLConnectionNew.bTrustedCertificate to SQLConnection.bTrustedCertificate

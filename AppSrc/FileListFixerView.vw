@@ -528,6 +528,20 @@ Object oFilelistFixerView is a dbView
         
         End_Object
 
+        Object oSelectCollationHelp_btn is a cRDCButton
+            Set Size to 12 120
+            Set Location to 135 515
+            Set Label to "How to select a SQL Collation"
+            Set psToolTip to "Help on selecting the Right SQL Collation"
+            Set peAnchors to anNone
+            Set psImage to "ActionHelp.ico"
+        
+            Procedure OnClick
+                Runprogram Shell Background "https://learn.microsoft.com/en-us/sql/relational-databases/collations/collation-and-unicode-support?view=sql-server-ver16"
+            End_Procedure
+        
+        End_Object  
+
         Object oCollatingSequence_fm is a cRDCForm
             Set Size to 13 387
             Set Location to 152 66
@@ -670,13 +684,6 @@ Object oFilelistFixerView is a dbView
     
         End_Object
 
-        Object oNumberOfSQLTables_fm is a cNumForm
-            Set Label to "Tot SQL Tables:"
-            Set Size to 12 34
-            Set Location to 119 600
-            Set peAnchors to anTopRight
-        End_Object
-        
         Object oConnIDErrors_edt is a cMyRichEdit
             Set Size to 74 77
             Set Location to 23 557
@@ -684,11 +691,18 @@ Object oFilelistFixerView is a dbView
             Set peAnchors to anTopLeftRight
             Set Label_Col_Offset to -5
         End_Object
-        
+
         Object oConnIDErrors_fm is a cNumForm
             Set Size to 12 34
             Set Location to 103 600
             Set Label to "Counter:"
+            Set peAnchors to anTopRight
+        End_Object
+
+        Object oNumberOfSQLTables_fm is a cNumForm
+            Set Label to "Tot SQL Tables:"
+            Set Size to 12 34
+            Set Location to 119 600
             Set peAnchors to anTopRight
         End_Object
     
@@ -1086,20 +1100,6 @@ Object oFilelistFixerView is a dbView
             End_Function
     
         End_Object
-
-        Object oSelectCollationHelp_btn is a cRDCButton
-            Set Size to 12 116
-            Set Location to 45 5
-            Set Label to "Select the Right SQL Collation"
-            Set psToolTip to "Help on selecting the Right SQL Collation"
-            Set peAnchors to anNone
-            Set psImage to "ActionHelp.ico"
-        
-            Procedure OnClick
-                Runprogram Shell Background "https://learn.microsoft.com/en-us/sql/relational-databases/collations/collation-and-unicode-support?view=sql-server-ver16"
-            End_Procedure
-        
-        End_Object  
 
         Object oUColHelp_btn is a cRDCButton
             Set Size to 12 116
