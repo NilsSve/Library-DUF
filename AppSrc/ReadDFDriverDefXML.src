@@ -3,27 +3,26 @@
 // This is an internal program for RDC Tools International and should not be
 // used by other developers.
 //
-#IF (!@ > 190)
-    CompilerLevelWarning All On
-#ENDIF
-Use cApplication.pkg
+//CompilerLevelWarning All On
+Use cRDCApplication.pkg
 Use Dferror.pkg                 // Error handling class and object
 Use seq_chnl.pkg                // Sequential channel management
 Use Statpnl.pkg                 // StatusPanel class
 Use File_dlg.pkg                // SaveAsDialog & OpenDialog class
 Use cli.pkg
+
 Use vWin32fh.pkg
-Use oEditContextMenu.pkg
 Use cDbUpdateFunctionLibrary.pkg
 Use cRDCHeaderGroup.pkg
+Use cRDCButton.pkg
 Use cSQLComboForm.pkg
 Use ChilkatXML-9.5.0-win32.pkg
+Use oEditContextMenu.pkg
 
-Object oApplication is a cApplication
+Object oApplication is a cRDCApplication
     Set psCompany to "RDC Tools International"
     Set psProduct to "Driver Info Import"
     Set psProgram to "Read DF Driver Def XML file"
-    Set psVersion to "2025"
     Property String psCompileDateAndTime
 End_Object
 
@@ -33,7 +32,7 @@ Object oMainPanel is a BasicPanel
     Set piMinSize to 180 394
     Set Border_Style to Border_Thick
     Set Locate_Mode to Center_On_Screen
-    Set Label to "Read DF Driver Def XML file - Internal Usage Only!"
+    Set Label to "Read DF Driver Def XML file *** INTERNAL USAGE ONLY! ***"
     Set Maximize_Icon to False
     Set peNeighborhood to nhPublic
     
@@ -199,11 +198,12 @@ Object oMainPanel is a BasicPanel
             
         End_Object
 
-        Object oOpenInEditor_btn is a Button
-            Set Size to 12 77
-            Set Location to 45 265
+        Object oOpenInEditor_btn is a cRDCButton
+            Set Size to 12 63
+            Set Location to 45 277
             Set Label to "View in Editor"
-            Set peAnchors to anBottomRight
+            Set peAnchors to anBottomRight   
+            Set psImage to "View.ico"
 
             Procedure OnClick
                 String sFileName             
@@ -265,11 +265,12 @@ Object oMainPanel is a BasicPanel
 
         End_Object
 
-        Object oOpenInEditor_btn is a Button
-            Set Size to 12 77
-            Set Location to 45 265
+        Object oOpenInEditor_btn is a cRDCButton
+            Set Size to 12 63
+            Set Location to 45 275
             Set Label to "View in Editor"
             Set peAnchors to anBottomRight
+            Set psImage to "View.ico"
 
             Procedure OnClick
                 String sFileName             
@@ -287,7 +288,7 @@ Object oMainPanel is a BasicPanel
 
     End_Object
 
-    Object oReadButton is a Button
+    Object oRead_btn is a cRDCButton
         Set Size to 14 50
         Set Location to 160 222
         Set Label to "Read"
@@ -309,7 +310,7 @@ Object oMainPanel is a BasicPanel
 
     End_Object
 
-    Object oWriteButton is a Button
+    Object oWrite_btn is a cRDCButton
         Set Size to 14 50
         Set Location to 160 275
         Set Label to "Write"
@@ -338,7 +339,7 @@ Object oMainPanel is a BasicPanel
 
     End_Object
 
-    Object oCloseButton is a Button
+    Object oClose_btn is a cRDCButton
         Set Size to 14 50
         Set Location to 160 328
         Set Label to "Exit"
@@ -598,8 +599,8 @@ Object oMainPanel is a BasicPanel
     End_Procedure
     Send OnStartUp
 
-    On_Key Key_Ctrl+Key_R Send KeyAction of oReadButton
-    On_Key Key_Ctrl+Key_W Send KeyAction of oWriteButton
+    On_Key Key_Ctrl+Key_R Send KeyAction of oRead_btn
+    On_Key Key_Ctrl+Key_W Send KeyAction of oWrite_btn
 End_Object
 
 Start_UI oMainPanel
