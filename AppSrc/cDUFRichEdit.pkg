@@ -1,0 +1,59 @@
+﻿Use cRDCRichEditor.pkg
+Use vWin32fh.pkg
+
+#IFNDEF clActiveRow
+    Define clActiveRow for (RGB(1, 82, 119))       // HTML #015277 
+#ENDIF
+
+Class cDUFRichEdit is a cRDCRichEditor
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Property String psExtension ".int"   
+
+        Set TextColor to clWhite
+        Set TextBackColor to clActiveRow
+        Set Color to clActiveRow
+        
+    End_Procedure     
+    
+    Procedure End_Construct_Object
+        Forward Send End_Construct_Object
+    End_Procedure
+    
+    Procedure ClearData
+        Send Delete_Data
+    End_Procedure
+
+    Procedure Mouse_Click Integer iWindowNumber Integer iPosition
+        Integer iLine iPos
+        String sLine sFileName sPath sExt
+        Boolean bFound
+        
+        Get psExtension to sExt
+        Get LineFromChar -1 to iLine
+        Get Line iLine to sLine
+        If (Trim(sLine) = "") Begin
+            Procedure_Return
+        End
+        Move (Pos(":", sLine)) to iPos 
+        If (iPos <> 0) Begin
+            Move (Mid(sLine, Length(sLine), iPos +1)) to sLine
+            Move (Pos(" ", sLine)) to iPos
+            Move (Left(sLine, iPos -1)) to sLine
+        End
+        If (not(sLine contains ".")) Begin
+            Move (sLine + sExt) to sFileName
+        End  
+        Else Begin
+            Move sLine to sFileName
+        End
+        Get psDataPath of (phoWorkspace(ghoApplication)) to sPath
+        Get vFolderFormat sPath to sPath
+        File_Exist (sPath + sFileName) bFound
+        If (bFound = True) Begin
+            Move ("/select, " + sFileName) to sFileName
+            Send vShellExecute "open" "explorer.exe" sFileName sPath
+        End
+    End_Procedure
+
+End_Class

@@ -1,0 +1,31 @@
+﻿Use Windows.pkg
+
+Class cDUFNumForm is a Form
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set Label_Col_Offset to 2
+        Set Label_Justification_Mode to JMode_Right
+        Set Form_Datatype to Mask_Numeric_Window  
+        Set Numeric_Mask 0 to 4 0
+    End_Procedure
+    
+    Procedure ClearData
+        Set Value item 0 to 0
+    End_Procedure
+    
+    Procedure OnChange
+        String sVal
+        Integer eWeight
+        
+        Get Value to sVal
+        If (sVal <> "" and sVal <> "0") Begin
+            Move fw_Bold to eWeight
+        End
+        Else Begin
+            Move FW_NORMAL to eWeight
+        End
+        Set FontWeight of (Label_Object(Self)) to eWeight
+//        Set FontWeight to eWeight
+    End_Procedure
+
+End_Class
