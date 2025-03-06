@@ -327,7 +327,7 @@ Class cSQLConnectionHandler is a cObject
         tSQLConnection SQLConnection
         Get Private.pSQLConnection to SQLConnection
         Move sValue to SQLConnection.sServer
-        Get ConstructConnectionString to SQLConnection.sConnectionString
+        Get ConstructConnectionString SQLConnection to SQLConnection.sConnectionString
         Set pSQLConnection to SQLConnection
     End_Procedure
 
@@ -341,7 +341,7 @@ Class cSQLConnectionHandler is a cObject
         tSQLConnection SQLConnection
         Get Private.pSQLConnection to SQLConnection
         Move sValue        to SQLConnection.sDatabase
-        Get ConstructConnectionString to SQLConnection.sConnectionString
+        Get ConstructConnectionString SQLConnection to SQLConnection.sConnectionString
         Set pSQLConnection to SQLConnection
     End_Procedure
 
@@ -355,7 +355,7 @@ Class cSQLConnectionHandler is a cObject
         tSQLConnection SQLConnection
         Get Private.pSQLConnection to SQLConnection
         Move sValue        to SQLConnection.sUserID
-        Get ConstructConnectionString to SQLConnection.sConnectionString
+        Get ConstructConnectionString SQLConnection to SQLConnection.sConnectionString
         Set pSQLConnection to SQLConnection
     End_Procedure
 
@@ -370,7 +370,7 @@ Class cSQLConnectionHandler is a cObject
         tSQLConnection SQLConnection
         Get Private.pSQLConnection to SQLConnection
         Move sValue        to SQLConnection.sPassword
-        Get ConstructConnectionString to SQLConnection.sConnectionString
+        Get ConstructConnectionString SQLConnection to SQLConnection.sConnectionString
         Set pSQLConnection to SQLConnection
     End_Procedure
 
@@ -384,7 +384,7 @@ Class cSQLConnectionHandler is a cObject
         tSQLConnection SQLConnection
         Get Private.pSQLConnection to SQLConnection
         Move bValue        to SQLConnection.bTrusted
-        Get ConstructConnectionString to SQLConnection.sConnectionString
+        Get ConstructConnectionString SQLConnection to SQLConnection.sConnectionString
         Set pSQLConnection to SQLConnection
     End_Procedure
 

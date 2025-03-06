@@ -441,11 +441,12 @@ Function CreateDatabaseDriverObject Global String sDriverID Returns Handle
             Move (RefClass(cDbUpdateDB2Driver))      to hcDriverClass
             Move "oDbUpdateDB2Driver" to sObjectName
             Case Break               
-        Case Else
-            // DATAFLEX_ID = Default driver
+        Case (sDriverID = DATAFLEX_ID)
             Move (RefClass(cDbUpdateDataFlexDriver)) to hcDriverClass
             Move "oDbUpdateDataFlexDriver" to sObjectName
             Move DATAFLEX_ID to sDriverID
+        Case Else
+        Function_Return 0
     Case End
 
     Get Create hcDriverClass to hoDriver

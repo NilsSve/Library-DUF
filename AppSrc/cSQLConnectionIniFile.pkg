@@ -488,7 +488,10 @@ Class cSQLConnectionIniFile is a cIniFile
         String sConnectionString
         Handle hoDriver
 
-        Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver        
+        Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver
+        If (hoDriver = 0) Begin
+            Function_Return ""        
+        End
         Get ConstructConnectionString of hoDriver SQLConnection to sConnectionString
         Send Destroy of hoDriver
 
@@ -500,6 +503,9 @@ Class cSQLConnectionIniFile is a cIniFile
         tSQLConnection SQLConnection
         
         Get CreateDatabaseDriverObject sDriverID to hoDriver        
+        If (hoDriver = 0) Begin
+            Function_Return SQLConnection        
+        End
         Get DeComposeConnectionString of hoDriver sDriverID sConnectionString to SQLConnection
         Send Destroy of hoDriver
 
@@ -513,6 +519,9 @@ Class cSQLConnectionIniFile is a cIniFile
         Handle hoDriver
 
         Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver        
+        If (hoDriver = 0) Begin
+            Function_Return ""        
+        End
         Get ConstructShortConnectionString of hoDriver SQLConnection to sConnectionString
         Send Destroy of hoDriver
         

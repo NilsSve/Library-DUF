@@ -1,18 +1,18 @@
 ﻿Use Windows.pkg
 Use Dfclient.pkg
+Use cRDCDbView.pkg
 Use MSSqldrv.pkg 
 Use db2_drv.pkg
 Use odbc_drv.pkg
 Use seq_chnl.pkg
 Use File_dlg.pkg
-Use cRichEdit.pkg
 Use cRDCForm.pkg
 Use cRDCButton.pkg
 Use cDbUpdateFunctionLibrary.pkg
 Use cRDCComboForm.pkg
 Use cRDCCheckbox.pkg
-Use cNumForm.pkg
-Use cMyRichEdit.pkg
+Use cDUFNumForm.pkg
+Use cDUFRichEdit.pkg
 Use vWin32fh.pkg
 Use DriverIntFileSettings.dg
 Use SQLDatabaseBackup.dg
@@ -34,12 +34,10 @@ Struct tBlock
 End_Struct
 
 Activate_View Acivate_oFileListFixerView for oFileListFixerView
-Object oFilelistFixerView is a dbView 
+Object oFilelistFixerView is a cRDCDbView 
     Set Location to 2 1
     Set Size to 464 691
     Set piMinSize to 464 691
-    Set Maximize_Icon to True
-    Set Border_Style to Border_Thick
     Set pbAutoActivate to True
 
     Set phoFilelistFixerView of ghoApplication to Self
@@ -257,7 +255,7 @@ Object oFilelistFixerView is a dbView
         Set Label to "SQL Settings:"
         Set peAnchors to anTopLeftRight
 
-        Object oConnidInfo_edt is a cMyRichEdit
+        Object oConnidInfo_edt is a cDUFRichEdit
             Set Size to 75 448
             Set Location to 23 5
             Set peAnchors to anNone
@@ -419,7 +417,7 @@ Object oFilelistFixerView is a dbView
         End_Object
         
         Object oServer_fm is a cRDCForm
-            Set Label to "SQL Server Name:"
+            Set Label to "SQL Server name:"
             Set Size to 12 171
             Set Location to 119 66
             Set pbAutoEnable to True
@@ -435,7 +433,7 @@ Object oFilelistFixerView is a dbView
         End_Object
 
         Object oDatabase_fm is a cRDCForm
-            Set Label to "Database Name:"
+            Set Label to "Database name:"
             Set Size to 12 154
             Set Location to 119 298
             Set pbAutoEnable to True
@@ -483,7 +481,7 @@ Object oFilelistFixerView is a dbView
             Set Size to 13 387
             Set Location to 135 66
             Set pbAutoEnable to True 
-            Set Label to "Current Collating"
+            Set Label to "Current collating"
             
             Procedure Page Integer iPageObject
                 String sDatabase
@@ -545,7 +543,7 @@ Object oFilelistFixerView is a dbView
         Object oCollatingSequence_fm is a cRDCForm
             Set Size to 13 387
             Set Location to 152 66
-            Set Label to "Select Collating:"
+            Set Label to "Select collating:"
             Set pbAutoEnable to True
             Set Entry_State to True
             Set Prompt_Object to (oSQLCollations(Self))
@@ -670,7 +668,7 @@ Object oFilelistFixerView is a dbView
         Object oMakeBackup_cb is a cRDCCheckBox
             Set Size to 12 55
             Set Location to 154 515
-            Set Label to "Create Database Backup"
+            Set Label to "Create database backup"
             Set psToolTip to "If checked, a database backup with a name that ends with todays date and time, is created in the standard SQL Server Backup folder, before attempting to change the database collation."
             Set Checked_State to True
             
@@ -684,23 +682,23 @@ Object oFilelistFixerView is a dbView
     
         End_Object
 
-        Object oConnIDErrors_edt is a cMyRichEdit
+        Object oConnIDErrors_edt is a cDUFRichEdit
             Set Size to 74 77
             Set Location to 23 557
-            Set Label to "DFCONNID Changes:"
+            Set Label to "DFCONNID changes:"
             Set peAnchors to anTopLeftRight
             Set Label_Col_Offset to -5
         End_Object
 
-        Object oConnIDErrors_fm is a cNumForm
+        Object oConnIDErrors_fm is a cDUFNumForm
             Set Size to 12 34
             Set Location to 103 600
             Set Label to "Counter:"
             Set peAnchors to anTopRight
         End_Object
 
-        Object oNumberOfSQLTables_fm is a cNumForm
-            Set Label to "Tot SQL Tables:"
+        Object oNumberOfSQLTables_fm is a cDUFNumForm
+            Set Label to "Tot SQL tables:"
             Set Size to 12 34
             Set Location to 119 600
             Set peAnchors to anTopRight
@@ -714,15 +712,15 @@ Object oFilelistFixerView is a dbView
         Set Label to "Filelist.cfg:"
         Set peAnchors to anAll
 
-        Object oDatTables_edt is a cMyRichEdit
+        Object oDatTables_edt is a cDUFRichEdit
             Set Size to 79 104
             Set Location to 29 6
-            Set Label to "RootName *.dat"
+            Set Label to "RootName *.Dat"
             Set psExtension to ".dat"
             Set peAnchors to anTopBottom
         End_Object
 
-        Object oDatTables_fm is a cNumForm
+        Object oDatTables_fm is a cDUFNumForm
             Set Size to 12 34
             Set Location to 111 76
             Set Label to "Counter:"
@@ -734,22 +732,22 @@ Object oFilelistFixerView is a dbView
             End_Procedure
         End_Object
 
-        Object oAliasErrors_edt is a cMyRichEdit
+        Object oAliasErrors_edt is a cDUFRichEdit
             Set Size to 79 104
             Set Location to 29 113
-            Set Label to "Alias Table Errors"
+            Set Label to "Alias table errors"
             Set psExtension to ".int"
             Set peAnchors to anTopBottom
         End_Object
 
-        Object oAliasErrors_fm is a cNumForm
+        Object oAliasErrors_fm is a cDUFNumForm
             Set Size to 12 34
             Set Location to 111 183
             Set Label to "Counter:"
             Set peAnchors to anBottomRight
         End_Object
 
-        Object oRootNameIntTables_edt is a cMyRichEdit
+        Object oRootNameIntTables_edt is a cDUFRichEdit
             Set Size to 79 104
             Set Location to 29 220
             Set Label to "RootName *.int"
@@ -757,22 +755,22 @@ Object oFilelistFixerView is a dbView
             Set peAnchors to anTopBottom
         End_Object
 
-        Object oRootNameIntTables_fm is a cNumForm
+        Object oRootNameIntTables_fm is a cDUFNumForm
             Set Size to 12 34
             Set Location to 111 290
             Set Label to "Counter:"
             Set peAnchors to anBottomRight
         End_Object
 
-        Object oOpenErrorTables_edt is a cMyRichEdit
+        Object oOpenErrorTables_edt is a cDUFRichEdit
             Set Size to 79 125
             Set Location to 29 327
-            Set Label to "Open Table Errors"
+            Set Label to "Open eable errors"
             Set peAnchors to anTopBottom
             Set psExtension to ".int"
         End_Object
 
-        Object oOpenErrorTables_fm is a cNumForm
+        Object oOpenErrorTables_fm is a cDUFNumForm
             Set Size to 12 34
             Set Location to 111 418
             Set Label to "Counter:"
@@ -782,38 +780,37 @@ Object oFilelistFixerView is a dbView
         Object oFileList_grp is a Group
             Set Size to 103 209
             Set Location to 25 459
-            Set Label to "FileList.cfg Counters:"
+            Set Label to "FileList.cfg counters:"
             Set peAnchors to anTopBottomRight
 
-            Object oNoOfSystemTables_fm is a cNumForm
+            Object oNoOfSystemTables_fm is a cDUFNumForm
                 Set Size to 12 34
                 Set Location to 10 142
-                Set Label to "System Tables"
+                Set Label to "System tables"
             End_Object
 
-            Object oNumberOfMasterFileListSQLTables_fm is a cNumForm
+            Object oNumberOfMasterFileListSQLTables_fm is a cDUFNumForm
                 Set Size to 12 34
                 Set Location to 32 142
-                Set Label to "Master Tables with SQL prefix:"
+                Set Label to "Master tables and SQL prefix:"
             End_Object
             
-            Object oNoOfAliasSQLTables_fm is a cNumForm
+            Object oNoOfAliasSQLTables_fm is a cDUFNumForm
                 Set Size to 12 34
                 Set Location to 47 142
-                Set Label to "Alias Tables:"
+                Set Label to "Alias tables:"
             End_Object
 
-            Object oNoOfDatTables2_fm is a cNumForm
+            Object oNoOfDatTables2_fm is a cDUFNumForm
                 Set Size to 12 34
                 Set Location to 62 142
-                Set Label to "RootName *.dat Tables:"
+                Set Label to "RootName *.Dat tables:"
             End_Object
             
-            Object oNumberOfFileListTables_fm is a cNumForm
+            Object oNumberOfFileListTables_fm is a cDUFNumForm
                 Set Size to 12 34
                 Set Location to 77 142
-                Set Label to "Total Filelist Tables:"
-                Set Label_FontWeight to fw_Bold
+                Set Label to "Total Filelist tables:"
             End_Object
 
         End_Object
@@ -831,7 +828,7 @@ Object oFilelistFixerView is a dbView
         Object oFixFileListErrors_btn is a cRDCButton
             Set Size to 32 61
             Set Location to 12 8
-            Set Label to "1. Fix 'RootName .dat Errors'"
+            Set Label to "1. Fix 'RootName .Dat errors'"
             Set peAnchors to anTopRight
             Set MultiLineState to True
             Set pbAutoEnable to True
@@ -866,7 +863,7 @@ Object oFilelistFixerView is a dbView
         Object oFixAliasProblems_btn is a cRDCButton
             Set Size to 32 61
             Set Location to 11 74
-            Set Label to "2. Fix 'Alias Table Errors'"
+            Set Label to "2. Fix 'Alias table errors'"
             Set peAnchors to anTopRight
             Set MultiLineState to True
             Set pbAutoEnable to True
@@ -903,7 +900,7 @@ Object oFilelistFixerView is a dbView
         Object oFixFileListSQLMissingTables_btn is a cRDCButton
             Set Size to 32 61
             Set Location to 12 139
-            Set Label to "3. Make Filelist RootNames equal to SQL Database"
+            Set Label to "3. Make Filelist RootNames equal to SQL database"
             Set peAnchors to anTopRight
             Set MultiLineState to True
             Set pbAutoEnable to True
@@ -937,7 +934,7 @@ Object oFilelistFixerView is a dbView
         Object oFixFileListOpenErrors_btn is a cRDCButton
             Set Size to 32 61
             Set Location to 12 206
-            Set Label to "4. Fix Filelist: 'Open Table Errors'"
+            Set Label to "4. Fix Filelist: 'Open table errors'"
             Set peAnchors to anTopRight
             Set MultiLineState to True
             Set pbAutoEnable to True
@@ -980,7 +977,7 @@ Object oFilelistFixerView is a dbView
         Object oFixIntFileError_btn is a cRDCButton
             Set Size to 32 61
             Set Location to 12 272
-            Set Label to "5. Recreate 'Open Table Errors' *.int files"
+            Set Label to "5. Recreate 'Open table errors' *.int files"
             Set peAnchors to anTopRight
             Set MultiLineState to True
             Set psToolTip to "This will try recreate the .int files listed in the 'Open Table Errors' list."
@@ -1068,7 +1065,7 @@ Object oFilelistFixerView is a dbView
         Object oExtract_Relationships_cb is a cRDCCheckBox
             Set Size to 10 50
             Set Location to 16 6
-            Set Label to "Extract Relationships"
+            Set Label to "Extract relationships"
             Set Checked_State to True   
             Set psToolTip to "Check this if you would like to extract relationships from the current .int file, and add that info to the new .int file."
             Set pbCreateInfoItem to False
@@ -1086,7 +1083,7 @@ Object oFilelistFixerView is a dbView
         Object oRemoveUColumns_cb is a cRDCCheckBox
             Set Size to 10 50
             Set Location to 31 6
-            Set Label to "Remove U_ Columns"
+            Set Label to "Remove U_ columns"
             Set Checked_State to True
             Set psToolTip to "Check the box if you would like to Remove Uppercased Columns. It is strongly suggested to do so IF you have applied an General Insensitive collation like 'Latin1_General_CI_AS'. Please read the help about the subject first, by clicking the help button 'Remove Uppercased Columns'"
             Set pbCreateInfoItem to False
@@ -1104,7 +1101,7 @@ Object oFilelistFixerView is a dbView
         Object oUColHelp_btn is a cRDCButton
             Set Size to 12 116
             Set Location to 45 125
-            Set Label to "Remove Uppercased Columns"
+            Set Label to "Remove uppercased columns"
             Set psToolTip to "Help on selecting the Right SQL Collation and removing ppercased columns"
             Set peAnchors to anNone
             Set psImage to "ActionHelp.ico"
@@ -1118,7 +1115,7 @@ Object oFilelistFixerView is a dbView
         Object oRecreateAllIntFiles_btn is a cRDCButton
             Set Size to 32 61
             Set Location to 11 91
-            Set Label to "Recreate All *.int files"
+            Set Label to "Recreate all *.int files"
             Set MultiLineState to True
             Set psToolTip to "This will recreate all .int files."
             Set psImage to "RecreateIntFiles.ico"
@@ -1162,7 +1159,7 @@ Object oFilelistFixerView is a dbView
         Object oRemove_U_Columns_btn is a cRDCButton
             Set Size to 32 61
             Set Location to 11 159
-            Set Label to "Remove Uppercased Columns"
+            Set Label to "Remove uppercased columns"
             Set MultiLineState to True
             Set psToolTip to "This will remove Uppercased (U_) columns from all tables. This will also be done when the 'Recreate All .int files' button is clicked while the 'Remove U_ Columns' checkbox is selected, but with this button Only the columns are being removed."
             Set psImage to "TableColumnDelete.ico"
@@ -1206,7 +1203,7 @@ Object oFilelistFixerView is a dbView
         Object oMoveUnusedDatFiles_btn is a cRDCButton
             Set Size to 32 61
             Set Location to 11 257
-            Set Label to "Move *.dat files to Backup"
+            Set Label to "Move *.Dat files to backup"
             Set MultiLineState to True
             Set psToolTip to "This will move all *.dat related files, that does not exist in the Filelist, to the workspace's '.\Data\Backup' folder."
             Set psImage to "MoveFiles.ico"
@@ -1249,14 +1246,14 @@ Object oFilelistFixerView is a dbView
     Object oLogFile_grp is a Group
         Set Size to 30 673
         Set Location to 425 12
-        Set Label to "Logged Changes:"
+        Set Label to "Logged changes:"
         Set peAnchors to anBottomLeftRight
 
         Object oLogFile_fm is a cRDCForm
             Set Size to 12 387
             Set Location to 14 66
             Set Enabled_State to False
-            Set Label to "Log File:"
+            Set Label to "Log file:"
             Set peAnchors to anNone
     
             Procedure Page Integer iPageObject
