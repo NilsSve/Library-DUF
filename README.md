@@ -10,11 +10,11 @@ The Database Update Framework (DUF) is a code-based solution designed for automa
 
 To implement the framework, you will need to compile and use two programs:
 - **DUFCodeGenerator**
-- **DUFFileListRepair**
+- **DUFSQLRepairUtility**
 
 Additionally, you need to integrate a piece of code into your program to facilitate the automated database update. This can be done by selecting a `cDbUpdateHandler` object from the Studio's Class Palette and dragging it into your main program.
 
-It is recommended to add the `DUFCodeGenerator.exe` and `DUFFileListRepair.exe` programs to the Studio’s Tools menu. You can do this by executing the programs and clicking the “Add To Studio” button.
+It is recommended to add the `DUFCodeGenerator.exe` and `DUFSQLRepairUtility.exe` programs to the Studio’s Tools menu. You can do this by executing the programs and clicking the “Add To Studio” button.
 
 ### Important Information
 
@@ -27,6 +27,6 @@ These sections can be found in the `Developer5.chm` Help file located in the `/H
 
 ![This is how the DUFCodeGenerator.src program looks:](Bitmaps/DUFCodeGenerator.png)
 
-![This is what the DUFFileListRepair.src program looks like:](Bitmaps/DUFFilelistRepairer.png)
+![This is what the DUFSQLRepairUtility.src program looks like:](Bitmaps/DUFFilelistRepairer.png)
 
 The workspace also utilizes other libraries available on Nils Sve's GitHub page. You typically won’t need to worry about this, as it should all be handled automatically when you clone the repository. These libraries are included as submodules in Git.
