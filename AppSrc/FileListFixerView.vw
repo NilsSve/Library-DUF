@@ -36,8 +36,8 @@ End_Struct
 Activate_View Acivate_oFileListFixerView for oFileListFixerView
 Object oFilelistFixerView is a cRDCDbView 
     Set Location to 2 1
-    Set Size to 464 691
-    Set piMinSize to 464 691
+    Set Size to 452 691
+//    Set piMinSize to 464 691
     Set pbAutoActivate to True
 
     Set phoFilelistFixerView of ghoApplication to Self
@@ -50,8 +50,8 @@ Object oFilelistFixerView is a cRDCDbView
     Property Integer piChannel -1  
     
     Object oFilelist_fm is a cRDCForm
-        Set Size to 12 387
-        Set Location to 14 77
+        Set Size to 12 382
+        Set Location to 14 82
         Set Label to "Filelist.cfg:" 
         Set Prompt_Object to Self 
         
@@ -154,8 +154,8 @@ Object oFilelistFixerView is a cRDCDbView
 
     Object oConnIDErrors_btn is a cRDCButton
         Set Size to 30 61
-        Set Location to 3 536
-        Set Label to "Change .int files to use DFConnid"
+        Set Location to 3 549
+        Set Label to "Make all .int files use DFConnid"
         Set psToolTip to "Changes or updates all .int files in the Data folder - except for DAW driver .int files (MSSQL_DRV.int, DB2_DRV.int & ODBC_DRV.int) - to use 'SERVER_NAME DFCONNID=xxx', where xxx is the 'id=' of the DFConnid.ini file displayed to the left."
         Set peAnchors to anNone
         Set MultiLineState to True
@@ -251,7 +251,7 @@ Object oFilelistFixerView is a cRDCDbView
 
     Object oSQL_grp is a Group
         Set Size to 175 673
-        Set Location to 35 12
+        Set Location to 47 12
         Set Label to "SQL Settings:"
         Set peAnchors to anTopLeftRight
 
@@ -527,7 +527,7 @@ Object oFilelistFixerView is a cRDCDbView
         End_Object
 
         Object oSelectCollationHelp_btn is a cRDCButton
-            Set Size to 12 120
+            Set Size to 12 124
             Set Location to 135 515
             Set Label to "How to select a SQL Collation"
             Set psToolTip to "Help on selecting the Right SQL Collation"
@@ -685,7 +685,7 @@ Object oFilelistFixerView is a cRDCDbView
         Object oConnIDErrors_edt is a cDUFRichEdit
             Set Size to 74 77
             Set Location to 23 557
-            Set Label to "DFCONNID changes:"
+            Set Label to "Connection ID changes:"
             Set peAnchors to anTopLeftRight
             Set Label_Col_Offset to -5
         End_Object
@@ -708,7 +708,7 @@ Object oFilelistFixerView is a cRDCDbView
 
     Object oCount_grp is a Group
         Set Size to 137 673
-        Set Location to 219 12
+        Set Location to 231 12
         Set Label to "Filelist.cfg:"
         Set peAnchors to anAll
 
@@ -818,9 +818,9 @@ Object oFilelistFixerView is a cRDCDbView
     End_Object
 
     Object oFixProblemsPreUpdate_grp is a Group
-        Set Size to 60 340
-        Set Location to 361 12
-        Set Label to "Pre-Update Database Actions:"
+        Set Size to 64 340
+        Set Location to 381 12
+        Set Label to "Prepare for DUF Database Update Actions:"
         Set peAnchors to anBottomLeft
 
         // Will remove non Alias Filelist entries that:
@@ -898,7 +898,7 @@ Object oFilelistFixerView is a cRDCDbView
         End_Object
 
         Object oFixFileListSQLMissingTables_btn is a cRDCButton
-            Set Size to 32 61
+            Set Size to 32 63
             Set Location to 12 139
             Set Label to "3. Make Filelist RootNames equal to SQL database"
             Set peAnchors to anTopRight
@@ -977,7 +977,7 @@ Object oFilelistFixerView is a cRDCDbView
         Object oFixIntFileError_btn is a cRDCButton
             Set Size to 32 61
             Set Location to 12 272
-            Set Label to "5. Recreate 'Open table errors' *.int files"
+            Set Label to "5. Recreate *.int files for 'Open table errors'"
             Set peAnchors to anTopRight
             Set MultiLineState to True
             Set psToolTip to "This will try recreate the .int files listed in the 'Open Table Errors' list."
@@ -1019,8 +1019,8 @@ Object oFilelistFixerView is a cRDCDbView
     End_Object
 
     Object oFixExtraProblems_grp is a Group
-        Set Size to 60 323
-        Set Location to 361 362
+        Set Size to 64 323
+        Set Location to 381 362
         Set Label to "More Database Actions:"
         Set peAnchors to anBottomLeftRight
 
@@ -1099,9 +1099,9 @@ Object oFilelistFixerView is a cRDCDbView
         End_Object
 
         Object oUColHelp_btn is a cRDCButton
-            Set Size to 12 116
-            Set Location to 45 125
-            Set Label to "Remove uppercased columns"
+            Set Size to 12 147
+            Set Location to 45 5
+            Set Label to "Why remove uppercased columns?"
             Set psToolTip to "Help on selecting the Right SQL Collation and removing ppercased columns"
             Set peAnchors to anNone
             Set psImage to "ActionHelp.ico"
@@ -1241,62 +1241,6 @@ Object oFilelistFixerView is a cRDCDbView
 
         End_Object
         
-    End_Object
-    
-    Object oLogFile_grp is a Group
-        Set Size to 30 673
-        Set Location to 425 12
-        Set Label to "Logged changes:"
-        Set peAnchors to anBottomLeftRight
-
-        Object oLogFile_fm is a cRDCForm
-            Set Size to 12 387
-            Set Location to 14 66
-            Set Enabled_State to False
-            Set Label to "Log file:"
-            Set peAnchors to anNone
-    
-            Procedure Page Integer iPageObject
-                String sFileName sHomePath
-                Forward Send Page iPageObject
-                Get psHome of (phoWorkspace(ghoApplication)) to sHomePath
-                Move CS_ReportFileName to sFileName
-                Set Value to (sHomePath + sFileName)
-            End_Procedure
-            
-        End_Object
-
-        Object oOpenLogFile_btn is a cRDCButton
-            Set Size to 12 50
-            Set Location to 14 458
-            Set Label to "View"
-            Set peAnchors to anNone
-            Set psImage to "View.ico"
-            Set pbAutoEnable to True
-            Set psToolTip to "View the content of the log file."
-        
-            Procedure OnClick
-                String sFileName
-                Boolean bExists
-                Get Value of oLogFile_fm to sFileName
-                File_Exist sFileName bExists
-                If (bExists = False) Begin
-                    Send Info_Box ("The log file hasn't been created yet:\n" + sFileName)
-                    Procedure_Return
-                End
-                Runprogram Shell Background sFileName
-            End_Procedure
-        
-            Function IsEnabled Returns Boolean
-                Boolean bExists
-                String sFileName
-                Get psConnIdFile to sFileName
-                File_Exist sFileName bExists
-                Function_Return bExists
-            End_Function
-
-        End_Object  
-
     End_Object
 
     Object oLocalError_Info_Object is a cObject
@@ -3295,6 +3239,53 @@ Object oFilelistFixerView is a cRDCDbView
         // This is the crucial bit:
         Set Border_Style of (Client_Id(ghoCommandBars)) to Border_None
     End_Procedure
+
+    Object oLogFile_fm is a cRDCForm
+        Set Size to 12 382
+        Set Location to 29 82
+        Set Enabled_State to False
+        Set Label to "Log file:"
+        Set peAnchors to anNone
+
+        Procedure Page Integer iPageObject
+            String sFileName sHomePath
+            Forward Send Page iPageObject
+            Get psHome of (phoWorkspace(ghoApplication)) to sHomePath
+            Move CS_ReportFileName to sFileName
+            Set Value to (sHomePath + sFileName)
+        End_Procedure
+        
+    End_Object
+    Object oOpenLogFile_btn is a cRDCButton
+        Set Size to 12 50
+        Set Location to 29 470
+        Set Label to "View"
+        Set peAnchors to anNone
+        Set psImage to "View.ico"
+        Set pbAutoEnable to True
+        Set psToolTip to "View the content of the log file."
+    
+        Procedure OnClick
+            String sFileName
+            Boolean bExists
+            Get Value of oLogFile_fm to sFileName
+            File_Exist sFileName bExists
+            If (bExists = False) Begin
+                Send Info_Box ("The log file hasn't been created yet:\n" + sFileName)
+                Procedure_Return
+            End
+            Runprogram Shell Background sFileName
+        End_Procedure
+    
+        Function IsEnabled Returns Boolean
+            Boolean bExists
+            String sFileName
+            Get psConnIdFile to sFileName
+            File_Exist sFileName bExists
+            Function_Return bExists
+        End_Function
+
+    End_Object  
 
     On_Key kClear Send RefreshData
 End_Object    
