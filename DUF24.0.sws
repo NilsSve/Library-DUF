@@ -11,10 +11,7 @@ Lib2=Libraries\RDCToolsLib\RDCToolsLib24.0.sws
 Lib3=Libraries\vwin32fh\StudioLibrary\vWin32fh-Library-DF24.0.sws
 [Projects]
 Project0=DUFCodeGenerator.src
-Project1=DUFFileListRepair.src
+Project1=DUFSQLRepairUtility.src
 Project2=DUFSQLConnections.src
 Project3=DUFTestProgram.src
 Project4=ReadDFDriverDefXML.src
-[ProjectParameters]
-DUFCodeGenerator.src=C:\Projects\DF20\ROW_TEST\ROW_TEST_Cust_2024.sws
-DUFFileListRepair.src=&quot;C:\DataFlex 24.0 Examples\OrderEntrySQL\OrderEntrySQL.sws&quot;

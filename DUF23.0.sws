@@ -11,9 +11,8 @@ Lib4=Libraries\RDCToolsLib\RDCToolsLib23.0.sws
 Lib1=Libraries\vwin32fh\StudioLibrary\vWin32fh-Library-DF23.0.sws
 [Projects]
 Project0=DUFCodeGenerator.src
-Project1=DUFTestProgram.src
+Project1=DUFSQLRepairUtility.src
 Project2=DUFSQLConnections.src
-Project3=ReadDFDriverDefXML.src
-Project4=WriteDateTimeHeaderFile.src
-Project5=DUFFileListRepair.src
+Project3=DUFTestProgram.src
+Project4=ReadDFDriverDefXML.src
 
