@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <classList xmlns="http://www.dataaccess.com/VisualDataFlex/2006/classlist/">
-	<VDFLibraryTimeStamp>2025-01-27T18:58:12</VDFLibraryTimeStamp>
-	<DFLibraryVersion>2</DFLibraryVersion>
+	<VDFLibraryTimeStamp>2024-03-29T09:06:04</VDFLibraryTimeStamp>
+	<DFLibraryVersion>1</DFLibraryVersion>
 	<libraries>
 		<library>
-			<libraryPath>Libraries\DFAbout\DFAbout25.0.sws</libraryPath>
+			<libraryPath>Libraries\DFAbout\DFAbout24.0.sws</libraryPath>
 			<libraryTimeStamp>2025-01-18T12:52:20</libraryTimeStamp>
 			<libraryID>Lib1</libraryID>
 		</library>
 		<library>
-			<libraryPath>Libraries\vwin32fh\StudioLibrary\vWin32fh-Library-DF25.0.sws</libraryPath>
+			<libraryPath>Libraries\vwin32fh\StudioLibrary\vWin32fh-Library-DF24.0.sws</libraryPath>
 			<libraryTimeStamp>2025-01-18T12:52:20</libraryTimeStamp>
 			<libraryID>Lib3</libraryID>
 		</library>
@@ -1141,20 +1141,6 @@
 			<package>cComSWXMap.pkg</package>
 			<groupName>ActiveX</groupName>
 			<libraryID>Lib1</libraryID>
-		</class>
-		<class>
-			<className>cWebWidgetPalette</className>
-			<image>cWebWidgetPalette.ico</image>
-			<package>cWebWidgetPalette.pkg</package>
-			<groupName>Web Controls</groupName>
-			<libraryID>0</libraryID>
-		</class>
-		<class>
-			<className>cWebWidgetContainer</className>
-			<image>cWebWidgetContainer.ico</image>
-			<package>cWebWidgetContainer.pkg</package>
-			<groupName>Web Containers</groupName>
-			<libraryID>0</libraryID>
 		</class>
 	</classes>
 </classList>
