@@ -11,7 +11,10 @@ Lib2=Libraries\RDCToolsLib\RDCToolsLib25.0.sws
 Lib3=Libraries\vwin32fh\StudioLibrary\vWin32fh-Library-DF25.0.sws
 [Projects]
 Project0=DUFCodeGenerator.src
-Project1=DUFSQLRepairUtility.src
-Project2=DUFSQLConnections.src
-Project3=DUFTestProgram.src
-Project4=ReadDFDriverDefXML.src
+Project1=DUFSQLConnections.src
+Project2=DUFTestProgram.src
+Project3=ReadDFDriverDefXML.src
+Project4=WriteDateTimeHeaderFile.src
+Project5=DUFSQLRepairUtility.src
+[ProjectParameters]
+DUFSQLRepairUtility.src=C:\Projects\DF20\ROW_TEST\Data\FILELIST.CFG
