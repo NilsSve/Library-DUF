@@ -659,14 +659,6 @@ Register_Function piCurrentErrorHandlerID Returns Integer
         Delegate Set Private.pbUpdateVersionObjectError to False
 
         Delegate Get pbExitIfDebuggerActive to bExitIfDebuggerActive
-        If (IsDebuggerPresent() and bExitIfDebuggerActive = True) Begin
-            Delegate Get piOrgErrorHandlerID to iErrorObject
-            If (iErrorObject <> 0) Begin
-                Move iErrorObject to Error_Object_Id
-            End
-            Error DFERR_OPERATOR "It is not possible to make structural changes to the database when running through the Debugger/Studio! You need to run this program from outside of the Studio."
-            Send Exit_Application
-        End
         // If the programmer forgot to set the version number we do not allow for the application
         // to continue to run, as this potentially could endanger the integrity of the database. E.g. if
         // one database update is depended on an earlier update and that earlier version
@@ -741,6 +733,15 @@ Register_Function piCurrentErrorHandlerID Returns Integer
         // We also guard from missing 'DatabaseVersionInfoTable' and column properties settings.
         // If not set we do nothing.
         If (nCurrentValue < nVersion) Begin
+
+            If (IsDebuggerPresent() and bExitIfDebuggerActive = True) Begin
+                Delegate Get piOrgErrorHandlerID to iErrorObject
+                If (iErrorObject <> 0) Begin
+                    Move iErrorObject to Error_Object_Id
+                End
+                Error DFERR_OPERATOR "It is not possible to make structural changes to the database when running through the Debugger/Studio! You need to run this program from outside of the Studio."
+                Send Exit_Application
+            End
 
             // If pbStopOnFirstError is True in the parent, the idea is that we do _no_ further
             // execution of database update code. So if true _and_ one error
