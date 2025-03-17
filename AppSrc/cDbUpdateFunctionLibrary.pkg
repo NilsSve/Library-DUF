@@ -5069,7 +5069,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move 0 to LastErr
 
         Structure_Start hTable sDriverID
-            Delete_Index hTable APIIndex.iIndexNumber
+//            Delete_Index hTable APIIndex.iIndexNumber
             Create_Index hTable At APIIndex.iIndexNumber
 
             #IF (!@ > 182)
