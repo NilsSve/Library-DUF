@@ -342,8 +342,8 @@ Object oFilelistFixerView is a cRDCDbView
         End_Object
         
         Object oDriver_fm is a cRDCForm
-            Set Size to 12 387
-            Set Location to 103 66
+            Set Size to 12 378
+            Set Location to 103 76
             Set Label to "Driver .int file:"
             Set pbAutoEnable to True
             Set peAnchors to anNone
@@ -418,8 +418,8 @@ Object oFilelistFixerView is a cRDCDbView
         
         Object oServer_fm is a cRDCForm
             Set Label to "SQL Server name:"
-            Set Size to 12 171
-            Set Location to 119 66
+            Set Size to 12 157
+            Set Location to 119 76
             Set pbAutoEnable to True
 
             Function IsEnabled Returns Boolean
@@ -478,10 +478,10 @@ Object oFilelistFixerView is a cRDCDbView
         End_Object
 
         Object oCurrentCollatingSequence_fm is a cRDCForm
-            Set Size to 13 387
-            Set Location to 135 66
+            Set Size to 13 378
+            Set Location to 135 76
             Set pbAutoEnable to True 
-            Set Label to "Current collating"
+            Set Label to "MS-SQL collating:"
             
             Procedure Page Integer iPageObject
                 String sDatabase
@@ -518,7 +518,7 @@ Object oFilelistFixerView is a cRDCDbView
             Set Location to 135 458
             Set Label to "Help"
             Set psImage to "ActionHelp.ico"
-            Set psToolTip to "Help about using collations for a SQL database."
+            Set psToolTip to "Help about using collations for a MS-SQL database."
         
             Procedure OnClick
                 Runprogram Shell Background "https://learn.microsoft.com/en-us/sql/relational-databases/collations/collation-and-unicode-support?view=sql-server-ver16#SQL-collations"
@@ -529,7 +529,7 @@ Object oFilelistFixerView is a cRDCDbView
         Object oSelectCollationHelp_btn is a cRDCButton
             Set Size to 12 124
             Set Location to 135 515
-            Set Label to "How to select a SQL Collation"
+            Set Label to "How to select a MS-SQL Collation"
             Set psToolTip to "Help on selecting the Right SQL Collation"
             Set peAnchors to anNone
             Set psImage to "ActionHelp.ico"
@@ -541,9 +541,10 @@ Object oFilelistFixerView is a cRDCDbView
         End_Object  
 
         Object oCollatingSequence_fm is a cRDCForm
-            Set Size to 13 387
-            Set Location to 152 66
-            Set Label to "Select collating:"
+            Set Size to 13 378
+            Set Location to 152 76
+            Set Label to "Select new collating:" 
+            Set psToolTip to "This is for MS-SQL only. The T-SQL script used for the background process is currently only adapted for MS-SQL."
             Set pbAutoEnable to True
             Set Entry_State to True
             Set Prompt_Object to (oSQLCollations(Self))
