@@ -5,3 +5,18 @@
 *.dg linguist-language=DataFlex
 *.sl linguist-language=DataFlex
 *.bp linguist-language=DataFlex
+*.wo linguist-language=DataFlex
+*.inc linguist-language=DataFlex
+*.rv linguist-language=DataFlex
+*.dd linguist-language=DataFlex
+*.frm linguist-language=DataFlex
+
+# Exclude compiled or generated files
+*.prn linguist-generated=true
+*.dbg linguist-generated=true
+*.dsk linguist-generated=true
+*.mtd linguist-generated=true
+*.dep linguist-generated=true
+*.fld linguist-generated=true
+*.pdp linguist-generated=true
+*.pkd linguist-generated=true
