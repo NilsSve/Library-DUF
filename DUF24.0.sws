@@ -15,3 +15,5 @@ Project1=DUFSQLRepairUtility.src
 Project2=DUFSQLConnections.src
 Project3=DUFTestProgram.src
 Project4=ReadDFDriverDefXML.src
+[ProjectParameters]
+DUFSQLRepairUtility.src=C:\Projects\DF20\ROW_TEST\Data\FILELIST.CFG
