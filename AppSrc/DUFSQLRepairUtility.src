@@ -34,8 +34,7 @@ Object oApplication is a cDUFApplication
 
         Get phoCommandLine to hoCmdLine
         Get Argument of hoCmdLine 1 to sArgument
-        // 1. Open the .sws file and look for the config.ws file
-        // 2. Open the config.ws file and read the filelist.cfg param.
+        // Open any Filelist.cfg file passed on the command line.
         If (Lowercase(sArgument) contains ".cfg") Begin
             Set psFilelistFrom to sArgument
         End
