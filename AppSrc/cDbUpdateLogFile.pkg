@@ -291,7 +291,6 @@ Class cDbUpdateLogFile is a cObject
         End   
         If (iSize >= 0) Begin
             If (aDbUpdateErrorArray[0].bShortFormat = False) Begin
-//                Writeln channel iCh "[Err No:] [pnVersionNumber:] [Status Text:]"
                 Writeln channel iCh "[Err No:] [Version:] [Status Text:]"
             End
         End
@@ -311,12 +310,10 @@ Class cDbUpdateLogFile is a cObject
             End
             If (aDbUpdateErrorArray[iCount].bError = True) Begin
                 Get PadLeft (String(nVersion)) (19 - Length(sErrorNo)) to sVersion
-//                Get PadLeft (String(nVersion)) (27 - Length(sErrorNo)) to sVersion
                 Move (sErrorNo + sVersion + "   " + sErrorText * "[ErrLine:" * String(iErrorLine) + "]" + "    (Table:" * sRootName * String(hTable) + "." + String(iField) + ")") to sText
             End
             Else Begin
                 Get PadLeft (String(nVersion)) (19 - Length(sErrorNo)) to sVersion
-//                Get PadLeft (String(nVersion)) (27 - Length(sErrorNo)) to sVersion
                 Move (sErrorNo + sVersion + "   " + sErrorText) to sText
             End
             Writeln channel iCh sText
@@ -337,7 +334,6 @@ Class cDbUpdateLogFile is a cObject
 
         Send Seq_Release_Channel iCh
         Set piChannel to -1
-
     End_Procedure
 
     // The character to pad is optional. If nothing, spaces are used.
