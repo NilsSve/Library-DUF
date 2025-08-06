@@ -549,7 +549,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
             Set Size to 13 202
             Set Location to 191 83
             Set Label to "Additional Connect String Options"
-            Set piItem to 7
+            Set piItem to 10
             Set peAnchors to anTopRight
             Set Label_Col_Offset to 0
             Set Label_Row_Offset to 1
@@ -1455,13 +1455,16 @@ Procedure Activate_SQLMaintainConnections_dg Boolean bNew Integer iCurrentRow tS
     
     Send Cursor_Wait of Cursor_Control
     Move (oSQLMaintainConnections_dg(Self)) to ho
-    Set pbReadOnly              of ho to False
     Set pbNew                   of ho to bNew
+    Set pbReadOnly              of ho to False
     Set piCurrentRow            of ho to iCurrentRow
     Set pbDFConnId              of ho to bDFConnId
     Set pSQLConnectionData      of ho to SQLConnectionData
     Get psIniFilePath of ghoSQLConnectionHandler to sPath
     Get psIniFileName of ghoSQLConnectionHandler to sSQLConnectionsFileName
+    If (sSQLConnectionsFileName = CS_SQLDFConnIdFileName) Begin
+        Set pbNew               of ho to False
+    End
     File_Exist (sPath + sSQLConnectionsFileName) bExists
     If (bExists = True) Begin
         Set Label  of ho to ("Connection Properties" * "[" + String(sPath) + String(sSQLConnectionsFileName) + "]")

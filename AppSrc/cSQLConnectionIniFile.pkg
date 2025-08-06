@@ -333,7 +333,7 @@ Class cSQLConnectionIniFile is a cIniFile
 
     Function ReadIniFileConnections Returns tSQLConnection[]
         tSQLConnection[] SQLConnectionsArray
-        String sSection sValue
+        String sSection sValue sIniFile
         Integer iCount eValue
         Boolean bExists
         Handle hoDriver
@@ -347,7 +347,7 @@ Class cSQLConnectionIniFile is a cIniFile
         If (bExists = True) Begin
             Error DFERR_PROGRAM "Sorry, the format for the SQLConnections.ini file has been changed and this file has the old format that is no longer valid and thus cannot be read. You need to re-enter your connection(s)."
         End
-
+        
         Move 1 to iCount // The section name "[ConnectionXX]" starts with "1"
         Get SectionExists (CS_SQLIniSectionName + String(iCount)) to bExists
 
@@ -407,6 +407,9 @@ Class cSQLConnectionIniFile is a cIniFile
                 Move (If(Uppercase(sValue) = "YES", True, False))                                            to SQLConnectionsArray[iCount].bTrustedCertificate
                 Send Destroy of hoDriver
             End
+            
+            Get psIniFileName to sIniFile
+            Move (sIniFile = CS_SQLDFConnIdFileName) to SQLConnectionsArray[iCount].bDAWConnection
             
             // Here we reconstruct the connection string to be complete with all params;
             Get ConstructConnectionString SQLConnectionsArray[iCount]                                       to SQLConnectionsArray[iCount].sConnectionString
