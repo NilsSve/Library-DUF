@@ -19,9 +19,9 @@ Object oApplication is a cDUFApplication
     Set psAutoOpenWorkspace to ""
 
     Property String psCommandLineIniFilePath ""
+    Property String psIniFileName
     Property Boolean pbIniFileExists False     
     Property Handle phoMainView 0
-
     // If the folder contains exactly one workspace file (*.ws), it will be
     // returned. Else an empty string ("") will be returned.
     Function FindWorkspaceFile String sPath Returns String
@@ -58,6 +58,12 @@ Object oApplication is a cDUFApplication
             If (iRetval = True) Begin
                 Set psCommandLineIniFilePath to sPath
                 Get vFilePathExists (sPath + CS_SQLIniFileName) to bExists
+                If (bExists = False) Begin
+                    Get vFilePathExists (sPath + CS_SQLDFConnIdFileName) to bExists 
+                    If (bExists = True) Begin
+                        Set psIniFileName to (sPath + CS_SQLDFConnIdFileName)
+                    End
+                End
                 Set pbIniFileExists to bExists
             End
         End
@@ -86,12 +92,12 @@ Object oApplication is a cDUFApplication
         End
     End_Procedure  
     
-    #IFDEF cConnection
+//    #IFDEF cConnection
     Object oConnection is a cConnection
         Use LoginEncryption.pkg
         Use DatabaseLoginDialog.dg
     End_Object
-    #ENDIF
+//    #ENDIF
 
 End_Object
 
@@ -107,9 +113,25 @@ Object oSQLConnectionHandler is a cSQLConnectionHandler
     Procedure End_Construct_Object
         String sPath
         Boolean bExists
+        tSQLConnection SQLConnection
+
         Get psCommandLineIniFilePath of ghoApplication to sPath
         If (sPath <> "") Begin
-            Set psIniFilePath to sPath
+            Set psIniFilePath to sPath 
+            Get vFilePathExists (sPath + CS_SQLIniFileName) to bExists
+            If (bExists = False) Begin
+                Get vFilePathExists (sPath + CS_SQLDFConnIdFileName) to bExists
+                If (bExists = True) Begin
+                    If (psIniFileName(ghoApplication) <> "") Begin
+                        Set pbDFConnId of ghoSQLConnectionHandler to True
+                        Send UnRegisterAllConnections of ghoConnection
+                        Get AddAllConnections of ghoConnection to bExists     
+                        Set psIniFileName of ghoSQLConnectionHandler to CS_SQLDFConnIdFileName
+                        Set psIniFilePath of ghoSQLConnectionHandler to sPath
+                        Get SetupSQLConnection True True to SQLConnection
+                    End
+                End
+            End
         End
         Else Begin
             Get psProgramPath of (phoWorkspace(ghoApplication)) to sPath
