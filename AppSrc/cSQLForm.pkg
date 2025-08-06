@@ -26,18 +26,18 @@ Class cSQLForm is a Form
     Procedure DbTypeUpdate Integer iDbType String sDriverID
     End_Procedure
 
-    Procedure ReadConnectionData String[] sConnectionData
+    Procedure ReadConnectionData String[] asConnectionData
         Integer iItem
         Get piItem to iItem
-        Set Value to sConnectionData[iItem]
+        Set Value to asConnectionData[iItem]
     End_Procedure
 
-    Procedure WriteConnectionData String[] ByRef sConnectionData
+    Procedure WriteConnectionData String[] ByRef asConnectionData
         String sValue
         Integer iItem
         Get piItem to iItem
         Get Value to sValue
-        Move sValue to sConnectionData[iItem]
+        Move sValue to asConnectionData[iItem]
     End_Procedure
 
     Procedure Set psToolTip String sToolTip
