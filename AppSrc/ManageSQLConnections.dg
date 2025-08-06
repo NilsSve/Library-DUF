@@ -30,7 +30,7 @@ Define CS_DF_File_Owner         for "Owner"
 Object oSQLMaintainConnections_dg is a ModalPanel
     Set Label to "Edit SQL Connection"
     Set Size to 377 324
-    Set Location to 4 6
+    Set Location to 21 6
     Set piMaxSize to (Hi(Size(Self))) (Low(Size(Self)) + 300)
     Set piMinSize to (Hi(Size(Self))) (Low(Size(Self)))
     Set Locate_Mode to CENTER_ON_PARENT
@@ -65,7 +65,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
         Object oEnabled_cb is a cSQLCheckBox
             Set Size to 10 36
-            Set Location to 25 210
+            Set Location to 25 208
             Set Label to "Enabled"
             Set psToolTip to "Check to indicate that this is the enabled connection. Note: There can only be one enabled connection at a time."
             Set piItem to 1
@@ -134,7 +134,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
         Object oFileDSN_btn is a cRDCButton
             Set Size to 13 78
-            Set Location to 42 210
+            Set Location to 42 208
             Set Label to "Select File DSN..."
             Set pbAutoEnable to True
             Set peAnchors to anTopRight
@@ -159,7 +159,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
         Object oODBCAdmin_btn is a cRDCButton
             Set Size to 13 78
-            Set Location to 57 210
+            Set Location to 57 208
             Set Label to "ODBC Admin" 
             Set psImage to "ODBCAD32.ico"
             Set pbAutoEnable to True
@@ -348,7 +348,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
         Object oSilentLogin_fm is a cSQLCheckBox
             Set Size to 10 48
-            Set Location to 78 210
+            Set Location to 78 208
             Set Label to "Silent Login"
             Set psToolTip to "Silent login to database is to not show error if login was unsuccessive."
             Set peAnchors to anTopRight
@@ -411,7 +411,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
         Object oViewPassword_btn is a cRDCButton
             Set Size to 13 15
-            Set Location to 123 210
+            Set Location to 123 208
             Set psToolTip to "View/hide password"
             Set psImage to "ViewPassword.ico"
             Set piImageMarginLeft to 2
@@ -443,7 +443,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
         End_Object
 
         Object oEncryption_cf is a cSQLComboForm
-            Set Size to 13 203
+            Set Size to 13 202
             Set Location to 153 82
             Set Label to "Encryption:"
             Set piItem to 16
@@ -472,8 +472,8 @@ Object oSQLMaintainConnections_dg is a ModalPanel
         End_Object
 
         Object oCheckLogin_btn is a cRDCButton
-            Set Size to 13 67
-            Set Location to 183 219
+            Set Size to 13 78
+            Set Location to 205 208
             Set Label to "Check &Login"
             Set psImage to "ActionLogin.ico"
             Set psToolTip to "You should always use this button when adding a new SQL Connection to ensure that the entered credentials are correct. (Ctrl+L)"
@@ -546,15 +546,15 @@ Object oSQLMaintainConnections_dg is a ModalPanel
         End_Object
 
         Object oConnOptions_fm is a cSQLForm
-            Set Size to 13 203
-            Set Location to 203 83
+            Set Size to 13 202
+            Set Location to 191 83
             Set Label to "Additional Connect String Options"
-            Set piItem to 10
+            Set piItem to 7
             Set peAnchors to anTopRight
             Set Label_Col_Offset to 0
-            Set Status_Help to "This text string value is added to the SQL connection string if needed. This is an addition to MS-SQL ODBC client software version 18 and up."
             Set Label_Row_Offset to 1
             Set Label_Justification_Mode to JMode_Top
+            Set Status_Help to "This text string value is added to the SQL connection string if needed. This is an addition to MS-SQL ODBC client software version 18 and up."
 
             Procedure DbTypeUpdate Integer iDbType String sDriverID
                 Set Enabled_State to (sDriverID = MSSQLDRV_ID)
@@ -653,36 +653,11 @@ Object oSQLMaintainConnections_dg is a ModalPanel
                 Forward Send Prompt
             End_Procedure
 
-//            Procedure DbTypeUpdate Integer iDbType String sDriverID
-//                Boolean bAdd
-//                String sValue
-//                Handle ho
-//                
-//                If (sDriverID <> "") Begin
-//                    Set Enabled_State to (sDriverID = MSSQLDRV_ID or (sDriverID = ODBC_DRV_ID and iDbType <> EN_DbTypeOracle))
-//                    If (Enabled_State(Self) = True) Begin
-//                        Move (piCurrentRow(Self) = -1) to bAdd
-//                        Get Value to sValue
-//                        If (bAdd = True and sValue = "" and iDbType = EN_dbTypeMSSQL) Begin
-//                            Set Value to "master"
-//                        End
-//                        Else Begin
-//                            If (Value(Self) = "master") Begin
-//                                Set Value to ""
-//                            End
-//                        End
-//                    End
-//                    If (Enabled_State(Self) = False) Begin
-////                        Set Value to ""
-//                    End
-//                End
-//            End_Procedure
-
         End_Object
 
         Object oCreateDatabase_btn is a cRDCButton
             Set Size to 13 78
-            Set Location to 243 210
+            Set Location to 243 208
             Set Label to "Create Database..."
             Set psImage to "ActionCreateDatabase.ico"
             Set pbAutoEnable to True
@@ -840,7 +815,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
         Procedure OnClick
             String sLoginText
-            String[] sConnectionData
+            String[] asConnectionData
             tSQLConnection SQLConnection
             Boolean bNew bOK bShouldSave
             Integer iRetval
@@ -852,10 +827,10 @@ Object oSQLMaintainConnections_dg is a ModalPanel
                 Procedure_Return
             End
 
-            Broadcast Recursive Send WriteConnectionData of (Parent(Self)) (&sConnectionData)
+            Broadcast Recursive Send WriteConnectionData of (Parent(Self)) (&asConnectionData)
 
             Get pbNew to bNew
-            Get MoveStringArrayToSQLConnection sConnectionData to SQLConnection
+            Get MoveStringArrayToSQLConnection asConnectionData to SQLConnection
             Case Begin
                 Case (SQLConnection.sDriverID = DB2_DRV_ID or SQLConnection.sDriverID = ODBC_DRV_ID)
                     If (SQLConnection.sDriverID = DB2_DRV_ID) Begin
@@ -1156,19 +1131,19 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
     // Returns True if anything has changed.
     Function Should_Save Returns Boolean
-        String[] sConnectionData sConnectionData2
+        String[] asConnectionData asConnectionData2
         tSQLConnection SQLConnectionData
         Boolean bState
 
-        Broadcast Recursive Send WriteConnectionData (&sConnectionData)
+        Broadcast Recursive Send WriteConnectionData (&asConnectionData)
         Get pSQLConnectionData to SQLConnectionData
-        Get MoveSQLConnectionToStringArray SQLConnectionData to sConnectionData2
+        Get MoveSQLConnectionToStringArray SQLConnectionData to asConnectionData2
         // We don't have a form here for the sConnectionString, so we "blank it out"
         // to be able to compare properly.
-        Move "" to sConnectionData2[7]
+        Move "" to asConnectionData2[7]
 
         #IF (!@ > 180)
-            Move (IsSameArray(sConnectionData, sConnectionData2)) to bState
+            Move (IsSameArray(asConnectionData, asConnectionData2)) to bState
         #ENDIF
         Function_Return (bState = False)
     End_Function
@@ -1247,18 +1222,18 @@ Object oSQLMaintainConnections_dg is a ModalPanel
     End_Function
 
     Function MoveSQLConnectionToStringArray tSQLConnection SQLConnection Returns String[]
-        String[] sConnectionData
+        String[] asConnectionData
         Integer iRetval
 
-        Move SQLConnection.bEnabled          to sConnectionData[1]
-        Move SQLConnection.sConnectionID     to sConnectionData[2]
-        Get SqlUtilDbTypeToString of ghoDbUpdateFunctionLibrary SQLConnection.iDbType to sConnectionData[3]
-        Move SQLConnection.sDriverID         to sConnectionData[4]
-        Move SQLConnection.sServer           to sConnectionData[5]
-        Move SQLConnection.sDatabase         to sConnectionData[6]
-        Move SQLConnection.sConnectionString to sConnectionData[7]
-        Move SQLConnection.bTrusted          to sConnectionData[8]
-        Move SQLConnection.sUserID           to sConnectionData[9]
+        Move SQLConnection.bEnabled          to asConnectionData[1]
+        Move SQLConnection.sConnectionID     to asConnectionData[2]
+        Get SqlUtilDbTypeToString of ghoDbUpdateFunctionLibrary SQLConnection.iDbType to asConnectionData[3]
+        Move SQLConnection.sDriverID         to asConnectionData[4]
+        Move SQLConnection.sServer           to asConnectionData[5]
+        Move SQLConnection.sDatabase         to asConnectionData[6]
+        Move SQLConnection.sConnectionString to asConnectionData[7]
+        Move SQLConnection.bTrusted          to asConnectionData[8]
+        Move SQLConnection.sUserID           to asConnectionData[9]
 
         If (SQLConnection.sPassword <> "") Begin
             Move MBR_Yes to iRetval
@@ -1274,39 +1249,39 @@ Object oSQLMaintainConnections_dg is a ModalPanel
                 End
             End
             Else Begin
-                Move SQLConnection.sPassword to sConnectionData[10]
+                Move SQLConnection.sPassword to asConnectionData[10]
             End
         End
 
-        Move SQLConnection.sSchema             to sConnectionData[11]
-        Move SQLConnection.sBaseTableSpace     to sConnectionData[12]
-        Move SQLConnection.sLongTableSpace     to sConnectionData[13]
-        Move SQLConnection.sIndexTableSpace    to sConnectionData[14]
-        Move SQLConnection.bSilentLogin        to sConnectionData[15]
-        Move SQLConnection.eEncryptOption      to sConnectionData[16] 
-        Move SQLConnection.bTrustedCertificate to sConnectionData[17] 
+        Move SQLConnection.sSchema             to asConnectionData[11]
+        Move SQLConnection.sBaseTableSpace     to asConnectionData[12]
+        Move SQLConnection.sLongTableSpace     to asConnectionData[13]
+        Move SQLConnection.sIndexTableSpace    to asConnectionData[14]
+        Move SQLConnection.bSilentLogin        to asConnectionData[15]
+        Move SQLConnection.eEncryptOption      to asConnectionData[16] 
+        Move SQLConnection.bTrustedCertificate to asConnectionData[17] 
 
-        Function_Return sConnectionData
+        Function_Return asConnectionData
     End_Function
 
-    Function MoveStringArrayToSQLConnection String[] sConnectionData Returns tSQLConnection
+    Function MoveStringArrayToSQLConnection String[] asConnectionData Returns tSQLConnection
         tSQLConnection SQLConnection 
         String sValue
         Handle hoDriver
 
-        Move sConnectionData[1]  to SQLConnection.bEnabled
-        Move sConnectionData[2]  to SQLConnection.sConnectionID
-        Get SqlUtilDbTypeToInteger of ghoDbUpdateFunctionLibrary sConnectionData[3] to SQLConnection.iDbType
-        Move sConnectionData[4]  to SQLConnection.sDriverID
+        Move asConnectionData[1]  to SQLConnection.bEnabled
+        Move asConnectionData[2]  to SQLConnection.sConnectionID
+        Get SqlUtilDbTypeToInteger of ghoDbUpdateFunctionLibrary asConnectionData[3] to SQLConnection.iDbType
+        Move asConnectionData[4]  to SQLConnection.sDriverID
         
-        Move sConnectionData[5]  to SQLConnection.sServer
-        Move sConnectionData[6]  to SQLConnection.sDatabase 
+        Move asConnectionData[5]  to SQLConnection.sServer
+        Move asConnectionData[6]  to SQLConnection.sDatabase 
         //                  [7] = SQLConnection.sConnectionString and not used here.
-        Move sConnectionData[8]  to SQLConnection.bTrusted
-        Move sConnectionData[9]  to SQLConnection.sUserID
+        Move asConnectionData[8]  to SQLConnection.bTrusted
+        Move asConnectionData[9]  to SQLConnection.sUserID
 
-        If (sConnectionData[10] <> "" and pbDFConnId(Self) = False) Begin
-            Move sConnectionData[10] to SQLConnection.sPassword
+        If (asConnectionData[10] <> "" and pbDFConnId(Self) = False) Begin
+            Move asConnectionData[10] to SQLConnection.sPassword
         End
         // In case of we're dealing with a DfConnID.ini file (DF 19+) we don't want to change the password
         // as DAW's 'Managed Connections' program has a different password encryption/decryption algorithm.
@@ -1314,19 +1289,19 @@ Object oSQLMaintainConnections_dg is a ModalPanel
             Get psUncryptedPw to SQLConnection.sPassword
         End
 
-        Move sConnectionData[11] to SQLConnection.sSchema
-        Move sConnectionData[12] to SQLConnection.sBaseTableSpace
-        Move sConnectionData[13] to SQLConnection.sLongTableSpace
-        Move sConnectionData[14] to SQLConnection.sIndexTableSpace
-        Move sConnectionData[15] to SQLConnection.bSilentLogin
+        Move asConnectionData[11] to SQLConnection.sSchema
+        Move asConnectionData[12] to SQLConnection.sBaseTableSpace
+        Move asConnectionData[13] to SQLConnection.sLongTableSpace
+        Move asConnectionData[14] to SQLConnection.sIndexTableSpace
+        Move asConnectionData[15] to SQLConnection.bSilentLogin
         
         If (SQLConnection.sDriverID = MSSQLDRV_ID) Begin
             Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver
             Get SQLClientVersionInteger of hoDriver SQLConnection.sDriverID to SQLConnection.iClientVersion
-            Move sConnectionData[16] to sValue
+            Move asConnectionData[16] to sValue
             Get EncryptOptionFromText of hoDriver sValue to SQLConnection.eEncryptOption
             Send Destroy of hoDriver
-            Move sConnectionData[17] to SQLConnection.bTrustedCertificate
+            Move asConnectionData[17] to SQLConnection.bTrustedCertificate
         End
         
         // Connection string:
@@ -1336,7 +1311,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
     Procedure Popup
         tSQLConnection SQLConnection
-        String[] sConnectionData
+        String[] asConnectionData
         String sDriverID sOption
         Integer iDbType iClientVersion
         Boolean bAdd 
@@ -1350,13 +1325,13 @@ Object oSQLMaintainConnections_dg is a ModalPanel
         If (SQLConnection.bEnabled = False and bAdd = True) Begin
             Move True to SQLConnection.bEnabled
         End
-        Get MoveSQLConnectionToStringArray SQLConnection to sConnectionData
+        Get MoveSQLConnectionToStringArray SQLConnection to asConnectionData
 
         If (SQLConnection.sDriverID <> "") Begin
             Set Value of oDriverID_cf to SQLConnection.sDriverID
             Set Value of oDbType_cf   to SQLConnection.iDbType
         End
-        Broadcast Recursive Send ReadConnectionData sConnectionData
+        Broadcast Recursive Send ReadConnectionData asConnectionData
 
         // We need this message to "auto-default" certain fields.
         If (bAdd = True) Begin
