@@ -31,7 +31,8 @@ Use vWin32fh.pkg
 // The cConnection class is the new SQL connections class for DF 19.
 // If an object of the cConnection class hasn't been instantiated we use a "dummy" class in its place.
 #IFNDEF get_ComparetConnectionById
-    Use cConnectionDUF.pkg
+    Use cConnection.pkg
+//    Use cConnectionDUF.pkg
 #ENDIF
 
 // We're making references to this object handle so we need it defined
@@ -49,12 +50,13 @@ Use vWin32fh.pkg
 Class cSQLConnectionHandler is a cObject
 
     Procedure Construct_Object
-        Handle ho
-        Forward Send Construct_Object
-        Move Self to ghoSQLConnectionHandler
-
+        Handle ho  
+        
         Property Handle phoSQLConnectionIniFile 
-        Get  Create (RefClass(cSQLConnectionIniFile)) to ho
+        Move Self to ghoSQLConnectionHandler
+        Get Create (RefClass(cSQLConnectionIniFile)) to ho
+        
+        Forward Send Construct_Object
         Set Name of ho to "oSQLConnectionIniFile"
         Set phoSQLConnectionIniFile to ho
         
@@ -583,7 +585,6 @@ Class cSQLConnectionHandler is a cObject
                 End
             End
 
-            Move 0 to iRetval
             // DAW DF19 connection info:
             // We first check that the connection is OK:
             Get ConnectionIdIndex of ghoConnection sConnectionID to iRetval
@@ -601,7 +602,7 @@ Class cSQLConnectionHandler is a cObject
             End
 
             // DUF connection info struct property:
-            Get Private.pSQLConnection                       to SQLConnection
+            Get Private.pSQLConnection to SQLConnection
 
             Move Connection.sId to sConnectionID
             Get IsConnectionIdLoggedIn of ghoConnection sConnectionID to bConnected
