@@ -697,7 +697,7 @@ Object oSQLMaintainConnection is a dbView
 
             Forward Send OnHeaderClick iCol
 
-            Get vSelect_File ("SQLConnections ini-files (*.ini)|" + CS_SQLIniFileName + "|All Ini Files (*.ini)|*.ini|All Files (*.*)|*.*") "Select a connection ini-file" "" to sFileName
+            Get vSelect_File ("SQL Connection ini-files (*.ini)|*.ini|All Files (*.*)|*.*") "Select a connection ini-file" "" to sFileName
             If (sFileName <> "") Begin
                 Get phoSQLConnectionIniFile of ghoSQLConnectionHandler to ho
                 Get ParseFolderName sFileName to sPath
