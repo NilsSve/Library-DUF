@@ -334,7 +334,7 @@ Class cSQLConnectionIniFile is a cIniFile
     Function ReadIniFileConnections Returns tSQLConnection[]
         tSQLConnection[] SQLConnectionsArray
         String sSection sValue
-        Integer iCount
+        Integer iCount eValue
         Boolean bExists
         Handle hoDriver
 
@@ -352,11 +352,6 @@ Class cSQLConnectionIniFile is a cIniFile
         Get SectionExists (CS_SQLIniSectionName + String(iCount)) to bExists
 
         While (bExists = True)                 
-            // 2018-07-14 Change to allow disabling all connections in test environment.
-            // We always put the enabled/active connection at the top
-//            Move (iCount = 1) to bEnabled
-//            Move bEnabled to SQLConnectionsArray[iCount].bEnabled
-
             Get IniFileValue (CS_SQLIniSectionName + String(iCount)) CS_SQLIniConnectionIdKeyword ""        to SQLConnectionsArray[iCount].sConnectionID
             Get IniFileValue (CS_SQLIniSectionName + String(iCount)) CS_SQLIniDriverKeyword       ""        to SQLConnectionsArray[iCount].sDriverID
             Get IniFileValue (CS_SQLIniSectionName + String(iCount)) CS_SQLIniDisabledKeyword     ""        to sValue
@@ -393,10 +388,24 @@ Class cSQLConnectionIniFile is a cIniFile
             If (SQLConnectionsArray[iCount].sDriverID = MSSQLDRV_ID) Begin
                 Get CreateDatabaseDriverObject MSSQLDRV_ID to hoDriver
                 Get SQLClientVersionInteger of hoDriver MSSQLDRV_ID                                          to SQLConnectionsArray[iCount].iClientVersion
-                Send Destroy of hoDriver
-                Get IniFileValue (CS_SQLIniSectionName + String(iCount))  CS_SQLIniEncrypt               ""  to SQLConnectionsArray[iCount].eEncryptOption
+
+                Get IniFileValue (CS_SQLIniSectionName + String(iCount))  CS_SQLIniEncrypt               ""  to sValue
+                If (sValue = "") Begin
+                    If (Lowercase(SQLConnectionsArray[iCount].sConnectionString) contains Lowercase(CS_SQLIniEncrypt)) Begin
+                        Get ParseKeyWord SQLConnectionsArray[iCount].sConnectionString CS_SQLIniEncrypt to sValue
+                    End
+                End
+                Get EncryptOptionFromText of hoDriver sValue to eValue
+                Move eValue to SQLConnectionsArray[iCount].eEncryptOption
+                
                 Get IniFileValue (CS_SQLIniSectionName + String(iCount))  CS_SQLIniTrustServerCertificate "" to sValue
+                If (sValue = "") Begin
+                    If (Lowercase(SQLConnectionsArray[iCount].sConnectionString) contains Lowercase(CS_SQLIniTrustServerCertificate)) Begin
+                        Get ParseKeyWord SQLConnectionsArray[iCount].sConnectionString CS_SQLIniTrustServerCertificate to sValue
+                    End
+                End
                 Move (If(Uppercase(sValue) = "YES", True, False))                                            to SQLConnectionsArray[iCount].bTrustedCertificate
+                Send Destroy of hoDriver
             End
             
             // Here we reconstruct the connection string to be complete with all params;
@@ -569,7 +578,7 @@ Class cSQLConnectionIniFile is a cIniFile
 
     // Pass a filename including the extension. The return value
     // will be the path of of the first found "sSearchFileName in the workspace.
-    // If not found in the workspace it will be search "globally" by the Get_File_Path command.
+    // If not found in the workspace it will be search "globally" with the Get_File_Path command.
     Function SearchLocallyThenGloballyForFile String sSearchFileName Returns String
         Boolean bExists
         Handle hoPaths hoIniFile
