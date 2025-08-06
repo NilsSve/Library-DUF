@@ -225,7 +225,7 @@ Class cDbUpdateGenericDatabaseDriver is a cObject
         If (sEncryptOption = CS_SQLIniEncryptMandatory) Begin
             Function_Return eMandatory
         End
-        Else If (sEncryptOption = CS_SQLIniEncryptStrictShort) Begin
+        Else If (sEncryptOption = CS_SQLIniEncryptStrictShort or sEncryptOption = CS_SQLIniEncryptStrictLong) Begin
             Function_Return eStrict
         End
         Function_Return -1 // Unknown
