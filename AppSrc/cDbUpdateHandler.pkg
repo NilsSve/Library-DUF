@@ -1,142 +1,141 @@
-﻿//****************************************************************************
-// $Module type: Class
-// $Module name: cDbUpdateHandler
-// $Author     : Nils Svedmyr, RDC Tools International, <mailto:support@rdctools.com>
-// Web-site    : http://www.rdctools.com
-// Created     : 2016-09-27 @ 09:33 (Military date format: YY-MM-DD)
-//
-// Purpose     : A framework for doing automated code based updates of a database from within
-//               a program, when it is started.
-//
-// Description : Place _one_ object of this class right after the cApplication object.
-//               Then inside this object place a series of cDbUpdateVersion objects
-//               as childs. One child object for each new database update.
-//
-//               - OnPreUpdate is a pre-processing event called
-//               before any database changes are started.
-//               - OnPostUpdate is a post-processing event called after all
-//               database changes have taken place.
-//
-// Note        : If tables have been opened prior to an object of this class
-//               (e.g. in the cApplication object), those tables will be closed.
-//               In that case you need to use the OnPostUpdate hook event to re-open
-//               tables after the last update has finished.
-//
-// Security    : Before an update is attempted; three things are checked to ensure the
-//               database is not in use. Aka nobody else is running the application.
-//               - All tables are tested for "Open in Exclusive_Mode"
-//               - The DataFlex license User Count is checked - cannot be more than 1, unless the
-//                 pbCheckDataFlexUserCount is set to False (Default = True)
-//               - A special user count file ("DbUpdateUserCount.ucf") is created in the Programs
-//                 folder and a bit-lock is performed for each start of the application and this
-//                 user counter is checked before an update is attempted.
-//                 Important: Even if it seems like both garters & suspenders are used to guard
-//                            against the database being "in use", there is no such guarantee! The
-//                            database could e.g. be open in "Microsoft SQL Server Management Studio"
-//                            and there is no way of telling. SO BE CAUTIOUS before attempting an update!
-//                 A second "user count file" is also used - "DbUpdateLock.ucf". It is used to
-//                 lock everybody else out (with a Stop box) while the database is being updated. The lock will
-//                 automatically be released after the update is completed.
-//
-//
-// Usage       :  Use cDbUpdateHandler.pkg
-//                Object oDatabaseUpdateHandler is a cDbUpdateHandler
-//                    // Declare the table that contains a "database version" field.
-//                    Declare_Datafile Sys
-//                    // Either one of these syntaxes is fine:
-//                    Set Data_File_Field to File_Field Sys.DbUpdateVersion
-//                    Set Data_File_Field to (RefTable(Sys)) (RefTable(Sys.DbUpdateVersion))
-//
-//                    // Don't forget to increase the pnVersionNumber property for each
-//                    // cDbUpdateVersion object!
-//                    // The VersionTableColumn field/column specified above will be updated automatically
-//                    // with the value of pnVersionNumber after each update has been finished.
-//                    Object oVersionUpdate1.1 is a cDbUpdateVersion
-//                        Set pnVersionNumber to 1.1
-//                        Use VersionUpdate1_1.pkg
-//                    End_Object
-//
-//                    Object oVersionUpdate1.2 is a cDbUpdateVersion
-//                        Set pnVersionNumber to 1.2
-//                        Use VersionUpdate1_2.pkg
-//                    End_Object
-//
-//                End_Object
-//
-// *** To use the pbRestoreIntFilesNow & pbSaveIntFilesNow properties, the pbUseIntFilesBackup property needs to be True.
-//     Sample Code:
-//                Object oApplication is a cApplication
-//                    Set peHelpType to htHtmlHelp
-//                
-//                    Object oConnection is a cConnection
-//                        Use LoginEncryption.pkg
-//                        Use DatabaseLoginDialog.dg
-//                    End_Object
-//                
-//                    Property Boolean pbRestoreIntFilesNow False
-//                    Property Boolean pbSaveIntFilesNow False
-//                    // This allows the program to have the parameter "-restore" passed on the command line.
-//                    // If found, it will call the "RestoreIntFiles" of the cDbUpdateHandler object.
-//                    Procedure OnCreate
-//                        Handle hoCmdLine
-//                        Integer iSize iCount
-//                        String sParam
-//                        
-//                        Get phoCommandLine to hoCmdLine
-//                        Get CountOfArgs of hoCmdLine to iSize
-//                        For iCount from 1 to iSize
-//                            Get Argument of hoCmdLine iCount to sParam
-//                            If (Lowercase(sParam) contains "restore") Begin
-//                                Set pbRestoreIntFilesNow to True
-//                            End
-//                            Else If (Lowercase(sParam) contains "save") Begin
-//                                Set pbSaveIntFilesNow to True
-//                            End
-//                        Loop
-//                    End_Procedure
-//                
-//                End_Object
-//
-//                Object oDbUpdateHandler is a cDbUpdateHandler
-//                    Set piDbVersionFileNumber  to 255
-//                    Set piDbVersionFieldNumber to 1
-//                    Set piIntFilesFileNumber to 256
-//                    Set pbUseIntFilesBackup to True
-//                    Set pbExitIfDebuggerActive to False
-//                
-//                    Procedure OnCreate
-//                        String sVersionInfo sErrorText
-//                        Boolean bRestoreIntFilesNow bSaveIntFilesNow bOK
-//                        
-//                        Get pbRestoreIntFilesNow of ghoApplication to bRestoreIntFilesNow
-//                        If (bRestoreIntFilesNow = True) Begin
-//                            Get RestoreIntFiles (&sErrorText) to bOK
-//                        End
-//                        Get pbSaveIntFilesNow of ghoApplication to bSaveIntFilesNow
-//                        If (bSaveIntFilesNow = True) Begin
-//                            Get SaveUpdateIntFiles (&sErrorText) to bOK
-//                        End 
-//                        
-//                        // To check for correct the driver and db client versions, when the program starts (each-Time it is started!)
-//                        Get MinMSSQLDRV_And_ClientVersion "24.0.29.10" SQLSERVER2019CLIENT True True to sVersionInfo
-//                    End_Procedure
-// ******************
+﻿/*
+ $Module type: Class
+ $Module name: cDbUpdateHandler
+ $Author     : Nils Svedmyr, RDC Tools International, <mailto:support@rdctools.com>
+ Web-site    : http://www.rdctools.com
+ Created     : 2016-09-27 @ 09:33 (Military date format: YY-MM-DD)
+
+ Purpose     : A framework for doing automated code based updates of a database from within
+               a program, when it is started.
+
+ Description : Place _one_ object of this class right after the cApplication object.
+               Then inside this object place a series of cDbUpdateVersion objects
+               as childs. One child object for each new database update.
+
+               - OnPreUpdate is a pre-processing event called
+               before any database changes are started.
+               - OnPostUpdate is a post-processing event called after all
+               database changes have taken place.
+
+ Note        : If tables have been opened prior to an object of this class
+               (e.g. in the cApplication object), those tables will be closed.
+               In that case you need to use the OnPostUpdate hook event to re-open
+               tables after the last update has finished.
+
+ Security    : Before an update is attempted; three things are checked to ensure the
+               database is not in use. Aka nobody else is running the application.
+               - All tables are tested for "Open in Exclusive_Mode"
+               - The DataFlex license User Count is checked - cannot be more than 1, unless the
+                 pbCheckDataFlexUserCount is set to False (Default = True)
+               - A special user count file ("DbUpdateUserCount.ucf") is created in the Programs
+                 folder and a bit-lock is performed for each start of the application and this
+                 user counter is checked before an update is attempted.
+                 Important: Even if it seems like both garters & suspenders are used to guard
+                            against the database being "in use", there is no such guarantee! The
+                            database could e.g. be open in "Microsoft SQL Server Management Studio"
+                            and there is no way of telling. SO BE CAUTIOUS before attempting an update!
+                 A second "user count file" is also used - "DbUpdateLock.ucf". It is used to
+                 lock everybody else out (with a Stop box) while the database is being updated. The lock will
+                 automatically be released after the update is completed.
 
 
+ Usage       :  Use cDbUpdateHandler.pkg
+                Object oDatabaseUpdateHandler is a cDbUpdateHandler
+                    // Declare the table that contains a "database version" field.
+                    Declare_Datafile Sys
+                    // Either one of these syntaxes is fine:
+                    Set Data_File_Field to File_Field Sys.DbUpdateVersion
+                    Set Data_File_Field to (RefTable(Sys)) (RefTable(Sys.DbUpdateVersion))
 
-//
-// $Rev History:
-//    2016-09-27  Module header created
-//    2016-09-28  Removed the Master/Alias logic. All update code must
-//                take place before any tables have been opened, or errors
-//                could occur if the client database is out of sync with the
-//                compiled program.
-//                Added user counting checks + lockout while database is being
-//                updated.
-//    2016-10-03  Changed the class name from cDatabaseUpdateHandler to cDbUpdateHandler,
-//                as it is more in line with the child class cDbUpdateVersion name.
-//    2016-10-06  Moved constant declarations, structs etc. to separate cDbUpdateHandler.h.pkg file
-//****************************************************************************
+                    // Don't forget to increase the pnVersionNumber property for each
+                    // cDbUpdateVersion object!
+                    // The VersionTableColumn field/column specified above will be updated automatically
+                    // with the value of pnVersionNumber after each update has been finished.
+                    Object oVersionUpdate1.1 is a cDbUpdateVersion
+                        Set pnVersionNumber to 1.1
+                        Use VersionUpdate1_1.pkg
+                    End_Object
+
+                    Object oVersionUpdate1.2 is a cDbUpdateVersion
+                        Set pnVersionNumber to 1.2
+                        Use VersionUpdate1_2.pkg
+                    End_Object
+
+                End_Object
+
+ --- To use the pbRestoreIntFilesNow & pbSaveIntFilesNow properties, the pbUseIntFilesBackup property needs to be True.
+     Sample Code:
+                Object oApplication is a cApplication
+                    Set peHelpType to htHtmlHelp
+                
+                    Object oConnection is a cConnection
+                        Use LoginEncryption.pkg
+                        Use DatabaseLoginDialog.dg
+                    End_Object
+                
+                    Property Boolean pbRestoreIntFilesNow False
+                    Property Boolean pbSaveIntFilesNow False
+                    // This allows the program to have the parameter "-restore" passed on the command line.
+                    // If found, it will call the "RestoreIntFiles" of the cDbUpdateHandler object.
+                    Procedure OnCreate
+                        Handle hoCmdLine
+                        Integer iSize iCount
+                        String sParam
+                        
+                        Get phoCommandLine to hoCmdLine
+                        Get CountOfArgs of hoCmdLine to iSize
+                        For iCount from 1 to iSize
+                            Get Argument of hoCmdLine iCount to sParam
+                            If (Lowercase(sParam) contains "restore") Begin
+                                Set pbRestoreIntFilesNow to True
+                            End
+                            Else If (Lowercase(sParam) contains "save") Begin
+                                Set pbSaveIntFilesNow to True
+                            End
+                        Loop
+                    End_Procedure
+                
+                End_Object
+
+                Object oDbUpdateHandler is a cDbUpdateHandler
+                    Set piDbVersionFileNumber  to 255
+                    Set piDbVersionFieldNumber to 1
+                    Set piIntFilesFileNumber to 256
+                    Set pbUseIntFilesBackup to True
+                    Set pbExitIfDebuggerActive to False
+                
+                    Procedure OnCreate
+                        String sVersionInfo sErrorText
+                        Boolean bRestoreIntFilesNow bSaveIntFilesNow bOK
+                        
+                        Get pbRestoreIntFilesNow of ghoApplication to bRestoreIntFilesNow
+                        If (bRestoreIntFilesNow = True) Begin
+                            Get RestoreIntFiles (&sErrorText) to bOK
+                        End
+                        Get pbSaveIntFilesNow of ghoApplication to bSaveIntFilesNow
+                        If (bSaveIntFilesNow = True) Begin
+                            Get SaveUpdateIntFiles (&sErrorText) to bOK
+                        End 
+                        
+                        // To check for correct the driver and db client versions, when the program starts (each-Time it is started!)
+                        Get MinMSSQLDRV_And_ClientVersion "24.0.29.10" SQLSERVER2019CLIENT True True to sVersionInfo
+                    End_Procedure
+
+
+ $Rev History:
+    2016-09-27  Module header created
+    2016-09-28  Removed the Master/Alias logic. All update code must
+                take place before any tables have been opened, or errors
+                could occur if the client database is out of sync with the
+                compiled program.
+                Added user counting checks + lockout while database is being
+                updated.
+    2016-10-03  Changed the class name from cDatabaseUpdateHandler to cDbUpdateHandler,
+                as it is more in line with the child class cDbUpdateVersion name.
+    2016-10-06  Moved constant declarations, structs etc. to separate cDbUpdateHandler.h.pkg file  
+    2025-08-20  Added property to use the cVersionInfo data of the cApplication object instead
+                of a specialized version info database table.
+*/
 Use VdfBase.pkg
 Use Dferror.pkg
 Use seq_chnl.pkg
