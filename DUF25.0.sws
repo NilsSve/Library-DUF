@@ -14,7 +14,6 @@ Project0=DUFCodeGenerator.src
 Project1=DUFSQLConnections.src
 Project2=DUFTestProgram.src
 Project3=ReadDFDriverDefXML.src
-Project4=WriteDateTimeHeaderFile.src
-Project5=DUFSQLRepairUtility.src
+Project4=DUFSQLRepairUtility.src
 [ProjectParameters]
 DUFSQLRepairUtility.src=C:\Projects\DF20\ROW_TEST\Data\FILELIST.CFG

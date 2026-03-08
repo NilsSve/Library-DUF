@@ -201,7 +201,9 @@ Object oTableDUFCodeGenerator is a cRDCDbView
                 Set peHeaderAlignment to xtpAlignmentCenter
                 Set peTextAlignment   to xtpAlignmentCenter
                 Set peFooterAlignment to xtpAlignmentCenter
-                Set piFindIndex to 1
+                Set piFindIndex to 1  
+                // Note: We can set this column to Windows_Numeric, as
+                //       that makes the suggestion list not to work.
             End_Object
 
             Object oLogicalName_col is a cRDCCJGridColumnSuggestion
@@ -210,6 +212,7 @@ Object oTableDUFCodeGenerator is a cRDCDbView
                 Set psToolTip to (psCaption(Self) * "(Suggestion List)")
                 Set piFindIndex to 1
                 Set psFooterText to "No of Tables:"
+                Set peFooterAlignment to xtpAlignmentCenter
             End_Object
 
             Object oRootName_col is a cCJGridColumn
@@ -220,6 +223,7 @@ Object oTableDUFCodeGenerator is a cRDCDbView
                 Set psToolTip to (psCaption(Self) * "(Read-Only)")
                 Set pbEditable to False
                 Set psFooterText to "Selected:"
+                Set peFooterAlignment to xtpAlignmentCenter
             End_Object
 
             Object oDisplayName_col is a cCJGridColumn
@@ -227,6 +231,10 @@ Object oTableDUFCodeGenerator is a cRDCDbView
                 Set psCaption to "Display Name"
                 Set psToolTip to (psCaption(Self) * "(Read-Only)")
                 Set pbEditable to False
+                Procedure OnCreate
+                    Forward Send OnCreate
+                    Set ComPlusMinus to True
+                End_Procedure
             End_Object
 
             Object oIsAlias_Col is a cCJGridColumn
