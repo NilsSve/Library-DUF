@@ -36,3 +36,12 @@ These sections can be found in the `Developer5.chm` Help file located in the `/H
 ![This is what the DUFSQLRepairUtility.src program looks like:](Bitmaps/DUFFilelistRepairer.png)
 
 The workspace also utilizes other libraries available on Nils Sve's GitHub page. You typically won’t need to worry about this, as it should all be handled automatically when you clone the repository. These libraries are included as submodules in Git.
+
+## Setup after cloning
+
+After cloning this repository, run **`setup.bat`** once from the repository root. It:
+
+- downloads / updates the library submodules under `Libraries\` (DFAbout, RDCToolsLib, vwin32fh) to the versions this workspace expects;
+- configures this clone so a normal `git pull` keeps those libraries in sync automatically from then on.
+
+Re-run `setup.bat` any time the `Libraries\` folders look empty or out of date, or when a new submodule is added.
