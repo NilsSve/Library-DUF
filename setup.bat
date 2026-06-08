@@ -53,7 +53,7 @@ if errorlevel 1 (
     echo [ERROR] One or more submodules could not be fetched.
     echo         Check your internet connection and that you can reach:
     echo           - https://github.com/NilsSve/Library-DFAbout.git
-    echo           - https://github.com/NilsSve/Library-RDCToolsLib
+    echo           - https://github.com/NilsSve/Library-RDCToolsLib.git
     echo           - https://github.com/NilsSve/Library-vwin32fh.git
     echo         Then run setup.bat again.
     echo.
