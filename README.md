@@ -45,3 +45,28 @@ After cloning this repository, run **`setup.bat`** once from the repository root
 - configures this clone so a normal `git pull` keeps those libraries in sync automatically from then on.
 
 Re-run `setup.bat` any time the `Libraries\` folders look empty or out of date, or when a new submodule is added.
+
+## Dependencies
+
+DUF requires **RDCToolsLib**, **vwin32fh** and **DFAbout**. What each is actually for:
+
+| Library | Why DUF needs it |
+|---|---|
+| RDCToolsLib | The `cRDC*` control classes and `RDCStatusPanel.pkg`, used throughout the dialogs and `cBaseDbUpdateFuncLib`. |
+| vwin32fh | `vWin32fh.pkg`, used directly by `cBaseDbUpdateFuncLib` — and required by RDCToolsLib in its own right. |
+| DFAbout | One class: `SysInfoDialog`, shown by `DriverSettings.dg`. Nothing else in DUF touches DFAbout. |
+
+Note the shape of that last row. DUF is a database library, and its entire dependency on the
+About-dialog library is a single System Information popup in one dialog. If DUF's dependency
+list ever needs to get shorter, extracting `SysInfoDialog` into RDCToolsLib is the move.
+
+### If you are consuming DUF from an application
+
+Declare all four — DUF, RDCToolsLib, vwin32fh and DFAbout — as a flat sibling list in your own
+workspace's `[Libraries]`. Do not rely on reaching the other three transitively through DUF.
+
+The reason is that DataFlex resolves the compiler search path first-match-wins, with no version
+arbitration. An application that declares RDCToolsLib itself *and* reaches a second copy through
+DUF gets two checkouts of the same library, at two possibly different commits, on one path — and
+which one wins is decided silently by list order. One library, one checkout, declared by the
+application, is the only arrangement that cannot drift.
