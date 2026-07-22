@@ -49,7 +49,10 @@ loginEncryptionkey.inc
 **/Help/**/*.hnd
 **/Help/**/Assets
 **/Help/**/Online Help
-**/Help/About.rtf
+# Help/About.rtf is NOT ignored. DfAbout.pkg embeds it as a program resource, so a clone with
+# no About.rtf cannot compile at all. A minimal placeholder is committed instead; replace its
+# text freely, but do not delete the file.
+*.rtf.bak
 **/HelpText/*.*
 HelpText/
 

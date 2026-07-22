@@ -46,6 +46,12 @@ After cloning this repository, run **`setup.bat`** once from the repository root
 
 Re-run `setup.bat` any time the `Libraries\` folders look empty or out of date, or when a new submodule is added.
 
+That is the only setup step. In particular `Help\About.rtf` now ships with the repository — it
+used to be gitignored, which meant a fresh clone could not compile at all until someone worked
+out that `DfAbout.pkg` embeds that file as a program resource. What is committed is a minimal
+placeholder; replace its text with whatever the About dialog should show, but do not delete the
+file. Editing it in Word rewrites the whole thing, so expect whole-file diffs.
+
 ## Dependencies
 
 DUF requires **RDCToolsLib**, **vwin32fh** and **DFAbout**. What each is actually for:
