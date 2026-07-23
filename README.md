@@ -35,16 +35,28 @@ These sections can be found in the `Developer5.chm` Help file located in the `/H
 
 ![This is what the DUFSQLRepairUtility.src program looks like:](Bitmaps/DUFFilelistRepairer.png)
 
-The workspace also utilizes other libraries available on Nils Sve's GitHub page. You typically won’t need to worry about this, as it should all be handled automatically when you clone the repository. These libraries are included as submodules in Git.
+The workspace also uses three other libraries from Nils Sve's GitHub page — DFAbout, RDCToolsLib and vwin32fh. As of the flattening described below, they are **no longer nested submodules of DUF**; they are separate sibling libraries. See the Dependencies section for why, and what a consuming application must do.
 
 ## Setup after cloning
 
-After cloning this repository, run **`setup.bat`** once from the repository root. It:
+**Building DUF on its own** (working on the framework itself): after cloning, run **`setup.bat`**
+once from the repository root. It clones DFAbout, RDCToolsLib and vwin32fh as **siblings** of the
+DUF folder — the layout `DUFDev25.0.sws` / `DUFDev26.0.sws` expect. Open one of the `DUFDev*.sws`
+workspaces to build. Re-run `setup.bat` any time those sibling folders look missing or stale.
 
-- downloads / updates the library submodules under `Libraries\` (DFAbout, RDCToolsLib, vwin32fh) to the versions this workspace expects;
-- configures this clone so a normal `git pull` keeps those libraries in sync automatically from then on.
+There is no plain `DUF25.0.sws`. The two workspace files are named for their role, so it is
+always clear which to use:
 
-Re-run `setup.bat` any time the `Libraries\` folders look empty or out of date, or when a new submodule is added.
+| File | Role | `[Libraries]` |
+|---|---|---|
+| `DUFDev25.0.sws` / `26.0` | Open this to **develop** DUF | the three `..\` siblings |
+| `DUFLibrary25.0.sws` / `26.0` | A consumer **references** this | none — deliberately empty |
+
+`DUFLibrary*.sws` declaring no libraries is the point: when DUF is used as a library inside
+another application, that application supplies the four-library flat set itself (see below), and
+DUF must not drag its own copies onto the path. (The old single `DUF25.0.sws` had the empty
+consumer file wearing the plain, inviting name — so it was the one people opened to work on DUF,
+found no libraries, and hit a wall. Two role-named files remove that trap.)
 
 That is the only setup step. In particular `Help\About.rtf` now ships with the repository — it
 used to be gitignored, which meant a fresh clone could not compile at all until someone worked
@@ -68,11 +80,24 @@ list ever needs to get shorter, extracting `SysInfoDialog` into RDCToolsLib is t
 
 ### If you are consuming DUF from an application
 
-Declare all four — DUF, RDCToolsLib, vwin32fh and DFAbout — as a flat sibling list in your own
-workspace's `[Libraries]`. Do not rely on reaching the other three transitively through DUF.
+Add all four — DUF, RDCToolsLib, vwin32fh and DFAbout — as submodules under your application's
+`Libraries\`, and declare them as a flat sibling list in your application workspace's
+`[Libraries]`. Do not rely on reaching the three through DUF; DUF's consumer `.sws` declares no
+libraries precisely so that it cannot.
 
-The reason is that DataFlex resolves the compiler search path first-match-wins, with no version
-arbitration. An application that declares RDCToolsLib itself *and* reaches a second copy through
-DUF gets two checkouts of the same library, at two possibly different commits, on one path — and
-which one wins is decided silently by list order. One library, one checkout, declared by the
-application, is the only arrangement that cannot drift.
+There are two reasons, and both are things this project has actually been bitten by:
+
+1. **Version drift.** DataFlex resolves the compiler search path first-match-wins, with no version
+   arbitration. If a library reached the path from two different checkouts, list order alone would
+   decide which won, silently. One library, one checkout, declared by the application, is the only
+   arrangement that cannot drift.
+
+2. **The Studio navigates by disk, not by the path.** Even when the *build* is unambiguous, a
+   second physical copy of a package on disk means Go-to-Definition and Find-in-Files can land on
+   the wrong file — and you can edit one copy while the build compiles the other. Flat siblings
+   mean exactly one physical copy of each library, so that cannot happen.
+
+This is why DUF stopped nesting the three: nesting guaranteed a second physical copy inside every
+consumer that also declared them as siblings. **Migrating a consumer:** add the three as siblings,
+list all four flat in the workspace, and confirm there is no longer a
+`Libraries\DUF\Libraries\` folder shadowing them.

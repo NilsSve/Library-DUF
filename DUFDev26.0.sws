@@ -6,9 +6,9 @@ ConfigFile=.\Programs\Config.ws
 Is$WebApp=False
 Is$Win64=True
 [Libraries]
-Lib1=Libraries\DFAbout\DFAbout26.0.sws
-Lib2=Libraries\RDCToolsLib\RDCToolsLib26.0.sws
-Lib3=Libraries\vwin32fh\StudioLibrary\vWin32fh-Library-DF26.0.sws
+Lib1=..\DFAbout\DFAbout26.0.sws
+Lib2=..\RDCToolsLib\RDCToolsLib26.0.sws
+Lib3=..\vwin32fh\StudioLibrary\vWin32fh-Library-DF26.0.sws
 [Projects]
 Project0=DUFCodeGenerator.src
 Project1=DUFSQLConnections.src

@@ -1,14 +1,10 @@
 [Properties]
-Version=25.0
+Version=26.0
 [WorkspacePaths]
 ConfigFile=.\Programs\Config.ws
 [Conditionals]
 Is$WebApp=False
 Is$Win64=True
-[Libraries]
-Lib1=Libraries\DFAbout\DFAbout25.0.sws
-Lib2=Libraries\RDCToolsLib\RDCToolsLib25.0.sws
-Lib3=Libraries\vwin32fh\StudioLibrary\vWin32fh-Library-DF25.0.sws
 [Projects]
 Project0=DUFCodeGenerator.src
 Project1=DUFSQLConnections.src

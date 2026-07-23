@@ -1,0 +1,15 @@
+[Properties]
+Version=25.0
+[WorkspacePaths]
+ConfigFile=.\Programs\Config.ws
+[Conditionals]
+Is$WebApp=False
+Is$Win64=True
+[Projects]
+Project0=DUFCodeGenerator.src
+Project1=DUFSQLConnections.src
+Project2=DUFTestProgram.src
+Project3=ReadDFDriverDefXML.src
+Project4=DUFSQLRepairUtility.src
+[ProjectParameters]
+DUFSQLRepairUtility.src=C:\Projects\DF20\ROW_TEST\Data\FILELIST.CFG
