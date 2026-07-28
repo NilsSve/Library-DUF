@@ -8902,10 +8902,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Get CKRevision of hoCLIHandler to sVersion
                 Move (SFormat (String(C_$DatabaseDriver), (sDriverID * "-" * (String(C_$Version) + ": " + String(sVersion))))) to sRetval
                 If (sClient <> "" and sRetval <> "") Begin
-                    Move (String(sRetval) + "\n" + String(C_$SQL_Client_Text) + "\n" + Trim(sClient)) to sRetval
+                    Move (String(sRetval) + "\n" + "Client Version:" + "\n" + Trim(sClient)) to sRetval
                 End                                
                 Else Begin
-                    Move (String(C_$SQL_Client_Text) + "\n" + Trim(sClient) * "(" + String(iClient) + ")") to sRetval
+                    Move ("Client Version:" + "\n" + Trim(sClient) * "(" + String(iClient) + ")") to sRetval
                 End
             End
         Loop
@@ -8914,9 +8914,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         If (bShowErrorDialog = True) Begin
             Get IsFirstStringGreaterThanSecond sVersion sMSSQLDRVVersion to bOK
             If (bOK = False or (iClient < iClientVersion)) Begin
-                Move (MSSQLDRV_ID + ".dll" * String(C_$SQL_Driver_Version_Min_Text) *  String(sMSSQLDRVVersion) + String("\n") + String(C_$SQL_Client_Version_Min_Text) + "\n" + String(sClientLowest) + String("\n\n") + String(C_$SQL_Versions_Are_Text) + String("\n") + String(sRetval)) to sRetval
+                Move (MSSQLDRV_ID + ".dll" * "The database driver version should at least be version:" *  String(sMSSQLDRVVersion) + String("\n") + "and the SQL client version should at least be:" + "\n" + String(sClientLowest) + String("\n\n") + "But the current versions are:" + String("\n") + String(sRetval)) to sRetval
                 If (bExitProgram = True) Begin
-                    Move (String(sRetval) + String("\n\n") + String(C_$PleaseAdjustTxt) * String(C_$ProgramWillExit_Text)) to sRetval
+                    Move (String(sRetval) + String("\n\n") + "Please adjust and try again." * "The program will now exit.") to sRetval
                 End
                 Send Stop_Box sRetval  
                 If (bExitProgram = True) Begin

@@ -21,7 +21,7 @@ Use RDCStatusPanel.pkg
 Use cDbUpdateFunctionLibrary_Mixin.pkg  // Properties used by the cDbUpdateFunctionLibrary class.
 Use cSQLConnectionHandler.pkg
 Use vWin32fh.pkg
-Use Dfabout.pkg
+//Use Dfabout.pkg
 
 #IFNDEF piOrgErrorHandlerID
     Function piOrgErrorHandlerID Returns Integer
@@ -61,6 +61,25 @@ Class cBaseDbUpdateFuncLib is a cObject
         Forward Send End_Construct_Object
 
     End_Procedure
+
+    Function IsDate String sDate Returns Boolean
+        Boolean bIsDate
+        String sGoodCharacters sChar
+        Integer iCount iLength
+
+        Move True to bIsDate
+        Move "0123456789-/" to sGoodCharacters
+        Move (Length(sDate)) to iLength
+        For iCount from 1 to iLength
+            Move (Left(sDate, 1)) to sChar
+            Move (Mid(sDate, 12, 2)) to sDate
+            Move (sGoodCharacters contains sChar) to bIsDate
+            If (bIsDate = False) Begin
+                Move iLength to iCount
+            End
+        Loop
+        Function_Return bIsDate
+    End_Function
 
     // Latin1_General_CI_AS = General Insensitive collation
     // Latin1_General_CS_AS = General Case Sensitive collation, AS= Accent Sensitive.
