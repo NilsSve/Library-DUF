@@ -7,7 +7,7 @@ Is$WebApp=False
 Is$Win64=True
 [Libraries]
 Lib1=..\DFAbout\DFAbout25.0.sws
-Lib2=..\RDCToolsLib\RDCToolsLib25.0.sws
+Lib2=..\RDCToolsLib\RDCToolsLibLibrary25.0.sws
 Lib3=..\vwin32fh\StudioLibrary\vWin32fh-Library-DF25.0.sws
 [Projects]
 Project0=DUFCodeGenerator.src
