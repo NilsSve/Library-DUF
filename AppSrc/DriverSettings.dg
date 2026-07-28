@@ -9,6 +9,12 @@ Use cRDCButton.pkg
 Use cRDCHeaderGroup.pkg
 Use cDbDriverSettingsForm.pkg
 Use cDbUpdateFunctionLibrary.pkg
+// DFAbout is needed here and ONLY here: oDriverInfo_btn pops a SysInfoDialog, which DFAbout
+// declares. It used to arrive via cBaseDbUpdateFuncLib, which meant every DUF consumer -
+// including headless service programs that never show a dialog - compiled the whole About
+// package. Declaring it in the one UI dialog that needs it keeps the Version Info button
+// working without imposing DFAbout on the function library.
+Use Dfabout.pkg
 
 Register_Procedure psOrgToolTip String sTooltip
 
