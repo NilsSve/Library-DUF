@@ -5,13 +5,18 @@
 	<libraries>
 		<library>
 			<libraryPath>..\DFAbout\DFAbout25.0.sws</libraryPath>
-			<libraryTimeStamp>2026-07-23T10:51:30</libraryTimeStamp>
+			<libraryTimeStamp>2025-03-17T16:53:14</libraryTimeStamp>
 			<libraryID>Lib1</libraryID>
 		</library>
 		<library>
 			<libraryPath>..\vwin32fh\StudioLibrary\vWin32fh-Library-DF25.0.sws</libraryPath>
-			<libraryTimeStamp>2026-07-23T10:51:32</libraryTimeStamp>
+			<libraryTimeStamp>2025-01-17T15:55:51</libraryTimeStamp>
 			<libraryID>Lib3</libraryID>
+		</library>
+		<library>
+			<libraryPath>..\RDCToolsLib\RDCToolsLibLibrary25.0.sws</libraryPath>
+			<libraryTimeStamp>2025-10-01T11:05:13</libraryTimeStamp>
+			<libraryID>Lib2</libraryID>
 		</library>
 	</libraries>
 	<classes>
@@ -1129,20 +1134,6 @@
 			<libraryID>0</libraryID>
 		</class>
 		<class>
-			<className>cWebWidgetPalette</className>
-			<image>cWebWidgetPalette.ico</image>
-			<package>cWebWidgetPalette.pkg</package>
-			<groupName>Web Controls</groupName>
-			<libraryID>0</libraryID>
-		</class>
-		<class>
-			<className>cWebWidgetContainer</className>
-			<image>cWebWidgetContainer.ico</image>
-			<package>cWebWidgetContainer.pkg</package>
-			<groupName>Web Containers</groupName>
-			<libraryID>0</libraryID>
-		</class>
-		<class>
 			<className>cMapComponent</className>
 			<image>ControlCOM.ico</image>
 			<package>cMapComponent.pkg</package>
@@ -1155,6 +1146,20 @@
 			<package>cComSWXMap.pkg</package>
 			<groupName>ActiveX</groupName>
 			<libraryID>Lib1</libraryID>
+		</class>
+		<class>
+			<className>cWebWidgetPalette</className>
+			<image>cWebWidgetPalette.ico</image>
+			<package>cWebWidgetPalette.pkg</package>
+			<groupName>Web Controls</groupName>
+			<libraryID>0</libraryID>
+		</class>
+		<class>
+			<className>cWebWidgetContainer</className>
+			<image>cWebWidgetContainer.ico</image>
+			<package>cWebWidgetContainer.pkg</package>
+			<groupName>Web Containers</groupName>
+			<libraryID>0</libraryID>
 		</class>
 	</classes>
 </classList>
