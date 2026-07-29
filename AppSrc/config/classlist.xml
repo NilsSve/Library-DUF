@@ -4,19 +4,14 @@
 	<DFLibraryVersion>2</DFLibraryVersion>
 	<libraries>
 		<library>
-			<libraryPath>Libraries\DFAbout\DFAbout25.0.sws</libraryPath>
-			<libraryTimeStamp>2025-03-13T19:45:34</libraryTimeStamp>
+			<libraryPath>..\DFAbout\DFAbout25.0.sws</libraryPath>
+			<libraryTimeStamp>2026-07-23T10:51:30</libraryTimeStamp>
 			<libraryID>Lib1</libraryID>
 		</library>
 		<library>
-			<libraryPath>Libraries\vwin32fh\StudioLibrary\vWin32fh-Library-DF25.0.sws</libraryPath>
-			<libraryTimeStamp>2025-01-18T13:52:20</libraryTimeStamp>
+			<libraryPath>..\vwin32fh\StudioLibrary\vWin32fh-Library-DF25.0.sws</libraryPath>
+			<libraryTimeStamp>2026-07-23T10:51:32</libraryTimeStamp>
 			<libraryID>Lib3</libraryID>
-		</library>
-		<library>
-			<libraryPath>Libraries\RDCToolsLib\RDCToolsLib25.0.sws</libraryPath>
-			<libraryTimeStamp>2026-07-22T12:54:22</libraryTimeStamp>
-			<libraryID>Lib2</libraryID>
 		</library>
 	</libraries>
 	<classes>
@@ -1134,20 +1129,6 @@
 			<libraryID>0</libraryID>
 		</class>
 		<class>
-			<className>cMapComponent</className>
-			<image>ControlCOM.ico</image>
-			<package>cMapComponent.pkg</package>
-			<groupName>Map Component</groupName>
-			<libraryID>Lib1</libraryID>
-		</class>
-		<class>
-			<className>cComSWXMap</className>
-			<image>ControlCOM.ico</image>
-			<package>cComSWXMap.pkg</package>
-			<groupName>ActiveX</groupName>
-			<libraryID>Lib1</libraryID>
-		</class>
-		<class>
 			<className>cWebWidgetPalette</className>
 			<image>cWebWidgetPalette.ico</image>
 			<package>cWebWidgetPalette.pkg</package>
@@ -1160,6 +1141,20 @@
 			<package>cWebWidgetContainer.pkg</package>
 			<groupName>Web Containers</groupName>
 			<libraryID>0</libraryID>
+		</class>
+		<class>
+			<className>cMapComponent</className>
+			<image>ControlCOM.ico</image>
+			<package>cMapComponent.pkg</package>
+			<groupName>Map Component</groupName>
+			<libraryID>Lib1</libraryID>
+		</class>
+		<class>
+			<className>cComSWXMap</className>
+			<image>ControlCOM.ico</image>
+			<package>cComSWXMap.pkg</package>
+			<groupName>ActiveX</groupName>
+			<libraryID>Lib1</libraryID>
 		</class>
 	</classes>
 </classList>
