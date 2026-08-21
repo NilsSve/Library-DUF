@@ -3,12 +3,12 @@
         {
             "source": "https://github.com/NilsSve/Library-DFAbout.git",
             "sws": "DFAbout26.0.sws",
-            "version": "ee08210f6c51fbc2e0c9b211a3d6a2cbe1524954"
+            "version": "bcee0e16d7e2b544cccd5d7e3cc3748749735c39"
         },
         {
             "source": "https://github.com/NilsSve/Library-RDCToolsLib.git",
             "sws": "RDCToolsLibLibrary26.0.sws",
-            "version": "73c9b00f97bdbb0b0c38dcc3146b9a8ca12587ee"
+            "version": "414f110d4afcebd3a16e5f2c2cbc290b1c92b251"
         }
     ],
     "description": "Database Update Framework: versioned, repeatable database schema updates for DataFlex.",
