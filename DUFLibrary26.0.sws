@@ -1,9 +1,23 @@
 {
+    "dependencies": [
+        {
+            "source": "https://github.com/NilsSve/Library-DFAbout.git",
+            "sws": "DFAbout26.0.sws",
+            "version": "ee08210f6c51fbc2e0c9b211a3d6a2cbe1524954"
+        },
+        {
+            "source": "https://github.com/NilsSve/Library-RDCToolsLib.git",
+            "sws": "RDCToolsLibLibrary26.0.sws",
+            "version": "73c9b00f97bdbb0b0c38dcc3146b9a8ca12587ee"
+        }
+    ],
     "description": "Database Update Framework: versioned, repeatable database schema updates for DataFlex.",
     "df": 26.0,
     "package": {
         "df-min": 26.0,
         "icon": "RDC-Mark.svg",
+        "license": "MIT",
+        "licenseFile": "LICENSE",
         "version": "1.0.0"
     },
     "projects": [
