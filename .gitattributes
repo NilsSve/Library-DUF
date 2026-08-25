@@ -40,3 +40,28 @@
 *.fld linguist-generated=true
 *.pdp linguist-generated=true
 *.pkd linguist-generated=true
+
+# Language-stats fixes: GitHub misdetects several DataFlex workspace files
+# as other languages. Once DataFlex lands in github-linguist (PR #7479) the
+# DataFlex mappings above switch from "suppress" to "count as DataFlex"
+# automatically; the lines below stay correct either way.
+
+# Workspace config is INI-format data — without this, *.ws is detected as
+# "Witcher Script" (a game-modding language).
+*.ws linguist-language=INI
+
+# DataFlex compile/API headers are DataFlex source, not C/C++.
+*.h linguist-language=DataFlex
+
+# gitattributes globs are case-sensitive on GitHub's servers; catch
+# capitalized extension variants that slip past the lowercase globs above.
+*.Inc linguist-language=DataFlex
+
+# Help sources (RTF) are documentation, not code.
+Help/** linguist-documentation=true
+*.rtf linguist-documentation=true
+
+# Third-party demo-database dumps (Chinook, Northwind) and DBA helper
+# scripts — real SQL, but not this library's own code. Without this they
+# make the repo read as 99% TSQL.
+Scripts/*.sql linguist-vendored=true
