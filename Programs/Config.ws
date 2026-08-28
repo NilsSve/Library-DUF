@@ -1,14 +1,14 @@
 [Workspace]
 Home=..\
-AppSrcPath=.\AppSrc
-AppHTMLPath=.\AppHtml
-BitmapPath=.\Bitmaps
-IdeSrcPath=.\IdeSrc
-DataPath=.\Data
-DDSrcPath=.\DDSrc
-HelpPath=.\Help
-ProgramPath=.\Programs
-FileList=.\Data\Filelist.cfg
+AppSrcPath=AppSrc
+AppHTMLPath=.
+BitmapPath=Bitmaps
+IdeSrcPath=IdeSrc
+DataPath=Data
+DDSrcPath=DDSrc
+HelpPath=Help
+ProgramPath=Programs
+FileList=Data\Filelist.cfg
 Description=Database Update Framework - Development
 [Suggestion Form List oFilelistPath_fm]
 Saved Item0=C:\Projects\DF18\MeterMAN SQL\Data\Filelist.cfg
