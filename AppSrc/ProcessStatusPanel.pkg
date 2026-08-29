@@ -4,7 +4,9 @@ Use cProcessStatusPanel.pkg
 Use cProgressBar.pkg
 
 #IFNDEF ghoStatusPanel
+#IFNDEF ghoStatusPanel
     Global_Variable Handle ghoStatusPanel // will contain the ID of the global StatusPanel object
+#ENDIF
     Move 0 to ghoStatusPanel
 #ENDIF
 
