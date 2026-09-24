@@ -16,7 +16,7 @@ REM  workspace's own setup provides the three siblings and this script is not
 REM  needed - if run there, it finds them already present and does nothing.
 REM
 REM  Open DUFDev25.0.sws (or DUFDev26.0.sws) to build DUF standalone. The
-REM  DUFLibrary25.0.sws / DUFLibrary26.0.sws files are the consumer-facing
+REM  DUFLibrary25.0.sws / RDC-DUF-Library-26.0.sws files are the consumer-facing
 REM  entry points and declare no libraries on purpose - the consumer supplies
 REM  them. There is deliberately no plain DUF25.0.sws to open by mistake.
 REM ===========================================================================
