@@ -2,13 +2,13 @@
     "dependencies": [
         {
             "source": "https://github.com/NilsSve/Library-RDCToolsLib.git",
-            "sws": "RDC-Windows-Sub-Classes-Library-26.0.sws",
-            "version": "1.0.0"
+            "sws": "RDC-Windows-Sub-Classes-Library.sws",
+            "version": "1.0.1"
         },
         {
             "source": "https://github.com/NilsSve/Library-DFAbout.git",
-            "sws": "RDC-DFAbout-Library-26.0.sws",
-            "version": "1.0.1"
+            "sws": "RDC-DFAbout-Library.sws",
+            "version": "1.0.2"
         },
         {
             "source": "https://github.com/NilsSve/Library-vwin32fh.git",
