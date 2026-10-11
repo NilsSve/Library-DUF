@@ -132,6 +132,32 @@ If the script cannot run on a machine, this is what it does for each program, fr
 
 That one command builds the program without its icon and manifest; the script adds both.
 
+### DataFlex 19.1 to 25: the programs with the application's login key
+
+DUF's programs can be compiled in DUF's own workspace, as described above. A program built there carries the
+login key of DUF's workspace. It reads an application's `SQLConnections.ini` on a development machine, where
+the application's key file is beside it, but not at a customer's.
+
+`BuildDUFUtilities.bat` builds the programs for an application instead. Start it from the folder of the
+application's workspace, or hand it the workspace file:
+
+```
+..\Libraries\DUF\BuildDUFUtilities.bat
+BuildDUFUtilities.bat C:\Projects\MyApp\MyApp.sws
+```
+
+It compiles `DUFCodeGenerator` and `DUFSQLRepairUtility` with that DataFlex version's own compiler and with the
+application's `AppSrc\LoginEncryptionKey.inc`, into the application's `Programs` folder. `/all` adds
+`DUFSQLConnections` and `ReadDFDriverDefXML`, and `/32` builds 32-bit programs on DataFlex 20 to 25. On
+DataFlex 19.1 it builds `DUFSQLRepairUtility`, with `/all` also `ReadDFDriverDefXML`, both 32-bit.
+
+The workspace file has to name `DUFLibrary<version>.sws` among its libraries, beside RDCToolsLib, DFAbout and
+vwin32fh. The script finds the compiler through the registry, or takes its path from the variable
+`DFCOMPILER`. It does not compile in the application's workspace itself: a utility needs DUF's own folders. It
+writes a workspace file of its own into `DUFUtilitiesBuild`, with DUF's folders, a copy of the application's
+key file first on the source path, and the application's `Programs` folder. The copy of the key file is
+removed again when the script is done. The DUF folder is only read.
+
 ### Passwords in SQLConnections.ini
 
 DUF encrypts the passwords in its `SQLConnections.ini` file with the login key of the workspace: the file
@@ -150,8 +176,8 @@ Three things follow:
 - **Existing files:** passwords stored before this change were encrypted with a fixed value in the class.
   They are not read any more. Enter them again, with the connections manager or the application's dialog.
 - On a machine without the application's source, a customer's for one, only a program built with the
-  application's login key reads its file. Build a utility that goes there in the application's workspace;
-  on DataFlex 26 `BuildDUFUtilities.bat` does that.
+  application's login key reads its file. Build a utility that goes there with `BuildDUFUtilities.bat`,
+  which takes the application's key on every DataFlex version from 19.1.
 
 ### If you are consuming DUF from an application
 
