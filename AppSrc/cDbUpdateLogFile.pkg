@@ -207,7 +207,10 @@ Class cDbUpdateLogFile is a cObject
             Append_Output channel iCh sFileName
                 If (bQuickWrite = True) Begin
                     If (iSize = 0) Begin
-                        Write channel iCh C_BOM_UTF8
+                        // The UTF-8 mark: a text file is UTF-8 from DataFlex 20, and OEM before it.
+                        #IF (!@ > 191)
+                            Write channel iCh C_BOM_UTF8
+                        #ENDIF
                         Writeln channel iCh CS_DatabaseUpdateFramework
                         Set pbEmptyLogFile to False
                     End

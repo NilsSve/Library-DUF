@@ -2163,7 +2163,10 @@ Class cBaseDbUpdateFuncLib is a cObject
             Loop
         End
 
-        Flush_Output channel iCh
+        // Flush_Output is a DataFlex 20 command; Close_Output writes what is left on every version.
+        #IF (!@ > 191)
+            Flush_Output channel iCh
+        #ENDIF
         Close_Output channel iCh
         Send Seq_Close_Channel iCh 
         

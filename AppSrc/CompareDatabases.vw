@@ -663,7 +663,10 @@ Object oCompareDatabases_vw is a dbView
         Get Value of oFilelistPathTo_fm   to sFilelistTo
         Move (CurrentDateTime()) to dtCreationTime
         
-        Write channel iCh C_BOM_UTF8
+        // The UTF-8 mark: a text file is UTF-8 from DataFlex 20, and OEM before it.
+        #IF (!@ > 191)
+            Write channel iCh C_BOM_UTF8
+        #ENDIF
         Writeln channel iCh CS_ReportHeaderUnderWrite
         Writeln channel iCh CS_DatabaseUpdateFramework
         Writeln channel iCh (" ***  DATABASE DIFFERENCES REPORT  ***")

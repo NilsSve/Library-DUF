@@ -2714,7 +2714,10 @@ Object oFilelistFixerView is a cRDCDbView
             For iCount from 0 to iSize
                 Writeln channel iCh asResultData[iCount]
             Loop        
-        Flush_Output channel iCh
+        // Flush_Output is a DataFlex 20 command; Close_Output writes what is left on every version.
+        #IF (!@ > 191)
+            Flush_Output channel iCh
+        #ENDIF
         Close_Output channel iCh
         Send Seq_Release_Channel iCh
         
@@ -3098,7 +3101,10 @@ Object oFilelistFixerView is a cRDCDbView
             Procedure_Return
         End
         Writeln channel iCh sErrorText 
-        Flush_Output channel iCh
+        // Flush_Output is a DataFlex 20 command.
+        #IF (!@ > 191)
+            Flush_Output channel iCh
+        #ENDIF
     End_Procedure
 
     Procedure OpenLogFile
@@ -3148,7 +3154,10 @@ Object oFilelistFixerView is a cRDCDbView
         If (iCh >= 0) Begin
             Move (CurrentDateTime()) to sTimeStamp
             Writeln channel iCh "Log file closed date/time: " (String(sTimeStamp))
-            Flush_Output channel iCh
+            // Flush_Output is a DataFlex 20 command; Close_Output writes what is left on every version.
+            #IF (!@ > 191)
+                Flush_Output channel iCh
+            #ENDIF
             Close_Output channel iCh
             Send Seq_Close_Channel iCh
         End

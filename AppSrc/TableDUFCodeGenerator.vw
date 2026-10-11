@@ -943,7 +943,10 @@ Object oTableDUFCodeGenerator is a cRDCDbView
             Function_Return GenerateOpenTableError
         End
 
-        Write channel iCh C_BOM_UTF8
+        // The UTF-8 mark: a text file is UTF-8 from DataFlex 20, and OEM before it.
+        #IF (!@ > 191)
+            Write channel iCh C_BOM_UTF8
+        #ENDIF
         Writeln channel iCh "/" "/ " CS_DatabaseUpdateFramework
         Writeln channel iCh ("/" + "/ Created by: 'DUF Update Code Generator'. Created:" * String(dtCreationTime))
         Writeln channel iCh ("Use cDbUpdateVersion.pkg")
