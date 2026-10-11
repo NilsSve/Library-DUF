@@ -68,3 +68,6 @@ AppSrc/CompileHeader.h
 LoginEncryptionKey.inc
 DfPkg/
 *.sws.lock
+# The two setup files the DFUnit package drops into a workspace it is installed in
+/SetupUnitTests.bat
+/SetupUnitTests.ps1

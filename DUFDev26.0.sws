@@ -14,6 +14,11 @@
             "source": "https://github.com/NilsSve/Library-vwin32fh.git",
             "sws": "StudioLibrary/vWin32fh-Library-DF26.0.sws",
             "version": "5432741c37c80be755e78f5f9d45ba8329fddcaf"
+        },
+        {
+            "source": "https://github.com/NilsSve/Library-DFUnit.git",
+            "sws": "RDC-DFUnit-Library.sws",
+            "version": "3f8d66719ddd3c1233aca82dcd0cc7a3ed3fc5ad"
         }
     ],
     "df": 26.0,
@@ -25,6 +30,7 @@
         {
             "debugArguments": "C:\\Projects\\DF20\\ROW_TEST\\Data\\FILELIST.CFG",
             "name": "DUFSQLRepairUtility.src"
-        }
+        },
+        "UnitTests.src"
     ]
 }

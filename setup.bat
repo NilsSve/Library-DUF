@@ -11,6 +11,10 @@ REM  script is only for working on DUF *on its own* - it clones those three as
 REM  siblings of this folder, which is where DUFDev25.0.sws / DUFDev26.0.sws
 REM  expect them (..\DFAbout, ..\RDCToolsLib, ..\vwin32fh).
 REM
+REM  DFUnit, the unit-test library, is cloned beside them (..\DFUnit). The
+REM  DUFDev workspaces of DataFlex 19.1 to 25 take it from there for the test
+REM  program AppSrc\UnitTests.src; on DataFlex 26 it comes as a package.
+REM
 REM  When DUF is consumed as a library inside another workspace, that
 REM  workspace's own setup provides the three siblings and this script is not
 REM  needed - if run there, it finds them already present and does nothing.
@@ -41,7 +45,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-for %%N in (DFAbout RDCToolsLib vwin32fh) do (
+for %%N in (DFAbout RDCToolsLib vwin32fh DFUnit) do (
     if exist "..\%%N\.git" (
         echo [%%N] already present - pulling latest...
         git -C "..\%%N" pull --ff-only
@@ -63,7 +67,7 @@ for %%N in (DFAbout RDCToolsLib vwin32fh) do (
 echo.
 echo === Setup complete ===
 echo.
-echo DFAbout, RDCToolsLib and vwin32fh are now siblings of this folder.
+echo DFAbout, RDCToolsLib, vwin32fh and DFUnit are now siblings of this folder.
 echo Open DUFDev25.0.sws (or DUFDev26.0.sws) in the Studio to build DUF
 echo standalone.
 echo.

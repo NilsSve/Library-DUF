@@ -40,7 +40,7 @@ The workspace also uses three other libraries from Nils Sve's GitHub page — DF
 ## Setup after cloning
 
 **Building DUF on its own** (working on the framework itself): after cloning, run **`setup.bat`**
-once from the repository root. It clones DFAbout, RDCToolsLib and vwin32fh as **siblings** of the
+once from the repository root. It clones DFAbout, RDCToolsLib, vwin32fh and DFUnit as **siblings** of the
 DUF folder — the layout the `DUFDev*.sws` workspaces expect (19.1, 20.1, 23.0, 24.0, 25.0 and 26.0). Open the one
 of your DataFlex version to build. Re-run `setup.bat` any time those sibling folders look missing or stale.
 
@@ -49,12 +49,30 @@ always clear which to use:
 
 | File | Role | `[Libraries]` |
 |---|---|---|
-| `DUFDev19.1.sws` / `20.1` / `23.0` / `24.0` / `25.0` / `26.0` | Open this to **develop** DUF | the three `..\` siblings |
+| `DUFDev19.1.sws` / `20.1` / `23.0` / `24.0` / `25.0` / `26.0` | Open this to **develop** DUF | the `..\` siblings |
 | `DUFLibrary19.1.sws` / `20.1` / `23.0` / `24.0` / `25.0` | A consumer **references** this | none — deliberately empty |
 
 On DataFlex 19.1 three of the five programs build: `DUFTestProgram`, `ReadDFDriverDefXML` and
 `DUFSQLRepairUtility`. `DUFCodeGenerator` needs DataFlex 20.1 or later, and `DUFSQLConnections` needs the
 icon `TagRemove.ico`, which DataFlex ships from version 20.
+
+### Unit tests
+
+`AppSrc\UnitTests.src` is the unit-test program of the workspace, built on
+[DFUnit](https://github.com/NilsSve/Library-DFUnit). The tests are in `AppSrc\o<Subject>-Tests.pkg`, one file
+per subject, and `AppSrc\oUnit_Tests.pkg` lists them. The first file, `oDbUpdateFunctionLibrary-Tests.pkg`,
+covers helper functions that need no database.
+
+- **DataFlex 26:** `DUFDev26.0.sws` takes DFUnit as a package.
+- **DataFlex 19.1 to 25:** `DUFDev<version>.sws` takes it from the sibling folder `..\DFUnit`, which
+  `setup.bat` clones.
+
+Compile `UnitTests` and run it: the test-runner window opens. `UnitTests64.exe -c` runs the tests without a
+window and ends with exit code 0 when all passed; `-o result.xml` adds a JUnit file. On DataFlex 19.1 the
+program is `UnitTests.exe`.
+
+On DataFlex 20.1 an unattended run ends with a crash code, although every test ran and the result file is
+written. The cause is inside DFUnit and is not found yet.
 
 `DUFLibrary*.sws` declaring no libraries is the point: when DUF is used as a library inside
 another application, that application supplies the four-library flat set itself (see below), and

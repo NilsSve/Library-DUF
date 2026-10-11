@@ -1,0 +1,31 @@
+// UnitTests.src - the unit-test program of the DUF workspace.
+//
+// It follows the starter program of the DFUnit library (Templates\UnitTests.src.template). A test program has
+// to live in the workspace's own AppSrc, so it is here and not in the library.
+//
+// Running it:
+//     UnitTests64.exe                  the test-runner window
+//     UnitTests64.exe -c               unattended: results on the console, then
+//                                      exit 0 (all passed) or -1 (a test failed)
+//     UnitTests64.exe -c -o result.xml the same, plus JUnit XML for a build server
+//     UnitTests64.exe -n               open the window but do not run on startup
+//
+// Nothing in this file needs to change when tests are added - that is done in oUnit_Tests.pkg.
+
+Use DFUnit.pkg
+
+Object oApplication is a cApplication
+    Set psCompany to "RDC Tools International"
+    Set psProduct to "DUF Unit Tests"
+End_Object
+
+Object oTestApplication is a cDFUnitTestApplication
+
+    // Every test fixture of this workspace hangs off this one file.
+    Use oUnit_Tests.pkg
+
+End_Object
+
+// Parses the command line, then either shows the test-runner window or runs the
+// tests on the console and exits with the appropriate code.
+Send AutoRun of ghoTestApplication

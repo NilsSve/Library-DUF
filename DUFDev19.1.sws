@@ -9,11 +9,13 @@ Is$Win64=False
 Lib1=..\DFAbout\DFAbout19.1.sws
 Lib2=..\RDCToolsLib\RDCToolsLibLibrary19.1.sws
 Lib3=..\vwin32fh\StudioLibrary\vWin32fh-Library-DF19.1.sws
+Lib4=..\DFUnit\DFUnit-19.1.sws
 [Projects]
 Project0=DUFCodeGenerator.src
 Project1=DUFSQLConnections.src
 Project2=DUFTestProgram.src
 Project3=ReadDFDriverDefXML.src
 Project4=DUFSQLRepairUtility.src
+Project5=UnitTests.src
 [ProjectParameters]
 DUFSQLRepairUtility.src=C:\Projects\DF20\ROW_TEST\Data\FILELIST.CFG

@@ -1,0 +1,127 @@
+// oDbUpdateFunctionLibrary-Tests.pkg - the helper functions of cDbUpdateFunctionLibrary that need no database:
+// folder and table names, driver ids, the length-and-decimals text. Nothing here logs in or opens a table.
+//
+// Only procedures carrying { Published=True } are run as tests.
+
+Use DFUnit\Fixturing\Fixture.pkg
+Use cDbUpdateFunctionLibrary.pkg
+
+Object oDbUpdateFunctionLibrary_Tests is a cTestFixture
+    Set psTestFixtureName to "cDbUpdateFunctionLibrary - no database"
+
+    // The library under test. A program that uses cDUFApplication has one already.
+    Procedure Setup
+        Handle ho
+        If (ghoDbUpdateFunctionLibrary = 0) Begin
+            Get Create (RefClass(cDbUpdateFunctionLibrary)) to ho
+        End
+    End_Procedure
+
+    Procedure TearDown
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_AddFolderDelimiter_Ends_The_Path_In_One_Backslash
+        String sPath
+        Get _AddFolderDelimiter of ghoDbUpdateFunctionLibrary "C:\Temp" to sPath
+        Send AssertSAreEqual "C:\Temp\" sPath "A path without a backslash at its end gets one."
+        Get _AddFolderDelimiter of ghoDbUpdateFunctionLibrary "C:\Temp\" to sPath
+        Send AssertSAreEqual "C:\Temp\" sPath "A path that ends in a backslash stays as it is."
+        Get _AddFolderDelimiter of ghoDbUpdateFunctionLibrary "  C:\Temp  " to sPath
+        Send AssertSAreEqual "C:\Temp\" sPath "Blanks around the path are trimmed first."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_SqlFormatLengthAndDecimalAsString
+        String sText
+        Get _SqlFormatLengthAndDecimalAsString of ghoDbUpdateFunctionLibrary 10 2 to sText
+        Send AssertSAreEqual "(10,2)" sText "Length and decimals."
+        Get _SqlFormatLengthAndDecimalAsString of ghoDbUpdateFunctionLibrary 10 0 to sText
+        Send AssertSAreEqual "(10)" sText "No decimals: the length alone."
+        Get _SqlFormatLengthAndDecimalAsString of ghoDbUpdateFunctionLibrary 0 0 to sText
+        Send AssertSAreEqual "" sText "No length: nothing at all."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_IsDAWSQLDriver_Knows_The_Driver_Ids
+        Boolean bIs
+        Get IsDAWSQLDriver of ghoDbUpdateFunctionLibrary MSSQLDRV_ID to bIs
+        Send Assert bIs "MSSQLDRV is one."
+        Get IsDAWSQLDriver of ghoDbUpdateFunctionLibrary DB2_DRV_ID to bIs
+        Send Assert bIs "DB2_DRV is one."
+        Get IsDAWSQLDriver of ghoDbUpdateFunctionLibrary ODBC_DRV_ID to bIs
+        Send Assert bIs "ODBC_DRV is one."
+        Get IsDAWSQLDriver of ghoDbUpdateFunctionLibrary DATAFLEX_ID to bIs
+        Send AssertFalse bIs "The embedded database is not."
+        Get IsDAWSQLDriver of ghoDbUpdateFunctionLibrary "" to bIs
+        Send AssertFalse bIs "An empty id is not."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_IsSQLDriver_Follows_IsDAWSQLDriver
+        Boolean bIs
+        Get IsSQLDriver of ghoDbUpdateFunctionLibrary MSSQLDRV_ID to bIs
+        Send Assert bIs "MSSQLDRV is an SQL driver."
+        Get IsSQLDriver of ghoDbUpdateFunctionLibrary DATAFLEX_ID to bIs
+        Send AssertFalse bIs "The embedded database is not."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_TableNameOnly_Strips_Driver_And_Int
+        String sName
+        Get _TableNameOnly of ghoDbUpdateFunctionLibrary "MSSQLDRV:Customer" to sName
+        Send AssertSAreEqual "Customer" sName "The driver prefix goes."
+        Get _TableNameOnly of ghoDbUpdateFunctionLibrary "Customer.int" to sName
+        Send AssertSAreEqual "Customer" sName "The .int extension goes."
+        Get _TableNameOnly of ghoDbUpdateFunctionLibrary "MSSQLDRV:Customer.INT" to sName
+        Send AssertSAreEqual "Customer" sName "Both go, whatever the case of the extension."
+        Get _TableNameOnly of ghoDbUpdateFunctionLibrary "Customer" to sName
+        Send AssertSAreEqual "Customer" sName "A plain name stays as it is."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_TableNoPrefix_Strips_Driver_And_Schema
+        String sName
+        Get _TableNoPrefix of ghoDbUpdateFunctionLibrary "mssqldrv:mytable" to sName
+        Send AssertSAreEqual "mytable" sName "The driver prefix goes."
+        Get _TableNoPrefix of ghoDbUpdateFunctionLibrary "dbo.mytable" to sName
+        Send AssertSAreEqual "mytable" sName "The schema goes."
+        Get _TableNoPrefix of ghoDbUpdateFunctionLibrary "mssqldrv:dbo.mytable" to sName
+        Send AssertSAreEqual "mytable" sName "Both go."
+        Get _TableNoPrefix of ghoDbUpdateFunctionLibrary "mytable" to sName
+        Send AssertSAreEqual "mytable" sName "A plain name stays as it is."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_DriverIDFromRootName
+        String sDriver
+        Get _DriverIDFromRootName of ghoDbUpdateFunctionLibrary "MSSQLDRV:Customer" to sDriver
+        Send AssertSAreEqual "MSSQLDRV" sDriver "What stands in front of the colon is the driver."
+        Get _DriverIDFromRootName of ghoDbUpdateFunctionLibrary "Customer" to sDriver
+        Send AssertSAreEqual DATAFLEX_ID sDriver "No colon: the embedded database."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_RemoveDriverFromRootName_Hands_Back_Both_Parts
+        String sName sDriver
+        Get _RemoveDriverFromRootName of ghoDbUpdateFunctionLibrary "MSSQLDRV:Customer.int" (&sDriver) to sName
+        Send AssertSAreEqual "Customer" sName "The name without driver and extension."
+        Send AssertSAreEqual "MSSQLDRV" sDriver "The driver, handed back by reference."
+        Move "" to sDriver
+        Get _RemoveDriverFromRootName of ghoDbUpdateFunctionLibrary "Customer" (&sDriver) to sName
+        Send AssertSAreEqual "Customer" sName "A plain name stays as it is."
+        Send AssertSAreEqual DATAFLEX_ID sDriver "No colon: the embedded database."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_IsDate_Takes_Digits_Dashes_And_Slashes
+        Boolean bIs
+        Get IsDate of ghoDbUpdateFunctionLibrary "2026-10-11" to bIs
+        Send Assert bIs "Digits and dashes."
+        Get IsDate of ghoDbUpdateFunctionLibrary "10/11/2026" to bIs
+        Send Assert bIs "Digits and slashes."
+        Get IsDate of ghoDbUpdateFunctionLibrary "2026-10-1x" to bIs
+        Send AssertFalse bIs "A letter makes it no date."
+    End_Procedure
+
+End_Object
