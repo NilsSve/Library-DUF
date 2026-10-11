@@ -41,7 +41,7 @@ The workspace also uses three other libraries from Nils Sve's GitHub page — DF
 
 **Building DUF on its own** (working on the framework itself): after cloning, run **`setup.bat`**
 once from the repository root. It clones DFAbout, RDCToolsLib and vwin32fh as **siblings** of the
-DUF folder — the layout the `DUFDev*.sws` workspaces expect (23.0, 24.0, 25.0 and 26.0). Open the one
+DUF folder — the layout the `DUFDev*.sws` workspaces expect (20.1, 23.0, 24.0, 25.0 and 26.0). Open the one
 of your DataFlex version to build. Re-run `setup.bat` any time those sibling folders look missing or stale.
 
 There is no plain `DUF25.0.sws`. The two workspace files are named for their role, so it is
@@ -49,8 +49,8 @@ always clear which to use:
 
 | File | Role | `[Libraries]` |
 |---|---|---|
-| `DUFDev23.0.sws` / `24.0` / `25.0` / `26.0` | Open this to **develop** DUF | the three `..\` siblings |
-| `DUFLibrary23.0.sws` / `24.0` / `25.0` | A consumer **references** this | none — deliberately empty |
+| `DUFDev20.1.sws` / `23.0` / `24.0` / `25.0` / `26.0` | Open this to **develop** DUF | the three `..\` siblings |
+| `DUFLibrary20.1.sws` / `23.0` / `24.0` / `25.0` | A consumer **references** this | none — deliberately empty |
 
 `DUFLibrary*.sws` declaring no libraries is the point: when DUF is used as a library inside
 another application, that application supplies the four-library flat set itself (see below), and

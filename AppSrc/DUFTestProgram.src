@@ -217,7 +217,9 @@ Object oMain is a Panel
                     Send AddTheme hoCombo "xtpThemeOffice2007Black" xtpThemeOffice2007Black
                     Send AddTheme hoCombo "xtpThemeOffice2007Silver" xtpThemeOffice2007Silver
                     
-                    Send AddTheme hoCombo "xtpThemeWindows10Dark" xtpThemeWindows10Dark
+                    #IF (!@ > 201)
+                        Send AddTheme hoCombo "xtpThemeWindows10Dark" xtpThemeWindows10Dark
+                    #ENDIF
                     Send AddTheme hoCombo "xtpThemeNativeWindows10" xtpThemeNativeWindows10
                     #IF (!@ > 240)
                         Send AddTheme hoCombo "xtpThemeWindows11Dark" xtpThemeWindows11Dark
@@ -237,7 +239,9 @@ Object oMain is a Panel
                     Send AddTheme hoCombo "xtpThemeOffice2013OneNote" xtpThemeOffice2013OneNote
                     
                     Send AddTheme hoCombo "xtpThemeOffice2016Access" xtpThemeOffice2016Access
-                    Send AddTheme hoCombo "xtpThemeOffice2016AccessBlack" xtpThemeOffice2016AccessBlack
+                    #IF (!@ > 201)
+                        Send AddTheme hoCombo "xtpThemeOffice2016AccessBlack" xtpThemeOffice2016AccessBlack
+                    #ENDIF
                     Send AddTheme hoCombo "xtpThemeOffice2016Excel" xtpThemeOffice2016Excel
                     Send AddTheme hoCombo "xtpThemeOffice2016OneNote" xtpThemeOffice2016OneNote
                     Send AddTheme hoCombo "xtpThemeOffice2016Outlook" xtpThemeOffice2016Outlook
@@ -251,10 +255,12 @@ Object oMain is a Panel
                     Send AddTheme hoCombo "xtpThemeVisualStudio2015Dark" xtpThemeVisualStudio2015Dark
                     Send AddTheme hoCombo "xtpThemeVisualStudio2015Light" xtpThemeVisualStudio2015Light
                     
-                    Send AddTheme hoCombo "xtpThemeVisualStudio2017Blue" xtpThemeVisualStudio2017Blue
-                    Send AddTheme hoCombo "xtpThemeVisualStudio2017BlueExtra" xtpThemeVisualStudio2017BlueExtra
-                    Send AddTheme hoCombo "xtpThemeVisualStudio2017Dark" xtpThemeVisualStudio2017Dark
-                    Send AddTheme hoCombo "xtpThemeVisualStudio2017Light" xtpThemeVisualStudio2017Light
+                    #IF (!@ > 201)
+                        Send AddTheme hoCombo "xtpThemeVisualStudio2017Blue" xtpThemeVisualStudio2017Blue
+                        Send AddTheme hoCombo "xtpThemeVisualStudio2017BlueExtra" xtpThemeVisualStudio2017BlueExtra
+                        Send AddTheme hoCombo "xtpThemeVisualStudio2017Dark" xtpThemeVisualStudio2017Dark
+                        Send AddTheme hoCombo "xtpThemeVisualStudio2017Light" xtpThemeVisualStudio2017Light
+                    #ENDIF
 
                 End_Procedure
 
