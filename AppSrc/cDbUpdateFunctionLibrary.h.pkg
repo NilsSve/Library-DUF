@@ -1,4 +1,4 @@
-﻿Use DUFLanguageConstants.h.pkg
+Use DUFLanguageConstants.h.pkg
 
 Register_Function paSQLQueryMessages Returns String[]
 Register_Procedure Set paSQLQueryMessages String[] aSQLQueryMessages

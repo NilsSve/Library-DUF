@@ -1,4 +1,4 @@
-﻿Use cRDCApplication.pkg
+Use cRDCApplication.pkg
 Use cIniFile.pkg
 Use cDbUpdateFunctionLibrary.pkg
 Use vWin32fh.pkg

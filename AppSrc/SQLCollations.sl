@@ -1,4 +1,4 @@
-﻿Use cRDCModalPanel.pkg
+Use cRDCModalPanel.pkg
 Use DFClient.pkg
 Use cCJGridColumnRowIndicator.pkg 
 Use cRDCCJGrid.pkg

@@ -1,4 +1,4 @@
-﻿Use Windows.pkg
+Use Windows.pkg
 
 Class cDUFNumForm is a Form
     Procedure Construct_Object

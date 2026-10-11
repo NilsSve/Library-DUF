@@ -1,4 +1,4 @@
-﻿Use cRDCRichEditor.pkg
+Use cRDCRichEditor.pkg
 Use vWin32fh.pkg
 
 #IFNDEF clActiveRow

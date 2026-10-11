@@ -1,4 +1,4 @@
-﻿#IF (!@ > 190)
+#IF (!@ > 190)
     CompilerLevelWarning All On
 #ENDIF
 Use DFAllEnt.pkg

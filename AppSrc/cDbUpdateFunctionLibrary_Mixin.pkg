@@ -1,4 +1,4 @@
-﻿// *** Mixin Class For the cDbUpdateFunctionLibrary Class ***
+// *** Mixin Class For the cDbUpdateFunctionLibrary Class ***
 //
 // We need to create a mixin class for the library.
 // Why? Because we import the library to the cDbUpdateVersion class; that imports

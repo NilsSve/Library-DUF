@@ -1,4 +1,4 @@
-﻿Use DFAllEnt.pkg
+Use DFAllEnt.pkg
 Use cCJStandardCommandBarSystem.pkg
 Use cCJCommandBarSystem.pkg
 Use vWin32fh.pkg

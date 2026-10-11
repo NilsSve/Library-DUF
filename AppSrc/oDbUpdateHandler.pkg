@@ -1,4 +1,4 @@
-﻿Use cDbUpdateHandler.pkg
+Use cDbUpdateHandler.pkg
 
 Object oDbUpdateHandler is a cDbUpdateHandler
     Set pbAutoCreateDbVersionTable to True

@@ -1,4 +1,4 @@
-﻿Use DFClient.pkg
+Use DFClient.pkg
 Use cCJCommandBarSystem.pkg
 Use cRDCCJGrid.pkg
 Use cCJGridColumnRowIndicator.pkg

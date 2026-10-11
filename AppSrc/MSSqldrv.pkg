@@ -1,4 +1,4 @@
-﻿//     Package that declares MS SQL driver constants and functions.
+//     Package that declares MS SQL driver constants and functions.
 //     This package can be used by developers who want to add Data Access
 //     MS SQL Client specific code to a DataFlex application.
 

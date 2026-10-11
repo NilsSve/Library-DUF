@@ -1,4 +1,4 @@
-﻿// Note: At the bottom of this package there's a general purpose access method for this dialog.
+// Note: At the bottom of this package there's a general purpose access method for this dialog.
 Use Windows.pkg
 Use vWin32fh.pkg
 

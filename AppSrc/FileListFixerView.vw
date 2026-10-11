@@ -1,4 +1,4 @@
-﻿Use Windows.pkg
+Use Windows.pkg
 Use Dfclient.pkg
 Use cRDCDbView.pkg
 Use MSSqldrv.pkg 

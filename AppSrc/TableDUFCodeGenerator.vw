@@ -1,4 +1,4 @@
-﻿Use Windows.pkg
+Use Windows.pkg
 Use cRDCDbView.pkg
 Use Cursor.pkg
 Use Batchdd.pkg

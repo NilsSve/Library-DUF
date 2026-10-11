@@ -1,4 +1,4 @@
-﻿Use Windows.pkg
+Use Windows.pkg
 Use DFClient.pkg
 Use cDbScrollingContainer.pkg
 Use cDbUpdateDatabaseDriver.pkg
