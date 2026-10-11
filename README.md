@@ -108,6 +108,16 @@ list ever needs to get shorter, extracting `SysInfoDialog` into RDCToolsLib is t
 On DataFlex 26 DUF can be added to a workspace as a package (`RDC-DUF-Library.sws`). DFAbout, RDCToolsLib and
 vwin32fh come with it. A package brings the sources of DUF's programs, but no programs.
 
+Add it with the version after a `#`:
+
+```
+https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.0
+```
+
+Each release has a version tag (`1.0.0`, ...), listed under Tags on GitHub. Without the `#` part the workspace
+gets a commit. A workspace that also names RDCToolsLib or DFAbout itself lists them before DUF, in a version
+DUF accepts: RDCToolsLib 1.0.11 or later, DFAbout 1.0.2 or later.
+
 The package puts **`BuildDUFUtilities.bat`** into the workspace folder. Start it there. It compiles
 `DUFCodeGenerator` and `DUFSQLRepairUtility` into the workspace's `Programs` folder:
 
