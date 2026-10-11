@@ -8,7 +8,7 @@
         {
             "source": "https://github.com/NilsSve/Library-RDCToolsLib.git",
             "sws": "RDC-Windows-Sub-Classes-Library.sws",
-            "version": "^1.0.1"
+            "version": "^1.0.11"
         },
         {
             "source": "https://github.com/NilsSve/Library-vwin32fh.git",

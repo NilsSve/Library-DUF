@@ -60,7 +60,7 @@ icon `TagRemove.ico`, which DataFlex ships from version 20.
 
 The Compare Databases view remembers the `Filelist.cfg` paths entered before. They are kept in
 `Programs\DUFSettings.ini`, which git ignores, and no longer in the workspace's `Config.ws`. A list still found
-in `Config.ws` is moved over the first time the view reads it. This needs RDCToolsLib after release 1.0.10.
+in `Config.ws` is moved over the first time the view reads it. This needs RDCToolsLib 1.0.11 or later.
 
 ### Unit tests
 
