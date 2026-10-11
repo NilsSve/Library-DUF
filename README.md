@@ -97,6 +97,35 @@ Note the shape of that last row. DUF is a database library, and its entire depen
 About-dialog library is a single System Information popup in one dialog. If DUF's dependency
 list ever needs to get shorter, extracting `SysInfoDialog` into RDCToolsLib is the move.
 
+### DataFlex 26: DUF as a package, and its programs
+
+On DataFlex 26 DUF can be added to a workspace as a package (`RDC-DUF-Library.sws`). DFAbout, RDCToolsLib and
+vwin32fh come with it. A package brings the sources of DUF's programs, but no programs.
+
+The package puts **`BuildDUFUtilities.bat`** into the workspace folder. Start it there. It compiles
+`DUFCodeGenerator` and `DUFSQLRepairUtility` into the workspace's `Programs` folder:
+
+- with the login key of that workspace (`AppSrc\LoginEncryptionKey.inc`), which a program built somewhere
+  else does not have;
+- with the DataFlex version the workspace file names, 64-bit, with icon and manifest as the Studio builds them.
+
+`BuildDUFUtilities.bat /all` also builds `DUFSQLConnections` and `ReadDFDriverDefXML`. With several workspace
+files in the folder, name the one to build for: `BuildDUFUtilities.bat MyApp.sws`. Run it again after the
+package is updated.
+
+It is a plain batch file and needs only Windows and DataFlex. It finds `df-cli.exe` on the PATH or through the
+registry, or takes its path from the variable `DFCLI`. It writes to `Programs` and to a folder
+`DUFUtilitiesBuild` in the workspace, which holds the compiler's listings and can be deleted. The package
+folder in `DfPkg` is only read.
+
+If the script cannot run on a machine, this is what it does for each program, from the workspace folder:
+
+```
+"C:\Program Files\DataFlex 26.0\Bin64\df-cli.exe" build-file "DfPkg\NilsSve_RDC_DUF_Library-<version>\AppSrc\DUFCodeGenerator.src" --workspace MyApp.sws --output-dir Programs --toolchain 26.0.0+windows-64
+```
+
+That one command builds the program without its icon and manifest; the script adds both.
+
 ### If you are consuming DUF from an application
 
 Add all four — DUF, RDCToolsLib, vwin32fh and DFAbout — as submodules under your application's
