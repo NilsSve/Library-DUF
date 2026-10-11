@@ -1,0 +1,80 @@
+// oDFAbout-Tests.pkg - DFAbout's compile date and network user name. Both have a branch of their own for a
+// DataFlex before 20 (no wide strings there), so the same tests on every version also say that the branches
+// agree. DFAbout has no development workspace of its own; that is why its tests are here.
+//
+// Only procedures carrying { Published=True } are run as tests.
+
+Use DFUnit\Fixturing\Fixture.pkg
+Use DfAbout.pkg
+
+Object oDFAbout_Tests is a cTestFixture
+    Set psTestFixtureName to "DFAbout - compile date and user name"
+
+    { Published=True }
+    Procedure Test_SystemTimeToDateTime_Keeps_Every_Part
+        tWinSystemTime SystemTime
+        Handle ho
+        DateTime dtResult
+
+        Move 2026 to SystemTime.wYear
+        Move 10   to SystemTime.wMonth
+        Move 11   to SystemTime.wDay
+        Move 13   to SystemTime.wHour
+        Move 14   to SystemTime.wMinute
+        Move 15   to SystemTime.wSecond
+        Get Create (RefClass(cFileCompileDateAndTime)) to ho
+        Get SystemTimeToDateTime of ho SystemTime to dtResult
+        Send Destroy of ho
+        Send AssertIAreEqual 2026 (DateGetYear(dtResult))   "The year."
+        Send AssertIAreEqual 10   (DateGetMonth(dtResult))  "The month."
+        Send AssertIAreEqual 11   (DateGetDay(dtResult))    "The day."
+        Send AssertIAreEqual 13   (DateGetHour(dtResult))   "The hour."
+        Send AssertIAreEqual 14   (DateGetMinute(dtResult)) "The minute."
+        Send AssertIAreEqual 15   (DateGetSecond(dtResult)) "The second."
+    End_Procedure
+
+    // 2026-10-11 12:00:00 as a Windows file time: 31283576 * 2^32 + 178069504 hundred-nanoseconds since 1601.
+    { Published=True }
+    Procedure Test_ConvertDateTimeToSystemDateTime_Reads_A_File_Time
+        Handle ho
+        DateTime dtResult
+
+        Get Create (RefClass(cFileCompileDateAndTime)) to ho
+        Get ConvertDateTimeToSystemDateTime of ho 178069504 31283576 to dtResult
+        Send Destroy of ho
+        Send AssertIAreEqual 2026 (DateGetYear(dtResult))   "The year."
+        Send AssertIAreEqual 10   (DateGetMonth(dtResult))  "The month."
+        Send AssertIAreEqual 11   (DateGetDay(dtResult))    "The day."
+        Send AssertIAreEqual 12   (DateGetHour(dtResult))   "The hour."
+        Send AssertIAreEqual 0    (DateGetMinute(dtResult)) "The minute."
+        Send AssertIAreEqual 0    (DateGetSecond(dtResult)) "The second."
+    End_Procedure
+
+    // The moment this very program was compiled: not before this test was written, and not in the future (a day
+    // of room, because the compile date is universal time and the clock here is local).
+    { Published=True }
+    Procedure Test_ProgramCompileDate_Is_A_Believable_Moment
+        String sProgram
+        DateTime dtCompiled dtLatest
+
+        Get GetApplicationFileName of ghoApplication to sProgram
+        Get ProgramCompileDate sProgram to dtCompiled
+        Send Assert (DateGetYear(dtCompiled) >= 2026) ("The year of the compile is 2026 or later, it was" * String(DateGetYear(dtCompiled)))
+        Move (CurrentDateTime()) to dtLatest
+        Move (DateAddDay(dtLatest, 1)) to dtLatest
+        Send Assert (dtCompiled <= dtLatest) "The compile is not in the future."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_Network_User_Name_Is_The_Windows_User
+        String sUser sLogon
+
+        Get Network_User_Name of Desktop to sUser
+        Get_Environment "USERNAME" to sLogon
+        Send Assert (sUser <> "") "A name comes back."
+        If (sUser <> "User Unknown") Begin
+            Send Assert (Uppercase(sUser) contains Uppercase(sLogon)) ("It holds the name of the USERNAME variable, it was" * sUser)
+        End
+    End_Procedure
+
+End_Object

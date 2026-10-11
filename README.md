@@ -71,9 +71,6 @@ Compile `UnitTests` and run it: the test-runner window opens. `UnitTests64.exe -
 window and ends with exit code 0 when all passed; `-o result.xml` adds a JUnit file. On DataFlex 19.1 the
 program is `UnitTests.exe`.
 
-On DataFlex 20.1 an unattended run ends with a crash code, although every test ran and the result file is
-written. The cause is inside DFUnit and is not found yet.
-
 `DUFLibrary*.sws` declaring no libraries is the point: when DUF is used as a library inside
 another application, that application supplies the four-library flat set itself (see below), and
 DUF must not drag its own copies onto the path. (The old single `DUF25.0.sws` had the empty
