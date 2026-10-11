@@ -59,6 +59,8 @@ Object oCompareDatabases_vw is a dbView
         Set psToolTip to "Select the Filelist.cfg file for the development database"
 
         Object oFilelistPathFrom_fm is a cRDCSuggestionIniForm
+            // The list of earlier paths is kept in Programs\DUFSettings.ini, not in the workspace's Config.ws.
+            Set psIniFileName to "DUFSettings.ini"
             Set Size to 12 413
             Set Location to 29 29
             Set Label_Col_Offset to 0
@@ -113,6 +115,8 @@ Object oCompareDatabases_vw is a dbView
         Set psToolTip to "Select the Filelist.cfg file for the database that needs to be updated"
 
         Object oFilelistPathTo_fm is a cRDCSuggestionIniForm
+            // The list of earlier paths is kept in Programs\DUFSettings.ini, not in the workspace's Config.ws.
+            Set psIniFileName to "DUFSettings.ini"
             Set Size to 12 413
             Set Location to 29 28
             Set Label_Col_Offset to 0

@@ -56,6 +56,12 @@ On DataFlex 19.1 three of the five programs build: `DUFTestProgram`, `ReadDFDriv
 `DUFSQLRepairUtility`. `DUFCodeGenerator` needs DataFlex 20.1 or later, and `DUFSQLConnections` needs the
 icon `TagRemove.ico`, which DataFlex ships from version 20.
 
+### What the programs save
+
+The Compare Databases view remembers the `Filelist.cfg` paths entered before. They are kept in
+`Programs\DUFSettings.ini`, which git ignores, and no longer in the workspace's `Config.ws`. A list still found
+in `Config.ws` is moved over the first time the view reads it. This needs RDCToolsLib after release 1.0.10.
+
 ### Unit tests
 
 `AppSrc\UnitTests.src` is the unit-test program of the workspace, built on
