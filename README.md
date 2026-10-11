@@ -142,6 +142,25 @@ If the script cannot run on a machine, this is what it does for each program, fr
 
 That one command builds the program without its icon and manifest; the script adds both.
 
+**Moving to a newer release.** Let df-cli do it, from the workspace folder:
+
+```
+df-cli package upgrade MyApp.sws NilsSve/RDC-DUF-Library
+```
+
+That takes the workspace to the newest release and replaces `BuildDUFUtilities.bat` in the workspace folder
+with the new one. An exact version in the workspace file is rewritten to the new version; a range such as
+`^1.0.0` stays. Then run the script again, so the programs are built from the new sources. A workspace that
+has DUF by commit counts as up to date: change its version to `1.0.0` in the workspace file first, then run
+the command.
+
+Do not move by changing the version in the workspace file alone. df-cli does not replace a script it
+installed earlier when the new release's script has another text. `df-cli config` then reports "Installed
+file ... BuildDUFUtilities.bat has been modified" and still calls the workspace OK, but a build stops with
+"Failed to load workspace configuration". The way out: delete `BuildDUFUtilities.bat` from the workspace
+folder and run `df-cli config MyApp.sws`, which installs the new script. This was measured with the df-cli
+of DataFlex 26.0.
+
 ### DataFlex 19.1 to 25: the programs with the application's login key
 
 DUF's programs can be compiled in DUF's own workspace, as described above. A program built there carries the
