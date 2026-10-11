@@ -6,7 +6,7 @@ Class cDbUpdateGenericDatabaseDriver is a cObject
     Procedure Construct_Object
         Forward Send Construct_Object
         { MethodType=Property Category="Database" }
-        { EnumList="DATAFLEX_ID, MSSQLDRV_ID, DB2_DRV_ID, ODBC_DRV_ID, DFBTRDRV_ID SQL_DRV, MDSPGSQL, MDSMYSQL, ORA_DRV" }
+        { EnumList="DATAFLEX_ID, MSSQLDRV_ID, DB2_DRV_ID, ODBC_DRV_ID, DFBTRDRV_ID" }
         { InitialValue=DATAFLEX_ID }
         Property String psDriverID DATAFLEX_ID
     End_Procedure

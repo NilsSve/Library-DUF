@@ -13,12 +13,10 @@
 //                Added a new structure for passing connection data back & forth.
 //                Added better error handling.
 //                Added a decompose message for the connection string.
-//    2017-01-09  Added support for Mertech drivers
-//                Big overhaul to comply better with "Managed Connections" (DF 19)
+//    2017-01-09  Big overhaul to comply better with "Managed Connections" (DF 19)
 //                These changes make the class compatible with DFConnId.ini (can read/write DAW connection ini-files)
 //    2017-02-12  Reworked the whole connection property interface.
 //                Now there is one struct property that is the at cencter of a connection.
-//    2023-11-06 *** REMOVED ALL SUPPORT FOR MERTECH DRIVERS ***
 //****************************************************************************
 Use cli.pkg
 Use MSSqldrv.pkg
@@ -291,7 +289,7 @@ Class cSQLConnectionHandler is a cObject
     //       Otherwise errors might be raised by the driver when e.g. the format
     //       for a connection string has the wrong format for that driver.
     { MethodType=Property Category="Database" InitialValue="Default" }
-    { EnumList="DATAFLEX, MSSQLDRV, DB2_DRV, ODBC_DRV, SQL_DRV, MDSPGSQL, MDSMYSQL, ORA_DRV" }
+    { EnumList="DATAFLEX, MSSQLDRV, DB2_DRV, ODBC_DRV" }
     Procedure Set psDriverID String sValue
         tSQLConnection SQLConnection
         Get pSQLConnection to SQLConnection

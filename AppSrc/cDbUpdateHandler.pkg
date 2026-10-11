@@ -1380,7 +1380,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
     End_Function
 
     { MethodType=Property Category="Database" InitialValue="Default" }
-    { EnumList="DATAFLEX, MSSQLDRV, DB2_DRV, ODBC_DRV, SQL_DRV, MDSPGSQL, MDSMYSQL, ORA_DRV" }
+    { EnumList="DATAFLEX, MSSQLDRV, DB2_DRV, ODBC_DRV" }
     Procedure Set psDriverID String sDriverID
         If (ghoSQLConnectionHandler = 0) Begin
             Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
