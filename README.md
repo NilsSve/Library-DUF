@@ -126,6 +126,27 @@ If the script cannot run on a machine, this is what it does for each program, fr
 
 That one command builds the program without its icon and manifest; the script adds both.
 
+### Passwords in SQLConnections.ini
+
+DUF encrypts the passwords in its `SQLConnections.ini` file with the login key of the workspace: the file
+`AppSrc\LoginEncryptionKey.inc`, which the Studio makes once for each workspace. It is the key DataFlex itself
+uses for `DFConnId.ini`. `cSQLConnectionIniFile` takes the key from the first of these that gives one:
+
+1. `psHashString`, when the program has set it. It is empty by default.
+2. `AppSrc\LoginEncryptionKey.inc` of the workspace the ini file is in, read when the program runs. That file
+   is there on a development machine, so a DUF utility built in another workspace reads an application's file
+   with the application's key.
+3. The login key the program was compiled with.
+
+Three things follow:
+
+- Every program that uses `cSQLConnectionIniFile` needs `AppSrc\LoginEncryptionKey.inc` when it is compiled.
+- **Existing files:** passwords stored before this change were encrypted with a fixed value in the class.
+  They are not read any more. Enter them again, with the connections manager or the application's dialog.
+- On a machine without the application's source, a customer's for one, only a program built with the
+  application's login key reads its file. Build a utility that goes there in the application's workspace;
+  on DataFlex 26 `BuildDUFUtilities.bat` does that.
+
 ### If you are consuming DUF from an application
 
 Add all four — DUF, RDCToolsLib, vwin32fh and DFAbout — as submodules under your application's

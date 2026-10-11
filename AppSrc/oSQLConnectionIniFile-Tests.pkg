@@ -1,0 +1,217 @@
+// oSQLConnectionIniFile-Tests.pkg - the key cSQLConnectionIniFile encrypts the passwords of a DUF
+// SQLConnections.ini file with: psHashString when the program has set it, else the login key of the workspace the
+// ini file is in (AppSrc\LoginEncryptionKey.inc, read when the program runs), else the login key the program
+// was compiled with.
+//
+// The tests make two small "workspaces" in the TEMP folder, each with a key file of its own, and remove them
+// again. The keys in them are made up. The key this test program was compiled with is never shown: where it
+// is compared, the test says only whether it was equal.
+
+Use DFUnit\Fixturing\Fixture.pkg
+Use cSQLConnectionIniFile.pkg
+
+Object oSQLConnectionIniFile_Tests is a cTestFixture
+    Set psTestFixtureName to "cSQLConnectionIniFile - the key for the passwords"
+
+    // "<TEMP>\DUFKeyTest<name>\"
+    Function TestWorkspace String sName Returns String
+        String sTemp
+
+        Get_Environment "TEMP" to sTemp
+        If (Right(sTemp, 1) <> "\") Begin
+            Move (sTemp + "\") to sTemp
+        End
+        Function_Return (sTemp + "DUFKeyTest" + sName + "\")
+    End_Function
+
+    // A workspace folder with Programs and AppSrc, and the lines handed in as its key file.
+    Procedure MakeTestWorkspace String sName String[] asKeyFile
+        String sHome
+        Integer iCh iLine
+
+        Get TestWorkspace sName to sHome
+        Make_Directory sHome
+        Make_Directory (sHome + "Programs")
+        Make_Directory (sHome + "AppSrc")
+        Get Seq_New_Channel to iCh
+        Direct_Output channel iCh (sHome + "AppSrc\LoginEncryptionKey.inc")
+        For iLine from 0 to (SizeOfArray(asKeyFile) - 1)
+            Writeln channel iCh asKeyFile[iLine]
+        Loop
+        Close_Output channel iCh
+        Send Seq_Release_Channel iCh
+    End_Procedure
+
+    Procedure RemoveTestWorkspace String sName
+        String sHome
+
+        Get TestWorkspace sName to sHome
+        EraseFile (sHome + "AppSrc\LoginEncryptionKey.inc")
+        Remove_Directory (sHome + "AppSrc")
+        Remove_Directory (sHome + "Programs")
+        Remove_Directory sHome
+    End_Procedure
+
+    // The key file as the Studio writes it: a comment line and the Set line.
+    Procedure MakePlainTestWorkspace String sName String sKey
+        String[] asKeyFile
+
+        Move "// The login encryption key of this workspace" to asKeyFile[0]
+        Move ('Set psEncryptPassword to "' + sKey + '"') to asKeyFile[1]
+        Send MakeTestWorkspace sName asKeyFile
+    End_Procedure
+
+    Procedure Setup
+        Send MakePlainTestWorkspace "A" "KeyOfWorkspaceA-0123456789-abcdefghij"
+        Send MakePlainTestWorkspace "B" "KeyOfWorkspaceB-9876543210-jihgfedcba"
+    End_Procedure
+
+    Procedure TearDown
+        Send RemoveTestWorkspace "A"
+        Send RemoveTestWorkspace "B"
+        Send RemoveTestWorkspace "C"
+    End_Procedure
+
+    // An ini file object whose file is in the Programs folder of a test workspace.
+    Function IniFileIn String sName Returns Handle
+        Handle ho
+
+        Get Create (RefClass(cSQLConnectionIniFile)) to ho
+        Set psIniFilePath of ho to (TestWorkspace(Self, sName) + "Programs")
+        Function_Return ho
+    End_Function
+
+    { Published=True }
+    Procedure Test_A_Password_Comes_Back
+        Handle ho
+        String sStored sBack
+
+        Get IniFileIn "A" to ho
+        Get EncryptPassword of ho "My#Secret 1" to sStored
+        Get DecryptPassword of ho sStored to sBack
+        Send Destroy of ho
+        Send Assert (sStored <> "") "Something is stored."
+        Send Assert (sStored <> "My#Secret 1") "It is not the password itself."
+        Send AssertSAreEqual "My#Secret 1" sBack "Decrypted, it is the password again."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_The_Key_File_Of_The_Workspace_Is_The_Key
+        Handle ho
+        String sKey
+
+        Get IniFileIn "A" to ho
+        Get EncryptionKey of ho to sKey
+        Send Destroy of ho
+        Send AssertSAreEqual "KeyOfWorkspaceA-0123456789-abcdefghij" sKey "The key of the workspace the ini file is in."
+        Get IniFileIn "B" to ho
+        Get EncryptionKey of ho to sKey
+        Send Destroy of ho
+        Send AssertSAreEqual "KeyOfWorkspaceB-9876543210-jihgfedcba" sKey "Another workspace, another key."
+    End_Procedure
+
+    // What an application writes with its login key, a program built somewhere else reads on a development
+    // machine: this test program is such a program, and it was not compiled with the key of workspace A.
+    { Published=True }
+    Procedure Test_A_Program_From_Elsewhere_Reads_The_Applications_File
+        Handle ho hoApplication
+        String sStored sBack
+
+        Get Create (RefClass(cLoginEncryption)) to hoApplication
+        Set psEncryptPassword of hoApplication to "KeyOfWorkspaceA-0123456789-abcdefghij"
+        Get EncryptPassword of hoApplication "The application's password" to sStored
+        Send Destroy of hoApplication
+
+        Get IniFileIn "A" to ho
+        Get DecryptPassword of ho sStored to sBack
+        Send Destroy of ho
+        Send AssertSAreEqual "The application's password" sBack "Read with the key file of the application's workspace."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_Two_Workspaces_Do_Not_Read_Each_Other
+        Handle hoA hoB
+        String sStored sBack
+
+        Get IniFileIn "A" to hoA
+        Get IniFileIn "B" to hoB
+        Get EncryptPassword of hoA "Only for workspace A" to sStored
+        Get DecryptPassword of hoB sStored to sBack
+        Send Destroy of hoA
+        Send Destroy of hoB
+        Send Assert (sBack <> "Only for workspace A") "Workspace B does not get the password of workspace A."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_psHashString_Set_By_The_Program_Wins
+        Handle ho
+        String sKey
+
+        Get IniFileIn "A" to ho
+        Set psHashString of ho to "AKeyTheProgramSetItself"
+        Get EncryptionKey of ho to sKey
+        Send Destroy of ho
+        Send AssertSAreEqual "AKeyTheProgramSetItself" sKey "A key the program sets goes before the key file."
+    End_Procedure
+
+    // No key file beside the ini file - a customer's machine: the key this program was compiled with. It is
+    // not shown here; only whether it is the one a cDUFLoginKey object holds.
+    { Published=True }
+    Procedure Test_Without_A_Key_File_It_Is_The_Programs_Key
+        Handle ho hoKey
+        String sKey sCompiled sTemp
+
+        Get Create (RefClass(cDUFLoginKey)) to hoKey
+        Get GetEncryptionPassword of hoKey to sCompiled
+        Send Destroy of hoKey
+
+        Get Create (RefClass(cSQLConnectionIniFile)) to ho
+        Get EncryptionKey of ho to sKey
+        Send Assert (sKey <> "") "With no ini folder set there is a key."
+        Send Assert (sKey = sCompiled) "It is the key the program was compiled with."
+
+        // a folder that has no AppSrc beside it: the home folder of a test workspace
+        Get TestWorkspace "A" to sTemp
+        Set psIniFilePath of ho to sTemp
+        Get EncryptionKey of ho to sKey
+        Send Destroy of ho
+        Send Assert (sKey = sCompiled) "With no key file beside the ini folder it is the same key."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_The_Forms_A_Key_File_Can_Have
+        Handle ho
+        String sKey sFile
+        String[] asKeyFile
+
+        Get Create (RefClass(cSQLConnectionIniFile)) to ho
+        Get TestWorkspace "C" to sFile
+        Move (sFile + "AppSrc\LoginEncryptionKey.inc") to sFile
+
+        // comment lines that name the property come first; the key has the characters a generated key can have
+        Move "// Set psEncryptPassword to a key of your own"            to asKeyFile[0]
+        Move "//"                                                       to asKeyFile[1]
+        Move ('    Set psEncryptPassword to "a{<Yk~O-Ni0nq=sMi[*Rn[A)q"')  to asKeyFile[2]
+        Send MakeTestWorkspace "C" asKeyFile
+        Get WorkspaceLoginKey of ho sFile to sKey
+        Send AssertSAreEqual "a{<Yk~O-Ni0nq=sMi[*Rn[A)q" sKey "The Set line after the comment lines."
+
+        // single quotes, a double quote inside the key, other capitals
+        Move (ResizeArray(asKeyFile, 0)) to asKeyFile
+        Move ("set PSENCRYPTPASSWORD to 'with" + '"' + "inside'")       to asKeyFile[0]
+        Send MakeTestWorkspace "C" asKeyFile
+        Get WorkspaceLoginKey of ho sFile to sKey
+        Send AssertSAreEqual ("with" + '"' + "inside") sKey "A key in single quotes."
+
+        // no Set line at all
+        Move "// nothing here" to asKeyFile[0]
+        Send MakeTestWorkspace "C" asKeyFile
+        Get WorkspaceLoginKey of ho sFile to sKey
+        Send AssertSAreEqual "" sKey "A file without the line gives no key."
+
+        Get WorkspaceLoginKey of ho (sFile + ".missing") to sKey
+        Send Destroy of ho
+        Send AssertSAreEqual "" sKey "A file that is not there gives no key."
+    End_Procedure
+
+End_Object

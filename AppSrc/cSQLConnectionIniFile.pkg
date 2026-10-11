@@ -26,6 +26,17 @@ Use cDbUpdateDatabaseDriver.pkg
 #ELSE
     Use Base64Functions.pkg
 #ENDIF
+Use seq_chnl.pkg
+
+// The login key of the workspace this program is compiled in: AppSrc\LoginEncryptionKey.inc, the file the
+// Studio makes once for each workspace. It holds one statement, Set psEncryptPassword to "...", and that
+// statement is compiled into the object here, the way DataFlex's own LoginEncryption.pkg does it.
+Class cDUFLoginKey is a cLoginEncryption
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        #Include LoginEncryptionKey.inc
+    End_Procedure
+End_Class
 
 Class cSQLConnectionIniFile is a cIniFile
     Procedure Construct_Object
@@ -42,9 +53,10 @@ Class cSQLConnectionIniFile is a cIniFile
         Property Boolean pbDFConnId False
 
         { Visibility=Public }
-        // *** You really want to change this value! ***
-        // It is used when encrypting/decrypting passwords.
-        Property String psHashString "zx!2139(LI0+?ips7433"
+        // The key for the passwords of a DUF "SQLConnections.ini" file. Empty, the default: the class finds
+        // the key itself - see the EncryptionKey function. Set it only in a program that must use another
+        // key; every program that reads or writes the same file must then set the same one.
+        Property String psHashString ""
 
     End_Procedure
 
@@ -540,13 +552,89 @@ Class cSQLConnectionIniFile is a cIniFile
         Function_Return sConnectionString
     End_Function
 
-    // Use Base64
+    // The key the passwords are encrypted and decrypted with:
+    //   1. psHashString, when the program has set it.
+    //   2. The login key of the workspace the ini file is in: AppSrc\LoginEncryptionKey.inc beside the folder
+    //      of the ini file, read now. That file is there on a development machine, so a program built in
+    //      another workspace - a DUF utility - reads an application's file with the application's key.
+    //   3. The login key this program was compiled with.
+    { Visibility=Private }
+    Function EncryptionKey Returns String
+        String sKey sPath
+        Handle hoKey
+
+        Get psHashString to sKey
+        If (sKey <> "") Begin
+            Function_Return sKey
+        End
+        Get psIniFilePath to sPath
+        If (sPath <> "") Begin
+            Get WorkspaceLoginKey (sPath + "..\AppSrc\LoginEncryptionKey.inc") to sKey
+            If (sKey <> "") Begin
+                Function_Return sKey
+            End
+        End
+        Get Create (RefClass(cDUFLoginKey)) to hoKey
+        Get GetEncryptionPassword of hoKey to sKey
+        Send Destroy of hoKey
+
+        Function_Return sKey
+    End_Function
+
+    // The key in a LoginEncryptionKey.inc file: what stands between the quotes of its line
+    // Set psEncryptPassword to "...". Empty when the file is not there or has no such line.
+    { Visibility=Private }
+    Function WorkspaceLoginKey String sFileName Returns String
+        Integer iCh iPos iDouble iSingle iFirst iLast
+        String sLine sKey sQuote
+        Boolean bExists bSeqEof
+
+        File_Exist sFileName bExists
+        If (bExists = False) Begin
+            Function_Return ""
+        End
+        Get Seq_New_Channel to iCh
+        If (iCh = DF_SEQ_CHANNEL_NOT_AVAILABLE) Begin
+            Function_Return ""
+        End
+        Direct_Input channel iCh sFileName
+        Move (SeqEof) to bSeqEof
+        While (bSeqEof = False and sKey = "")
+            Readln channel iCh sLine
+            Move (SeqEof) to bSeqEof
+            Move (Trim(sLine)) to sLine
+            Move (Pos("PSENCRYPTPASSWORD", Uppercase(sLine))) to iPos
+            If (iPos > 0 and Left(sLine, 2) <> "//") Begin
+                // What follows the property name:  to "the key"
+                Move (Mid(sLine, Length(sLine), iPos + 17)) to sLine
+                Move (Pos('"', sLine)) to iDouble
+                Move (Pos("'", sLine)) to iSingle
+                Move iDouble to iFirst
+                If (iDouble = 0 or (iSingle > 0 and iSingle < iDouble)) Begin
+                    Move iSingle to iFirst
+                End
+                If (iFirst > 0) Begin
+                    Move (Mid(sLine, 1, iFirst)) to sQuote
+                    Move (RightPos(sQuote, sLine)) to iLast
+                    If (iLast > (iFirst + 1)) Begin
+                        Move (Mid(sLine, iLast - iFirst - 1, iFirst + 1)) to sKey
+                    End
+                End
+            End
+        Loop
+        Close_Input channel iCh
+        Send Seq_Release_Channel iCh
+
+        Function_Return sKey
+    End_Function
+
+    // The password as it stands in the ini file: encrypted with the key of EncryptionKey, as Base64 text.
     Function EncryptPassword String sPassword Returns String
         String sRetval
         Handle hoLoginEncryption
 
         Get Create (RefClass(cLoginEncryption)) to hoLoginEncryption
-        Set psEncryptPassword of hoLoginEncryption to (psHashString(Self))
+        Set psEncryptPassword of hoLoginEncryption to (EncryptionKey(Self))
         Get EncryptPassword of hoLoginEncryption sPassword to sRetval
         Send Destroy of hoLoginEncryption
           
@@ -558,7 +646,7 @@ Class cSQLConnectionIniFile is a cIniFile
         Handle hoLoginEncryption
 
         Get Create (RefClass(cLoginEncryption)) to hoLoginEncryption
-        Set psEncryptPassword of hoLoginEncryption to (psHashString(Self))
+        Set psEncryptPassword of hoLoginEncryption to (EncryptionKey(Self))
         Get DecryptPassword of hoLoginEncryption sPassword to sRetval
         Send Destroy of hoLoginEncryption
 
