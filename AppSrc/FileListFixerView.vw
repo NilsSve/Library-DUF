@@ -2829,12 +2829,12 @@ Object oFilelistFixerView is a cRDCDbView
         Integer iRetval
         Boolean bExists
         
+        Get psDataPath  of (phoWorkspace(ghoApplication)) to sDataPath
+        Get PathAtIndex of (phoWorkspace(ghoApplication)) sDataPath 1 to sDataPath
+        Get vFolderFormat sDataPath to sDataPath
         Get psBackupFolder to sBackupFolder
         Get vFolderExists sBackupFolder to bExists
         If (bExists = False) Begin
-            Get psDataPath  of (phoWorkspace(ghoApplication)) to sDataPath
-            Get PathAtIndex of (phoWorkspace(ghoApplication)) sDataPath 1 to sDataPath
-            Get vFolderFormat sDataPath to sDataPath
             Get FileDatePrefix to sFileDateExt
             Move (sDataPath + String(CS_BackupFolder) + String(sFileDateExt)) to sBackupFolder
             Get vCreateDirectory sBackupFolder to iRetval

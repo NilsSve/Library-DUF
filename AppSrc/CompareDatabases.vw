@@ -979,7 +979,7 @@ Object oCompareDatabases_vw is a dbView
                     Get MakeStringLength sFrom CI_ReportColumn2                          to sFrom
 
                     Move ""                                                              to sTo
-                    If (iIndexNumberTo <> -1) Begin
+                    If (iIndexNumberTo <> -1 and iCount2 < iSegmentSizeTo) Begin
                         Move aApiIndexSegmentsTo[iCount2].iFieldNumber                   to iFieldNumberTo
                         Move (String(iFieldNumberTo))                                    to sTo
                         Move (String(aApiIndexSegmentsTo[iCount2].sFieldName))           to sFieldNameTo
@@ -996,7 +996,7 @@ Object oCompareDatabases_vw is a dbView
                         If (bIsSqlTableFrom = True) Begin
                             Move (sFrom + CS_ReportIndexNotApplicable)                                            to sFrom
                         End
-                        Else If (iCount <= iSegmentSizeFrom) Begin
+                        Else If (iCount2 < iSegmentSizeFrom) Begin
                             Move (sFrom + String(If(aApiIndexSegmentsFrom[iCount2].bUppercase = 1, "Yes","No")))  to sFrom
                         End
                         Get MakeStringLength sFrom CI_ReportColumn2                                               to sFrom
@@ -1004,7 +1004,7 @@ Object oCompareDatabases_vw is a dbView
                         If (bIsSqlTableFrom = True) Begin
                             Move CS_ReportIndexNotApplicable                                                      to sTo
                         End
-                        Else If (iCount <= iSegmentSizeTo) Begin
+                        Else If (iCount2 < iSegmentSizeTo) Begin
                             Move (String(If(aApiIndexSegmentsTo[iCount2].bUppercase = 1, "Yes", "No")))           to sTo
                         End
                         Writeln channel iCh sFrom sTo
@@ -1016,7 +1016,7 @@ Object oCompareDatabases_vw is a dbView
                         If (bIsSqlTableFrom = True) Begin
                             Move (sFrom + CS_ReportIndexNotApplicable)                                            to sFrom
                         End
-                        Else If (iCount <= iSegmentSizeFrom) Begin
+                        Else If (iCount2 < iSegmentSizeFrom) Begin
                             Move (sFrom + String(If(aApiIndexSegmentsFrom[iCount2].bAscending = 1, "Yes", "No"))) to sFrom
                         End
                         Get MakeStringLength sFrom CI_ReportColumn2                                               to sFrom
@@ -1024,7 +1024,7 @@ Object oCompareDatabases_vw is a dbView
                         If (bIsSqlTableFrom = True) Begin
                             Move CS_ReportIndexNotApplicable                                                      to sTo
                         End
-                        Else If (iCount <= iSegmentSizeTo) Begin
+                        Else If (iCount2 < iSegmentSizeTo) Begin
                             Move (String(If(aApiIndexSegmentsTo[iCount2].bAscending = 1, "Yes", "No")))           to sTo
                         End
                         Writeln channel iCh sFrom sTo

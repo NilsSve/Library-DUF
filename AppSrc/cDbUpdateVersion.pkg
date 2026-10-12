@@ -665,7 +665,7 @@ Register_Function piCurrentErrorHandlerID Returns Integer
         // update was never executed it could lead to disastrous results.
         // This is a programmer error and should be discovered before any customer sees it. Thus no point in translating...
         Get pnVersionNumber to nVersion
-        If (nVersion < 0) Begin
+        If (nVersion <= 0) Begin
             Get piCurrentErrorHandlerID to Error_Object_Id
             Move (Name(Self)) to sObjectName
             Error DFERR_PROGRAM ("The pnVersionNumber property was not set properly by the programmer for the following object; Program will now exit!\n\n" + sObjectName)

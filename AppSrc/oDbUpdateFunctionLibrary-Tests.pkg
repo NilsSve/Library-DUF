@@ -1,5 +1,6 @@
 // oDbUpdateFunctionLibrary-Tests.pkg - the helper functions of cDbUpdateFunctionLibrary that need no database:
-// folder and table names, driver ids, the length-and-decimals text. Nothing here logs in or opens a table.
+// folder and table names, driver ids, the length-and-decimals text, the compare of index segments. Nothing here
+// logs in or opens a table.
 //
 // Only procedures carrying { Published=True } are run as tests.
 
@@ -122,6 +123,28 @@ Object oDbUpdateFunctionLibrary_Tests is a cTestFixture
         Send Assert bIs "Digits and slashes."
         Get IsDate of ghoDbUpdateFunctionLibrary "2026-10-1x" to bIs
         Send AssertFalse bIs "A letter makes it no date."
+    End_Procedure
+
+    // -1 means "the same". Otherwise the answer is the first segment that differs, counted from 0.
+    { Published=True }
+    Procedure Test_UtilIndexSegmentsCompare_Sees_A_Different_Count
+        tAPIIndexSegment[] aFrom aTo
+        Integer iSegment
+        Move 1 to aFrom[0].iFieldNumber
+        Move 2 to aFrom[1].iFieldNumber
+        Move 1 to aTo[0].iFieldNumber
+        Move 2 to aTo[1].iFieldNumber
+        Get UtilIndexSegmentsCompare of ghoDbUpdateFunctionLibrary aFrom aTo False False to iSegment
+        Send AssertIAreEqual -1 iSegment "The same two segments on both sides."
+        Move 9 to aTo[1].iFieldNumber
+        Get UtilIndexSegmentsCompare of ghoDbUpdateFunctionLibrary aFrom aTo False False to iSegment
+        Send AssertIAreEqual 1 iSegment "Another column in the second segment."
+        Move 2 to aTo[1].iFieldNumber
+        Move 3 to aFrom[2].iFieldNumber
+        Get UtilIndexSegmentsCompare of ghoDbUpdateFunctionLibrary aFrom aTo False False to iSegment
+        Send AssertIAreEqual 2 iSegment "A third segment in FROM only."
+        Get UtilIndexSegmentsCompare of ghoDbUpdateFunctionLibrary aTo aFrom False False to iSegment
+        Send AssertIAreEqual 2 iSegment "A third segment in TO only."
     End_Procedure
 
 End_Object

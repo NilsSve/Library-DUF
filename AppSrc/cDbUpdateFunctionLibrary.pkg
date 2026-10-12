@@ -360,7 +360,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                     If (SQLScriptArray.sSQLScriptArray[iCount] contains "COLLATION_NAME_XXX") Begin
                         Move (Replaces("COLLATION_NAME_XXX", SQLScriptArray.sSQLScriptArray[iCount], String(sCollation))) to SQLScriptArray.sSQLScriptArray[iCount]
                     End
-                    If (bBackup = False) Begin
+                    // The script ships with its backup switched off ('0'): switch it on when a backup is asked for.
+                    If (bBackup = True) Begin
                         Move (Replace("('ShouldBackup', '0')", SQLScriptArray.sSQLScriptArray[iCount], String("('ShouldBackup', '1')"))) to SQLScriptArray.sSQLScriptArray[iCount]                        
                     End
                 Loop
@@ -1415,7 +1416,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     Function SqlUtilAdjustAuxFiles Handle hTable String sTableName String sColumnName Returns Boolean
         String sDataPath sDDSrcPath sDriverID
         Boolean bOK bExists
-        Integer iCount iCh iPos
+        Integer iCount iPos
 
         // If table name equals e.g. "dbo.MyTable" we need to remove the prefix.
         If (sTableName contains ".") Begin
@@ -1433,11 +1434,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         // First delete the cache file:
         Get _UtilDeleteCacheFile sTableName to bOK
-
-        Get Seq_New_Channel to iCh
-        If (iCh = DF_SEQ_CHANNEL_NOT_AVAILABLE) Begin
-            Function_Return False
-        End
 
         Get vFilePathExists (sDataPath + sTableName + ".tag") to bExists
         If (bExists = False) Begin
@@ -7312,9 +7308,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Set Error_Report_Mode to DUF_ERROR_NO_REPORT
         Move (SizeOfArray(aIndexSegmentFrom))      to iNumSegmentsFrom
         Move (SizeOfArray(aIndexSegmentTo))        to iNumSegmentsTo 
-        If (iNumSegmentsFrom <> iNumSegmentsTo) Begin
-            Function_Return -1
-        End
+        // A different number of segments is a difference: the loop returns the first segment that one side lacks.
         Move (iNumSegmentsFrom max iNumSegmentsTo) to iNumSegments
 
         Decrement iNumSegments
