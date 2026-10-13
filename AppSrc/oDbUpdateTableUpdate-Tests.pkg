@@ -1,0 +1,443 @@
+// Table updates on real embedded tables, through ApiTableUpdate with a description of the table as it
+// should be - the call that generated update code makes for every table.
+//
+// The tables live in a folder of their own with a Filelist of their own. Every test makes that folder in
+// the temp folder, points the runtime and the workspace object at it, and removes it again afterwards.
+// The Filelist and the Data folder of the workspace are not touched.
+//
+// Errors are taken the way cDbUpdateHandler takes them: dropped while the library has its report mode
+// switched off, counted otherwise. A test that expects a clean run asserts that the count is 0.
+
+Use DFUnit\Fixturing\Fixture.pkg
+Use cDbUpdateFunctionLibrary.pkg
+
+Object oDbUpdateTableUpdate_Tests is a cTestFixture
+    Set psTestFixtureName to "ApiTableUpdate on embedded tables"
+
+    Property String psFolder ""
+    Property String psOldFilelistName ""
+    Property String psOldOpenPath ""
+    Property String psOldDataPath ""
+    Property String psOldFileList ""
+    Property Handle phOldErrorObject 0
+    Property String psTable ""
+    Property Handle phTable 0
+
+    // Stands in for the handler object as the error object of an update run.
+    Object oErrors is a cObject
+        Property Integer piErrors 0
+        Property String  psErrors ""
+        Procedure Error_Report Integer iErr Integer iLine String sMsg
+            If (Error_Report_Mode(ghoDbUpdateFunctionLibrary) = DUF_ERROR_NO_REPORT) Begin
+                Move False to Err
+                Procedure_Return
+            End
+            If (iErr = DFERR_UNSUPPORTED_ATTRIBUTE) Begin
+                Procedure_Return
+            End
+            // The library asks its parent object for the driver first. In a program that is the handler object.
+            If (iErr = 98 and (Uppercase(sMsg) contains "PSDRIVERID")) Begin
+                Procedure_Return
+            End
+            Set piErrors to (piErrors(Self) + 1)
+            Set psErrors to (psErrors(Self) + " [" + String(iErr) + ": " + Left(sMsg, 80) + "]")
+        End_Procedure
+        Procedure Ignore_Error Integer iErr
+        End_Procedure
+        Procedure Trap_Error Integer iErr
+        End_Procedure
+        Procedure Ignore_All
+        End_Procedure
+        Procedure Trap_All
+        End_Procedure
+    End_Object
+
+    Procedure Setup
+        Handle ho hoWorkspace
+        String sTemp sFolder sValue
+
+        If (ghoDbUpdateFunctionLibrary = 0) Begin
+            Get Create (RefClass(cDbUpdateFunctionLibrary)) to ho
+        End
+        Get phoWorkspace of ghoApplication to hoWorkspace
+        Close DF_ALL
+
+        Get_Environment "TEMP" to sTemp
+        Get vFolderFormat sTemp to sTemp
+        Move (sTemp + "DUFTableTests" + String(Random(899999) + 100000)) to sFolder
+        Make_Directory sFolder
+        Set psFolder to sFolder
+
+        Get_Attribute DF_FILELIST_NAME to sValue
+        Set psOldFilelistName to sValue
+        Get_Attribute DF_OPEN_PATH to sValue
+        Set psOldOpenPath to sValue
+        Get psDataPath of hoWorkspace to sValue
+        Set psOldDataPath to sValue
+        Get psFileList of hoWorkspace to sValue
+        Set psOldFileList to sValue
+
+        // A copy of the workspace's Filelist: the tests take a free slot of the copy.
+        CopyFile (psOldFileList(Self)) to (sFolder + "\Filelist.cfg")
+        Set_Attribute DF_FILELIST_NAME to (sFolder + "\Filelist.cfg")
+        Set_Attribute DF_OPEN_PATH     to (sFolder + ";" + psOldOpenPath(Self))
+        Set psDataPath of hoWorkspace  to sFolder
+        Set psFileList of hoWorkspace  to (sFolder + "\Filelist.cfg")
+
+        Set pbCompareDate_DateTime  of ghoDbUpdateFunctionLibrary to False
+        Set pbCompareIndexAscending of ghoDbUpdateFunctionLibrary to False
+        Set pbCompareIndexUppercase of ghoDbUpdateFunctionLibrary to False
+        Set psTable to ""
+        Set phTable to 0
+        Move False to Err
+    End_Procedure
+
+    Procedure TearDown
+        Handle hoWorkspace
+        String sFolder sTable
+        Integer iKey
+
+        Get phoWorkspace of ghoApplication to hoWorkspace
+        Get psFolder to sFolder
+        Close DF_ALL
+        Set_Attribute DF_FILELIST_NAME to (psOldFilelistName(Self))
+        Set_Attribute DF_OPEN_PATH     to (psOldOpenPath(Self))
+        Set psDataPath of hoWorkspace  to (psOldDataPath(Self))
+        Set psFileList of hoWorkspace  to (psOldFileList(Self))
+
+        // Only what the test made, in the folder the test made.
+        If (sFolder <> "" and (Uppercase(sFolder) contains "DUFTABLETESTS")) Begin
+            Get psTable to sTable
+            If (sTable <> "") Begin
+                EraseFile (sFolder + "\" + sTable + ".dat")
+                EraseFile (sFolder + "\" + sTable + ".hdr")
+                EraseFile (sFolder + "\" + sTable + ".tag")
+                EraseFile (sFolder + "\" + sTable + ".vld")
+                EraseFile (sFolder + "\" + sTable + ".fd")
+                For iKey from 1 to 15
+                    EraseFile (sFolder + "\" + sTable + ".k" + String(iKey))
+                Loop
+            End
+            EraseFile (sFolder + "\Filelist.cfg")
+            Remove_Directory sFolder
+        End
+        Set psFolder to ""
+        Move False to Err
+    End_Procedure
+
+    Function Col Integer iNo String sName Integer iType Integer iLen Integer iPrec Returns tAPIColumn
+        tAPIColumn c
+        Move iNo   to c.iFieldNumber
+        Move sName to c.sFieldName
+        Move iType to c.iType
+        Move False to c.bIsSQLType
+        Move False to c.bAllowNULL
+        Move ""    to c.sDefaultValue
+        Move (If(iType = DF_ASCII, "ASCII", If(iType = DF_BCD, "Numeric", "Date"))) to c.sType
+        Move iLen  to c.iLength
+        Move iPrec to c.iPrecision
+        Move 0     to c.iOptions
+        Function_Return c
+    End_Function
+
+    // An index of two or three segments. A field number of -1 ends the list.
+    Function Idx Integer iNo Integer iF1 String sN1 Integer iF2 String sN2 Integer iF3 String sN3 Returns tAPIIndex
+        tAPIIndex x
+        Integer[] aiFields
+        String[] asNames
+        Integer i
+        Move iNo   to x.iIndexNumber
+        Move 0     to x.iPrimaryIndex
+        Move 0     to x.iSQLIndexType
+        Move False to x.bIsSQLClustered
+        Move False to x.bIsSQLPrimaryKey
+        Move iF1 to aiFields[0]
+        Move sN1 to asNames[0]
+        Move iF2 to aiFields[1]
+        Move sN2 to asNames[1]
+        Move iF3 to aiFields[2]
+        Move sN3 to asNames[2]
+        For i from 0 to 2
+            If (aiFields[i] <> -1) Begin
+                Move aiFields[i] to x.IndexSegmentArray[i].iFieldNumber
+                Move asNames[i]  to x.IndexSegmentArray[i].sFieldName
+                Move False       to x.IndexSegmentArray[i].bUppercase
+                Move True        to x.IndexSegmentArray[i].bAscending
+            End
+        Loop
+        Function_Return x
+    End_Function
+
+    // The table the tests start from: 1 Id N6.0, 2 Code A5, 3 Name A30, 4 Created Date, 5 Amount N8.2
+    Function BaseColumns Returns tAPIColumn[]
+        tAPIColumn[] a
+        Get Col 1 "Id" DF_BCD 6 0        to a[0]
+        Get Col 2 "Code" DF_ASCII 5 0    to a[1]
+        Get Col 3 "Name" DF_ASCII 30 0   to a[2]
+        Get Col 4 "Created" DF_DATE 6 0  to a[3]
+        Get Col 5 "Amount" DF_BCD 8 2    to a[4]
+        Function_Return a
+    End_Function
+
+    // Its indexes: 1 Id; 2 Name, Id; 3 Created, Id
+    Function BaseIndexes Returns tAPIIndex[]
+        tAPIIndex[] a
+        Get Idx 1 1 "Id" -1 "" -1 ""        to a[0]
+        Get Idx 2 3 "Name" 1 "Id" -1 ""     to a[1]
+        Get Idx 3 4 "Created" 1 "Id" -1 ""  to a[2]
+        Function_Return a
+    End_Function
+
+    // One call of ApiTableUpdate with the fixture's error object in place. Returns the number of errors
+    // that were raised, or -1 when the call returned False without one.
+    Function UpdateTable tAPIColumn[] aColumns tAPIIndex[] aIndexes Returns Integer
+        tAPITableNameInfo Info
+        tAPIRelation[] aNoRelations
+        Handle hoErrors
+        Boolean bOK
+        Integer iErrors
+
+        Move (phTable(Self)) to Info.iTableNumber
+        Move (psTable(Self)) to Info.sRootName
+        Move (psTable(Self)) to Info.sLogicalName
+        Move (psTable(Self)) to Info.sDisplayName
+        Move DATAFLEX_ID     to Info.sDriverID
+        Move False           to Info.bIsAlias
+        Move False           to Info.bIsSQL
+        Move False           to Info.bIsSystemFile
+
+        Move (oErrors(Self)) to hoErrors
+        Set piErrors of hoErrors to 0
+        Set psErrors of hoErrors to ""
+        Set phOldErrorObject to Error_Object_Id
+        Move hoErrors to Error_Object_Id
+        Move False to Err
+        Get ApiTableUpdate of ghoDbUpdateFunctionLibrary Info aColumns aIndexes aNoRelations to bOK
+        Close DF_ALL
+        Move (phOldErrorObject(Self)) to Error_Object_Id
+        Move False to Err
+        Get piErrors of hoErrors to iErrors
+        If (iErrors = 0 and bOK = False) Begin
+            Move -1 to iErrors
+        End
+        Function_Return iErrors
+    End_Function
+
+    // Makes the base table in a free slot of the copied Filelist and writes two records.
+    // iColumns is 4 (the Date column last) or 5; bAllIndexes False leaves index 1 only.
+    Procedure MakeBaseTable String sName Integer iColumns Boolean bAllIndexes
+        Handle h
+        String sRoot
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+
+        Move 500 to h
+        Repeat
+            Increment h
+            Get_Attribute DF_FILE_ROOT_NAME of h to sRoot
+        Until (sRoot = "" or h > 4000)
+        Set phTable to h
+        Set psTable to sName
+
+        Get BaseColumns to aColumns
+        Move (ResizeArray(aColumns, iColumns)) to aColumns
+        Get BaseIndexes to aIndexes
+        If (not(bAllIndexes)) Begin
+            Move (ResizeArray(aIndexes, 1)) to aIndexes
+        End
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The base table is created without an error." + psErrors(oErrors(Self)))
+
+        Open h
+        Lock
+            Clear h
+            Set_Field_Value h 1 to 1
+            Set_Field_Value h 2 to "C1"
+            Set_Field_Value h 3 to "Anna"
+            Set_Field_Value h 4 to (DateSet(2026, 1, 15))
+            If (iColumns > 4) Begin
+                Set_Field_Value h 5 to 12.5
+            End
+            SaveRecord h
+            Clear h
+            Set_Field_Value h 1 to 2
+            Set_Field_Value h 2 to "C2"
+            Set_Field_Value h 3 to "Bertil"
+            Set_Field_Value h 4 to (DateSet(2026, 2, 20))
+            If (iColumns > 4) Begin
+                Set_Field_Value h 5 to 7
+            End
+            SaveRecord h
+        Unlock
+        Close h
+    End_Procedure
+
+    // "Name,Id" for an index, "" for an index that is not there
+    Function IndexColumns Integer iIndex Returns String
+        Handle h
+        Integer iSegments iSegment iField
+        String sName sResult
+        Get phTable to h
+        Open h
+        Get_Attribute DF_INDEX_NUMBER_SEGMENTS of h iIndex to iSegments
+        For iSegment from 1 to iSegments
+            Get_Attribute DF_INDEX_SEGMENT_FIELD of h iIndex iSegment to iField
+            Get_Attribute DF_FIELD_NAME of h iField to sName
+            Move (sResult + If(iSegment > 1, ",", "") + sName) to sResult
+        Loop
+        Close h
+        Function_Return sResult
+    End_Function
+
+    // "Id,Code,Created" - the table's columns in their order
+    Function ColumnNames Returns String
+        Handle h
+        Integer iFields iField
+        String sName sResult
+        Get phTable to h
+        Open h
+        Get_Attribute DF_FILE_NUMBER_FIELDS of h to iFields
+        For iField from 1 to iFields
+            Get_Attribute DF_FIELD_NAME of h iField to sName
+            Move (sResult + If(iField > 1, ",", "") + sName) to sResult
+        Loop
+        Close h
+        Function_Return sResult
+    End_Function
+
+    // The type of the named column and its value in the first record, as "type|value"
+    Function ColumnTypeAndFirstValue String sColumn Returns String
+        Handle h
+        Integer iField iType
+        String sValue
+        Get phTable to h
+        Open h
+        Field_Map h sColumn to iField
+        Get_Attribute DF_FIELD_TYPE of h iField to iType
+        Clear h
+        Vfind h 0 GT
+        Get_Field_Value h iField to sValue
+        Close h
+        Function_Return (String(iType) + "|" + Trim(sValue))
+    End_Function
+
+    { Published=True }
+    Procedure Test_A_Date_Column_That_Moves_Up_Keeps_Its_Type_And_Its_Dates
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+        Date dFirst
+
+        // Id, Code, Name, Created: the column in front of the Date column goes.
+        Send MakeBaseTable "DUFTT1" 4 False
+        Get Col 1 "Id" DF_BCD 6 0        to aColumns[0]
+        Get Col 2 "Code" DF_ASCII 5 0    to aColumns[1]
+        Get Col 3 "Created" DF_DATE 6 0  to aColumns[2]
+        Get Idx 1 1 "Id" -1 "" -1 ""     to aIndexes[0]
+
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id,Code,Created" (ColumnNames(Self)) "The column in front of the Date column is gone."
+        Move (DateSet(2026, 1, 15)) to dFirst
+        Send AssertSAreEqual (String(DF_DATE) + "|" + String(dFirst)) (ColumnTypeAndFirstValue(Self, "Created")) "The Date column is still a Date and holds its date."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_Date_Column_That_Changes_Places_Keeps_Its_Type_And_Its_Dates
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+        Date dFirst
+
+        Send MakeBaseTable "DUFTT2" 5 False
+        Get Col 1 "Id" DF_BCD 6 0        to aColumns[0]
+        Get Col 2 "Code" DF_ASCII 5 0    to aColumns[1]
+        Get Col 3 "Created" DF_DATE 6 0  to aColumns[2]
+        Get Col 4 "Name" DF_ASCII 30 0   to aColumns[3]
+        Get Col 5 "Amount" DF_BCD 8 2    to aColumns[4]
+        Get Idx 1 1 "Id" -1 "" -1 ""     to aIndexes[0]
+
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id,Code,Created,Name,Amount" (ColumnNames(Self)) "Name and Created have changed places."
+        Move (DateSet(2026, 1, 15)) to dFirst
+        Send AssertSAreEqual (String(DF_DATE) + "|" + String(dFirst)) (ColumnTypeAndFirstValue(Self, "Created")) "The Date column is still a Date and holds its date."
+        Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "Name")) "The text column holds its text."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_Changed_Index_Is_Changed_Under_Its_Own_Number
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors iRun iLast
+        Handle h
+
+        Send MakeBaseTable "DUFTT3" 5 True
+        Get BaseColumns to aColumns
+        Get BaseIndexes to aIndexes
+        Get Idx 2 3 "Name" 4 "Created" 1 "Id" to aIndexes[1]
+
+        // Twice: the second run has to find nothing to do.
+        For iRun from 1 to 2
+            Get UpdateTable aColumns aIndexes to iErrors
+            Send AssertIAreEqual 0 iErrors ("Run " + String(iRun) + " is without an error." + psErrors(oErrors(Self)))
+            Send AssertSAreEqual "Name,Created,Id" (IndexColumns(Self, 2)) ("Run " + String(iRun) + ": index 2 has its third segment.")
+            Send AssertSAreEqual "Created,Id" (IndexColumns(Self, 3)) ("Run " + String(iRun) + ": index 3 is as it was.")
+            Get phTable to h
+            Open h
+            Get_Attribute DF_FILE_LAST_INDEX_NUMBER of h to iLast
+            Close h
+            Send AssertIAreEqual 3 iLast ("Run " + String(iRun) + ": no index was added under a new number.")
+        Loop
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_An_Index_Removed_From_The_Middle_Leaves_The_Others
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+
+        Send MakeBaseTable "DUFTT4" 5 True
+        Get BaseColumns to aColumns
+        Get Idx 1 1 "Id" -1 "" -1 ""        to aIndexes[0]
+        Get Idx 3 4 "Created" 1 "Id" -1 ""  to aIndexes[1]
+
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id" (IndexColumns(Self, 1)) "Index 1 is as it was."
+        Send AssertSAreEqual "" (IndexColumns(Self, 2)) "Index 2 is gone."
+        Send AssertSAreEqual "Created,Id" (IndexColumns(Self, 3)) "Index 3 is as it was."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_Columns_That_Change_Places_Keep_Their_Index
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors iLast
+        Handle h
+
+        // Code and Name change places. Name is in index 2.
+        Send MakeBaseTable "DUFTT5" 5 True
+        Get Col 1 "Id" DF_BCD 6 0        to aColumns[0]
+        Get Col 2 "Name" DF_ASCII 30 0   to aColumns[1]
+        Get Col 3 "Code" DF_ASCII 5 0    to aColumns[2]
+        Get Col 4 "Created" DF_DATE 6 0  to aColumns[3]
+        Get Col 5 "Amount" DF_BCD 8 2    to aColumns[4]
+        Get Idx 1 1 "Id" -1 "" -1 ""        to aIndexes[0]
+        Get Idx 2 2 "Name" 1 "Id" -1 ""     to aIndexes[1]
+        Get Idx 3 4 "Created" 1 "Id" -1 ""  to aIndexes[2]
+
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id,Name,Code,Created,Amount" (ColumnNames(Self)) "Code and Name have changed places."
+        Send AssertSAreEqual "Name,Id" (IndexColumns(Self, 2)) "Index 2 is on Name and Id again."
+        Get phTable to h
+        Open h
+        Get_Attribute DF_FILE_LAST_INDEX_NUMBER of h to iLast
+        Close h
+        Send AssertIAreEqual 3 iLast "No index was added under a new number."
+        Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "Name")) "The values followed their columns."
+    End_Procedure
+
+End_Object

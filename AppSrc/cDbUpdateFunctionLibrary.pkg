@@ -3565,6 +3565,13 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Get UtilColumnsCompare sDriverIDFrom sDriverIDTo bIsSQLTableFrom bIsSQLTableTo aAPIColumnCompare bCompareDate_DateTime to bIsSame
                 If (bIsSame = False) Begin
                     Get ApiColumnsUpdate sDriverIDFrom hTable bIsSQLTableFrom APITableFrom.aApiColumns APITableTo.aApiColumns bCompareDate_DateTime to bOk
+                    // The column step gives columns new numbers, and a column that is moved leaves its indexes.
+                    // The indexes and relations are read again, so that the steps below see the table as it is now.
+                    If (bOk = True) Begin
+                        Get UtilTableStructFill hTable False to APITableTo
+                        Get UtilIndexCombineFromAndToArrays    APITableFrom.aApiIndexes   APITableTo.aApiIndexes    to aAPIIndexCompare
+                        Get UtilRelationCombineFromAndToArrays APITableFrom.aApiRelations APITableTo.aApiRelations  to aAPIRelationCompare
+                    End
                 End
                 If (bOk = False) Begin
                     Case Break
@@ -4213,13 +4220,17 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Set_Attribute DF_FIELD_OLD_NUMBER of hTable iNew to iOld
             Set_Attribute DF_FIELD_NAME of hTable iNew to sColumn
             
-            // If SQL table it is important that we don't try to change the field type, as MS-SQL then will generate an error.
-            If (bIsSQLType = True and bIsDate = False) Begin
+            // The new field starts as text of length 0. A date column that is left like that comes back as text
+            // and its values are gone, so a date gets its type as well. Only its length is fixed and is not written.
+            If (bIsSQLType = True) Begin
                 Set_Attribute DF_FIELD_NATIVE_TYPE of hTable iNew to iSQLType
             End
             If (bIsDate = False) Begin
                 Set_Attribute DF_FIELD_TYPE   of hTable iNew to iType
                 Set_Attribute DF_FIELD_LENGTH of hTable iNew to iLength
+            End
+            Else If (bIsSQLType = False) Begin
+                Set_Attribute DF_FIELD_TYPE   of hTable iNew to iType
             End
             If (iType = DF_BCD) Begin
                 Set_Attribute DF_FIELD_PRECISION of hTable iNew to iPrecision
@@ -5071,7 +5082,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move 0 to LastErr
 
         Structure_Start hTable sDriverID
-//            Delete_Index hTable APIIndex.iIndexNumber
+            // An index that exists is taken away first. Asked for a number that is in use, Create_Index makes
+            // a new index under another number and leaves the old one as it was.
+            If (bExists = True) Begin
+                Delete_Index hTable APIIndex.iIndexNumber
+            End
             Create_Index hTable At APIIndex.iIndexNumber
 
             #IF (!@ > 182)
@@ -7352,28 +7367,50 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function UtilIndexesUpdate Handle hTable Boolean bIsSQLTableFrom Boolean bIsSQLTableTo tAPIIndex[] aIndexesFrom tAPIIndex[] aIndexesTo Boolean bCompareIndexUppercase Boolean bCompareIndexAscending Returns Boolean
-        Boolean bIsSame bOK
-        Integer iSize iSizeTo iCount
+        Boolean bIsSame bOK bStep
+        Integer iSize iCount iFrom iItem iSizeFrom
         tAPIIndexCompare[] aAPIIndexCompare
 
-        Move (SizeOfArray(aIndexesFrom)) to iSize
-        If (iSize = 0) Begin
+        Move (SizeOfArray(aIndexesFrom)) to iSizeFrom
+        If (iSizeFrom = 0) Begin
             Function_Return True
         End
-        Move (SizeOfArray(aIndexesTo)) to iSizeTo
         Get _UtilTableIsSql hTable to bIsSQLTableTo
+        // One entry per index number: of the description, of the table, or of both.
         Get UtilIndexCombineFromAndToArrays aIndexesFrom aIndexesTo to aAPIIndexCompare
+        Move (SizeOfArray(aAPIIndexCompare)) to iSize
+        Move True to bOK
 
+        // An index that only the table has is removed, by its own number.
         For iCount from 0 to (iSize - 1)
-            Get UtilIndexCompare bIsSQLTableFrom bIsSQLTableTo aAPIIndexCompare[iCount] bCompareIndexUppercase bCompareIndexAscending to bIsSame
-            If (bIsSame = False) Begin
-                Get APIIndexCreateByFieldNames hTable aIndexesFrom[iCount] aIndexesTo aIndexesFrom[iCount].IndexSegmentArray to bOK
+            If (aAPIIndexCompare[iCount].bExistsFrom = False and aAPIIndexCompare[iCount].bExistsTo = True) Begin
+                Get ApiIndexRemove hTable aAPIIndexCompare[iCount].iIndexNumber to bStep
+                If (bStep = False) Begin
+                    Move False to bOK
+                End
             End
         Loop
 
-        // We probably should delete other indexes if they exists.
-        For iCount from (iSize +1) to iSizeTo
-            Get ApiIndexRemove hTable iCount to bOK
+        // An index of the description that the table lacks, or has in another form, is written.
+        For iCount from 0 to (iSize - 1)
+            If (aAPIIndexCompare[iCount].bExistsFrom = True) Begin
+                Get UtilIndexCompare bIsSQLTableFrom bIsSQLTableTo aAPIIndexCompare[iCount] bCompareIndexUppercase bCompareIndexAscending to bIsSame
+                If (bIsSame = False) Begin
+                    // The description of that index number: the two lists are not in step when the table has an index the description lacks.
+                    Move -1 to iItem
+                    For iFrom from 0 to (iSizeFrom - 1)
+                        If (aIndexesFrom[iFrom].iIndexNumber = aAPIIndexCompare[iCount].iIndexNumber) Begin
+                            Move iFrom to iItem
+                        End
+                    Loop
+                    If (iItem <> -1) Begin
+                        Get APIIndexCreateByFieldNames hTable aIndexesFrom[iItem] aIndexesTo aIndexesFrom[iItem].IndexSegmentArray to bStep
+                        If (bStep = False) Begin
+                            Move False to bOK
+                        End
+                    End
+                End
+            End
         Loop
 
         Function_Return bOK
