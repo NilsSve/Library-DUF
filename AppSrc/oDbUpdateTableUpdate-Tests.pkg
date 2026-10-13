@@ -609,4 +609,153 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Send AssertIAreEqual 2 (RecordCount(Self)) "The table still has its two records."
     End_Procedure
 
+    // The length of the named column
+    Function ColumnLength String sColumn Returns Integer
+        Handle h
+        Integer iField iLength
+        Get phTable to h
+        Open h
+        Field_Map h sColumn to iField
+        Get_Attribute DF_FIELD_LENGTH of h iField to iLength
+        Close h
+        Function_Return iLength
+    End_Function
+
+    // One call of ApiColumnRemove, the way update code can make it in front of ApiTableUpdate
+    Function RemoveColumn String sColumn Returns Boolean
+        Handle hoErrors
+        Boolean bOK
+
+        Move (oErrors(Self)) to hoErrors
+        Set phOldErrorObject to Error_Object_Id
+        Move hoErrors to Error_Object_Id
+        Move False to Err
+        Get ApiColumnRemove of ghoDbUpdateFunctionLibrary (phTable(Self)) sColumn to bOK
+        Close DF_ALL
+        Move (phOldErrorObject(Self)) to Error_Object_Id
+        Move False to Err
+        Function_Return bOK
+    End_Function
+
+    { Published=True }
+    Procedure Test_A_Column_Renamed_And_Made_Longer_Keeps_Its_Values
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+        Date dFirst
+
+        // Name, text of 30, is FullName, text of 40. Index 2 is on it.
+        Send MakeBaseTable "DUFTT12" 5 True
+        Get BaseColumns to aColumns
+        Get Col 3 "FullName" DF_ASCII 40 0 to aColumns[2]
+        Get BaseIndexes to aIndexes
+        Get Idx 2 3 "FullName" 1 "Id" -1 "" to aIndexes[1]
+
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id,Code,FullName,Created,Amount" (ColumnNames(Self)) "Name is FullName, in its place."
+        Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "FullName")) "FullName holds the names."
+        Send AssertIAreEqual 40 (ColumnLength(Self, "FullName")) "FullName has the new length."
+        Send AssertSAreEqual "FullName,Id" (IndexColumns(Self, 2)) "Index 2 is on FullName and Id."
+        Move (DateSet(2026, 1, 15)) to dFirst
+        Send AssertSAreEqual (String(DF_DATE) + "|" + String(dFirst)) (ColumnTypeAndFirstValue(Self, "Created")) "Created holds its date."
+        Send AssertIAreEqual 2 (RecordCount(Self)) "Both records are there."
+
+        // The same description once more: nothing is left to do.
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The second run is without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "FullName")) "FullName still holds the names."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_Renamed_Column_Keeps_Its_Values_When_A_New_Column_Comes_In_Front
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+        Date dFirst
+
+        // Rebate is new, in front of Code. Name is FullName and longer. Its neighbours, Code and Created,
+        // are the same as before, though its number is not.
+        Send MakeBaseTable "DUFTT13" 5 False
+        Get Col 1 "Id" DF_BCD 6 0          to aColumns[0]
+        Get Col 2 "Rebate" DF_BCD 8 2      to aColumns[1]
+        Get Col 3 "Code" DF_ASCII 5 0      to aColumns[2]
+        Get Col 4 "FullName" DF_ASCII 40 0 to aColumns[3]
+        Get Col 5 "Created" DF_DATE 6 0    to aColumns[4]
+        Get Col 6 "Amount" DF_BCD 8 2      to aColumns[5]
+        Get Idx 1 1 "Id" -1 "" -1 ""       to aIndexes[0]
+
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id,Rebate,Code,FullName,Created,Amount" (ColumnNames(Self)) "The columns are in the described order."
+        Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "FullName")) "FullName holds the names."
+        Send AssertSAreEqual (String(DF_ASCII) + "|C1") (ColumnTypeAndFirstValue(Self, "Code")) "Code holds its text."
+        Move (DateSet(2026, 1, 15)) to dFirst
+        Send AssertSAreEqual (String(DF_DATE) + "|" + String(dFirst)) (ColumnTypeAndFirstValue(Self, "Created")) "Created holds its date."
+        Send AssertSAreEqual (String(DF_BCD) + "|" + String(12.5)) (ColumnTypeAndFirstValue(Self, "Amount")) "Amount holds its number."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_The_Last_Column_Renamed_And_Made_Longer_Keeps_Its_Values
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+
+        // Amount, a number of 8.2, is Total, a number of 10.2. Its right neighbour is the edge of the table.
+        Send MakeBaseTable "DUFTT14" 5 False
+        Get BaseColumns to aColumns
+        Get Col 5 "Total" DF_BCD 10 2    to aColumns[4]
+        Get Idx 1 1 "Id" -1 "" -1 ""     to aIndexes[0]
+
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id,Code,Name,Created,Total" (ColumnNames(Self)) "Amount is Total."
+        Send AssertSAreEqual (String(DF_BCD) + "|" + String(12.5)) (ColumnTypeAndFirstValue(Self, "Total")) "Total holds the amounts."
+        Send AssertIAreEqual 10 (ColumnLength(Self, "Total")) "Total has the new length."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_Shorter_Column_In_The_Place_Of_A_Removed_One_Is_A_New_Column
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+        Date dFirst
+
+        // Name, text of 30, is gone. Short, text of 10, stands in its place. The names would not all fit,
+        // so Short is not Name under a new name.
+        Send MakeBaseTable "DUFTT15" 5 False
+        Get BaseColumns to aColumns
+        Get Col 3 "Short" DF_ASCII 10 0  to aColumns[2]
+        Get Idx 1 1 "Id" -1 "" -1 ""     to aIndexes[0]
+
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id,Code,Short,Created,Amount" (ColumnNames(Self)) "Short stands where Name stood."
+        Send AssertSAreEqual (String(DF_ASCII) + "|") (ColumnTypeAndFirstValue(Self, "Short")) "The new column is empty."
+        Move (DateSet(2026, 1, 15)) to dFirst
+        Send AssertSAreEqual (String(DF_DATE) + "|" + String(dFirst)) (ColumnTypeAndFirstValue(Self, "Created")) "Created holds its date."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_Column_Removed_By_A_Call_Of_Its_Own_Is_Not_Taken_For_The_New_One
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+        Boolean bOK
+
+        // The update code says that Name is to go. FullName is then a new column, although it stands
+        // where Name stood and all the names would fit in it.
+        Send MakeBaseTable "DUFTT16" 5 False
+        Get RemoveColumn "Name" to bOK
+        Send Assert bOK "ApiColumnRemove removes the column."
+
+        Get BaseColumns to aColumns
+        Get Col 3 "FullName" DF_ASCII 40 0 to aColumns[2]
+        Get Idx 1 1 "Id" -1 "" -1 ""       to aIndexes[0]
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id,Code,FullName,Created,Amount" (ColumnNames(Self)) "FullName stands where Name stood."
+        Send AssertSAreEqual (String(DF_ASCII) + "|") (ColumnTypeAndFirstValue(Self, "FullName")) "The new column is empty."
+    End_Procedure
+
 End_Object

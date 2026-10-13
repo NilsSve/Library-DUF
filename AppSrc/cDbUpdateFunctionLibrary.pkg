@@ -4597,6 +4597,148 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return bRename
     End_Function
 
+    // The place of a column name in a column array, counted from 0, or -1 when the name is not in it.
+    Function UtilColumnIndexByName tAPIColumn[] aColumns String sFieldName Returns Integer
+        Integer iSize iCount
+        String sName
+
+        Move (Uppercase(sFieldName)) to sName
+        Move (SizeOfArray(aColumns)) to iSize
+        Decrement iSize
+        For iCount from 0 to iSize
+            If (Uppercase(aColumns[iCount].sFieldName) = sName) Begin
+                Function_Return iCount
+            End
+        Loop
+        Function_Return -1
+    End_Function
+
+    // Has the described column the type of the table's column, and does every value of the table's column
+    // fit in it? The same type and options, no fewer decimals and no fewer places in front of them.
+    Function UtilColumnSameTypeAndFits tAPIColumn ColumnFrom tAPIColumn ColumnTo Returns Boolean
+        If (ColumnFrom.bIsSQLType <> ColumnTo.bIsSQLType or ColumnFrom.iType <> ColumnTo.iType or ColumnFrom.iOptions <> ColumnTo.iOptions) Begin
+            Function_Return False
+        End
+        Function_Return (ColumnFrom.iPrecision >= ColumnTo.iPrecision and (ColumnFrom.iLength - ColumnFrom.iPrecision) >= (ColumnTo.iLength - ColumnTo.iPrecision))
+    End_Function
+
+    // The columns that got a new name in this version, found by their neighbours and not by their form.
+    // The description and the table are two layouts. A column that was renamed and made longer looks like
+    // one column removed and another added, and a removed column takes its values with it. A column of the
+    // description is taken for a column of the table under a new name when all of this holds:
+    // - the old name is no longer in the description, and the new name is not in the table;
+    // - both stand between the same two neighbours. A neighbour is a column that the table and the
+    //   description both have, or the edge of the table. So between those two, one column is gone and one
+    //   is new;
+    // - the type is the same, and every value of the old column fits in the new one.
+    // A shorter column, a column of another type, and two columns gone or new between the same neighbours
+    // are not taken for a rename: there the old column is removed and the new one starts empty.
+    // The code that calls ApiTableUpdate can say it outright, in front of that call: ApiColumnRename for a
+    // rename, ApiColumnRemove for a column that is to go.
+    // Returns one entry for each such column: sFieldNameTo is the old name, sFieldNameFrom the new one.
+    Function UtilColumnsCheckForRenamesByNeighbours tAPIColumn[] aColumnsFrom tAPIColumn[] aColumnsTo Returns tAPIColumnCompare[]
+        tAPIColumnCompare[] aAPIColumnsToRename
+        Integer iSizeFrom iSizeTo iTo iFrom iOther iItem
+        String sNameTo sNameFrom sLeft sRight sRightFrom
+        Boolean bPair
+
+        Move 0 to iItem
+        Move (SizeOfArray(aColumnsFrom)) to iSizeFrom
+        Move (SizeOfArray(aColumnsTo))   to iSizeTo
+        Decrement iSizeFrom
+        Decrement iSizeTo
+        For iTo from 0 to iSizeTo
+            Move (Uppercase(aColumnsTo[iTo].sFieldName)) to sNameTo
+            Get UtilColumnIndexByName aColumnsFrom sNameTo to iOther
+            If (sNameTo <> "" and iOther = -1) Begin
+                // A column of the table that the description no longer has. Its neighbours in the table:
+                // "" stands for the edge.
+                Move True to bPair
+                Move ""   to sLeft
+                Move ""   to sRight
+                If (iTo > 0) Begin
+                    Move (Uppercase(aColumnsTo[iTo - 1].sFieldName)) to sLeft
+                    Get UtilColumnIndexByName aColumnsFrom sLeft to iOther
+                    If (sLeft = "" or iOther = -1) Begin
+                        Move False to bPair
+                    End
+                End
+                If (iTo < iSizeTo) Begin
+                    Move (Uppercase(aColumnsTo[iTo + 1].sFieldName)) to sRight
+                    Get UtilColumnIndexByName aColumnsFrom sRight to iOther
+                    If (sRight = "" or iOther = -1) Begin
+                        Move False to bPair
+                    End
+                End
+
+                // The column of the description behind the same left neighbour ...
+                Move 0 to iFrom
+                If (bPair = True and sLeft <> "") Begin
+                    Get UtilColumnIndexByName aColumnsFrom sLeft to iFrom
+                    Increment iFrom
+                End
+                If (iFrom > iSizeFrom) Begin
+                    Move False to bPair
+                End
+                // ... is new ...
+                If (bPair = True) Begin
+                    Move (Uppercase(aColumnsFrom[iFrom].sFieldName)) to sNameFrom
+                    Get UtilColumnIndexByName aColumnsTo sNameFrom to iOther
+                    If (sNameFrom = "" or iOther <> -1) Begin
+                        Move False to bPair
+                    End
+                End
+                // ... and stands in front of the same right neighbour.
+                If (bPair = True) Begin
+                    Move "" to sRightFrom
+                    If (iFrom < iSizeFrom) Begin
+                        Move (Uppercase(aColumnsFrom[iFrom + 1].sFieldName)) to sRightFrom
+                    End
+                    If (sRightFrom <> sRight) Begin
+                        Move False to bPair
+                    End
+                End
+                If (bPair = True) Begin
+                    Get UtilColumnSameTypeAndFits aColumnsFrom[iFrom] aColumnsTo[iTo] to bPair
+                End
+                If (bPair = True) Begin
+                    Move aColumnsFrom[iFrom].iFieldNumber to aAPIColumnsToRename[iItem].iFieldNumber
+                    Move aColumnsTo[iTo].iFieldNumber     to aAPIColumnsToRename[iItem].iFieldNumberTo
+                    Move aColumnsFrom[iFrom].sFieldName   to aAPIColumnsToRename[iItem].sFieldNameFrom
+                    Move aColumnsTo[iTo].sFieldName       to aAPIColumnsToRename[iItem].sFieldNameTo
+                    Increment iItem
+                End
+            End
+        Loop
+        Function_Return aAPIColumnsToRename
+    End_Function
+
+    // Renames the columns that UtilColumnsCheckForRenamesByNeighbours found, each in a restructure of its
+    // own, and writes a line to the log for each. Stops at the first one that fails.
+    Function UtilColumnsRenameByNeighbours Handle hTable tAPIColumnCompare[] aAPIColumnsToRename Returns Boolean
+        Integer iSize iCount
+        Boolean bOK
+        String sOld sNew sLogicalName
+
+        Get_Attribute DF_FILE_LOGICAL_NAME of hTable to sLogicalName
+        Move (SizeOfArray(aAPIColumnsToRename)) to iSize
+        Decrement iSize
+        For iCount from 0 to iSize
+            Move aAPIColumnsToRename[iCount].sFieldNameTo   to sOld
+            Move aAPIColumnsToRename[iCount].sFieldNameFrom to sNew
+            Move False to Err
+            Get ApiColumnRename hTable sOld sNew to bOK
+            If (bOK = False) Begin
+                If (Err = False) Begin
+                    Error DFERR_PROGRAM ("Function 'UtilColumnsRenameByNeighbours'. Table number:" * String(hTable) + ". Column" * sOld * "could not be renamed to" * sNew + ". The columns of the table were left as they were.")
+                End
+                Function_Return False
+            End
+            Send LogError ("Table:" * String(sLogicalName) + ". Column" * sOld * "was taken for column" * sNew * "of the new layout under its old name: it stands between the same two columns and has the same type. It was renamed and keeps its values. If" * sNew * "is a new column, remove" * sOld * "with ApiColumnRemove before the table is updated.") False
+        Loop
+        Function_Return True
+    End_Function
+
     // Returns the name of the leftmost column of the table that the description no longer has, or "" when
     // there is none. A column that UtilColumnIsRename takes for the old name of a renamed column is not one.
     Function UtilColumnsFirstToRemove tAPIColumnCompare[] aAPIColumnCompare Returns String
@@ -4764,8 +4906,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Boolean bFieldExistsFrom bFieldExistsTo bIsSQLDriver bIsSame bOK bSkip
         Boolean bRecnum bIsSQLTableTo bRecnumTable bIsOpen bSkipTypeChange bIsDateType bMismatch
         String sFieldNameFrom sFieldNameTo sDriverIDTo sDefaultValue sRemove
-        Integer iRemoved iMaxRemove
-        tAPIColumnCompare[] aAPIColumnCompare aApiInsertColumns aAPIMoveColumns aAPIRenameColumns aAPIRemoveColumns
+        Integer iRemoved iMaxRemove iRenamedFirst
+        tAPIColumnCompare[] aAPIColumnCompare aApiInsertColumns aAPIMoveColumns aAPIRenameColumns aAPIRemoveColumns aAPIRenameFirst
         tColumnType ColumnType
 
         Move False to Err
@@ -4784,8 +4926,22 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
 
-        // Before we start to change the table we need to do four things;
-        // 1) Remove the columns that the description no longer has, one at a time and from the left.
+        // Before we start to change the table we need to do five things;
+        // 1) Rename the columns that got a new name and a new length in the same version, see
+        //    UtilColumnsCheckForRenamesByNeighbours. This has to come first: the next step removes every
+        //    column whose name the description no longer has, and its values with it.
+        Get UtilColumnsCheckForRenamesByNeighbours aColumnsFrom aColumnsTo to aAPIRenameFirst
+        Move (SizeOfArray(aAPIRenameFirst)) to iRenamedFirst
+        If (iRenamedFirst > 0) Begin
+            Get UtilColumnsRenameByNeighbours hTable aAPIRenameFirst to bOK
+            If (bOK = False) Begin
+                Function_Return False
+            End
+            Get UtilColumnsStructFill hTable to aColumnsTo
+            Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
+        End
+
+        // 2) Remove the columns that the description no longer has, one at a time and from the left.
         //    With a column gone the columns behind it stand where they are described and need not be moved
         //    up one by one, and a column that only changed its name comes to stand where its new name is.
         Move 0 to iRemoved
@@ -4802,7 +4958,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get UtilColumnsFirstToRemove aAPIColumnCompare to sRemove
         Loop
 
-        // 2) Insert any new fields
+        // 3) Insert any new fields
         Get UtilColumnsCheckForInserts hTable aAPIColumnCompare to aApiInsertColumns
         If (SizeOfArray(aApiInsertColumns)) Begin
             Get UtilColumnsInsert sDriverIDFrom hTable aApiInsertColumns to bOK
@@ -4814,7 +4970,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
         End
 
-        // 3) Move fields with same names
+        // 4) Move fields with same names
         Get UtilColumnsCheckForMoves hTable aAPIColumnCompare to aAPIMoveColumns
         If (SizeOfArray(aAPIMoveColumns)) Begin
             Get UtilColumnsMove hTable aColumnsFrom aColumnsTo aAPIMoveColumns to bOK
@@ -4825,7 +4981,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
         End
         
-        // 4) Rename fields
+        // 5) Rename fields
         Get UtilColumnsCheckForRenames hTable aAPIColumnCompare to aAPIRenameColumns
         If (SizeOfArray(aAPIRenameColumns)) Begin
             Get UtilColumnsRename hTable aAPIRenameColumns to bOK
@@ -4837,7 +4993,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
 
         // If any of the fields were changed by "Remove", "Insert", "Rename" or "Move", we need to compare the fields again:
-        If (iRemoved > 0 or SizeOfArray(aApiInsertColumns) or SizeOfArray(aAPIRenameColumns) or SizeOfArray(aAPIMoveColumns)) Begin
+        If (iRenamedFirst > 0 or iRemoved > 0 or SizeOfArray(aApiInsertColumns) or SizeOfArray(aAPIRenameColumns) or SizeOfArray(aAPIMoveColumns)) Begin
             Get UtilColumnsCompare sDriverIDFrom sDriverIDTo bIsSQLTableFrom bIsSQLTableTo aAPIColumnCompare bCompareDate_DateTime to bIsSame
             If (bIsSame = True) Begin
                 Function_Return True
