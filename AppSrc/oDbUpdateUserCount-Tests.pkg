@@ -1,0 +1,94 @@
+// oDbUpdateUserCount-Tests.pkg - cDbUpdateUserCount, the lock on one byte of a small file that cDbUpdateHandler
+// uses twice: to count the running programs, and to keep everybody else out while a database update runs.
+//
+// The tests take, refuse and release a lock on a file of their own beside the test program, and remove the file
+// again. No database is touched.
+//
+// Only procedures carrying { Published=True } are run as tests.
+
+Use DFUnit\Fixturing\Fixture.pkg
+Use cDbUpdateUserCount.pkg
+
+Define CS_UserCountTestFile for "DUFUnitTestLock.ucf"
+
+Object oDbUpdateUserCount_Tests is a cTestFixture
+    Set psTestFixtureName to "cDbUpdateUserCount - taking and releasing a lock"
+
+    // A lock object of its own on the test file. One user at a time, as for the update lock.
+    Function NewLock Returns Handle
+        Handle ho
+        Get Create (RefClass(cDbUpdateUserCount)) to ho
+        Set psLockFileName of ho to CS_UserCountTestFile
+        Set piMaxUsers     of ho to 1
+        Function_Return ho
+    End_Function
+
+    Procedure RemoveTestFile Handle ho
+        String sPath
+        Get ApplicationPath of ho to sPath
+        EraseFile (sPath + "\" + CS_UserCountTestFile)
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_Released_Lock_Can_Be_Taken_Again
+        Handle ho
+        tUserCount UserCount
+        Integer iLocks
+
+        Get NewLock to ho
+        Get CurrentNumberOfUsers of ho to iLocks
+        Send AssertIAreEqual 0 iLocks "Nobody holds the lock at the start."
+
+        Get CheckUserCount of ho to UserCount
+        Send AssertIAreEqual 0 UserCount.iError "The lock is taken without an error."
+        Get CurrentNumberOfUsers of ho to iLocks
+        Send AssertIAreEqual 1 iLocks "One lock is held now."
+
+        Send DoReleaseUserCount of ho
+        Get CurrentNumberOfUsers of ho to iLocks
+        Send AssertIAreEqual 0 iLocks "After the release nobody holds it."
+
+        Get CheckUserCount of ho to UserCount
+        Send AssertIAreEqual 0 UserCount.iError "It is taken a second time without an error."
+        Get CurrentNumberOfUsers of ho to iLocks
+        Send AssertIAreEqual 1 iLocks "And it is really held again."
+
+        // A second release must do nothing: the handle of the first one is closed.
+        Send DoReleaseUserCount of ho
+        Send DoReleaseUserCount of ho
+        Get CurrentNumberOfUsers of ho to iLocks
+        Send AssertIAreEqual 0 iLocks "Released twice: nobody holds it."
+
+        Send RemoveTestFile ho
+        Send Destroy of ho
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_Second_Taker_Is_Refused_Until_The_First_Lets_Go
+        Handle hoFirst hoSecond
+        tUserCount UserCount
+        Integer iLocks
+
+        Get NewLock to hoFirst
+        Get NewLock to hoSecond
+
+        Get CheckUserCount of hoFirst to UserCount
+        Send AssertIAreEqual 0 UserCount.iError "The first one takes the lock."
+        Get CheckUserCount of hoSecond to UserCount
+        Send AssertIAreEqual 4 UserCount.iError "The second one is refused: error 4, no free place."
+        Send AssertIAreEqual CI_UserCountMaxUsers UserCount.iUserCount "And it is told that the places are taken."
+
+        Send DoReleaseUserCount of hoFirst
+        Send DoReleaseUserCount of hoSecond
+        Get CheckUserCount of hoSecond to UserCount
+        Send AssertIAreEqual 0 UserCount.iError "After the first let go, the second takes it."
+        Get CurrentNumberOfUsers of hoSecond to iLocks
+        Send AssertIAreEqual 1 iLocks "And it is really held."
+
+        Send DoReleaseUserCount of hoSecond
+        Send RemoveTestFile hoFirst
+        Send Destroy of hoFirst
+        Send Destroy of hoSecond
+    End_Procedure
+
+End_Object

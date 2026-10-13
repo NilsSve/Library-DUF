@@ -160,6 +160,9 @@ Class cDbUpdateUserCount is a cObject
         Property Handle  phUserCountFile
         { Visibility=Private }
         Property Integer pdwLockPosition
+        { Visibility=Private }
+        // True while this object holds a lock. The first lock sits at position 0, so the position cannot tell.
+        Property Boolean pbLockHeld False
     End_Procedure
 
     Function IsProgramRunning Returns Boolean
@@ -350,6 +353,7 @@ Class cDbUpdateUserCount is a cObject
                     End
                     Else Begin  // byte is not locked
                         Set pdwLockPosition to dwFilePos
+                        Set pbLockHeld to True
                         Move True to bLocked
                         Move iMaxUsers to iCurUser
                     End
@@ -375,11 +379,17 @@ Class cDbUpdateUserCount is a cObject
         Get phUserCountFile to hFile
         Get pdwLockPosition to dwLockPos
         If (hFile) Begin
-            If (dwLockPos) Begin
+            // Not "If (dwLockPos)": the first lock sits at position 0.
+            If (pbLockHeld(Self)) Begin
                 Get UnlockUserCountFile hFile dwLockPos to iResult
             End
             Get CloseUserCountFile hFile to iResult
         End
+        // The handle is closed now. Forget it, so that CheckUserCount opens the file again and a second
+        // release does not close a handle that is no longer ours.
+        Set phUserCountFile to 0
+        Set pdwLockPosition to 0
+        Set pbLockHeld to False
     End_Procedure
 
     Function CurrentNumberOfUsers Returns Integer

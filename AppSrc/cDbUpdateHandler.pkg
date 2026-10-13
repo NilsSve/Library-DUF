@@ -1857,9 +1857,9 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
             End
         End 
         Else Begin
+            // The property switches off the count of DataFlex licence users, and that count only. The two other
+            // tests - every table opens exclusively, and nobody else has the program running - stay.
             Move 1 to iDataFlexUsers 
-            Move 1 to iUserCount
-            Move True to bOK
         End
 
         If (pbSilentMode(Self) = False and iDataFlexUsers > 1) Begin
@@ -1879,6 +1879,17 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
         // This will put a look on the DbUpdateLock.ucf file.
         // It is released when the update process is finished
         Get CheckUserCount of (phoDatabaseUpdateLock(Self)) to UserCount
+        // No update without the lock. Somebody else took it first, or it could not be taken at all.
+        If (UserCount.iError <> 0) Begin
+            Send StopStatusPanel
+            If (UserCount.iUserCount = CI_UserCountMaxUsers) Begin
+                Send Stop_Box CS_DUF_UpdateInProgressTxt
+            End
+            Else Begin
+                Send Stop_Box (CS_UserCountError * String(UserCount.iError) + "\n" + UserCount.sErrorTxt)
+            End
+            Send Exit_Application
+        End
 
         Move (CurrentDateTime()) to dtUpdateStarted
         Set pdtUpdateStart of (phoLogFile(Self)) to dtUpdateStarted
@@ -2022,6 +2033,9 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
 
             // This is a programmer's hook message:
             Send OnPostUpdate
+
+            // The update is over: let the other users in again. The lock was taken in InitDatabaseUpdate.
+            Send DoReleaseUserCount of (phoDatabaseUpdateLock(Self))
 
             Send StopStatusPanel
             If (pbSilentMode(Self) = False) Begin
