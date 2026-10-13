@@ -2951,6 +2951,38 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return (bOK = True)
     End_Function
 
+    // Enters an embedded table in an empty Filelist slot when its data file is in the data path already:
+    // a table that lost its Filelist entry. Returns True when it did that.
+    // It does nothing when the slot is in use, when new tables are not embedded tables (the driver of the
+    // connection is an SQL driver) or when there is no such file.
+    Function UtilTableAttachEmbedded Handle hTable String sRootName String sLogicalName String sDisplayName Returns Boolean
+        String sDriverID sFile
+        Boolean bInUse bExists
+
+        Get psDriverID to sDriverID
+        If (sDriverID <> DATAFLEX_ID or hTable < 1) Begin
+            Function_Return False
+        End
+        Get _UtilTableNumberIsInUse hTable to bInUse
+        If (bInUse = True) Begin
+            Function_Return False
+        End
+        Get _TableNameOnly sRootName to sFile
+        If (sFile = "") Begin
+            Function_Return False
+        End
+        Get _UtilEmbeddedTableFileExists sFile to bExists
+        If (bExists = False) Begin
+            Function_Return False
+        End
+
+        Set_Attribute DF_FILE_ROOT_NAME    of hTable to sFile
+        Set_Attribute DF_FILE_LOGICAL_NAME of hTable to sLogicalName
+        Set_Attribute DF_FILE_DISPLAY_NAME of hTable to sDisplayName
+        Send LogError ("Table:" * String(sLogicalName) * "was not in the Filelist, but its data file" * (sFile + ".dat") * "was in the data folder. The table was entered in Filelist slot:" * String(hTable) * "again. It was not created anew.") False
+        Function_Return True
+    End_Function
+
     // The bANSI parameter's default value = True, meaning a table in ANSI format will be created.
     // i.e. DF_FILE_TABLE_CHARACTER_FORMAT {"OEM"|"ANSI"}
     Function ApiTableCreate Handle hTable String sRootName String sDisplayName String sLogicalName Boolean bUseConnectionID Boolean bANSI Boolean bRecnum tAPIColumn[] aColumnIn Returns Boolean
@@ -3056,6 +3088,14 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move False to Err
         If (sDriverID = DATAFLEX_ID) Begin
             Move sRootName to sPhysicalFile
+            // The data file of the table is in the data folder already, and the Filelist slot is empty. Creating
+            // the table would replace the file, and its records, by an empty table. As with an SQL table that is
+            // on the server but not in the Filelist (above), the table is entered in the Filelist instead.
+            Get UtilTableAttachEmbedded hTable sRootName sLogicalName sDisplayName to bExists
+            If (bExists = True) Begin
+                Set TableName_Text of ghoStatusPanel to ""
+                Function_Return False
+            End
         End
 
         If (sDriverID <> DATAFLEX_ID) Begin
@@ -3471,6 +3511,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move APITableNameInfoFrom.iTableNumber  to hTable
         Set Private.phCurrentTable              to hTable
         Get _UtilTableExists  hTable            to bTableExists
+        // The data file of an embedded table without a Filelist entry: the table is entered in the Filelist
+        // again and is updated like any table that exists. Creating it would empty the file.
+        If (bTableExists = False and APITableNameInfoFrom.bIsSQL = False and APITableNameInfoFrom.bIsAlias = False) Begin
+            Get UtilTableAttachEmbedded hTable APITableNameInfoFrom.sRootName APITableNameInfoFrom.sLogicalName APITableNameInfoFrom.sDisplayName to bTableExists
+        End
 
         If (ghoProgressBar <> 0) Begin
             Send DoAdvance of ghoProgressBar
@@ -4360,7 +4405,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Field_Map hTable aAPIColumnCompare[iCount].sFieldNameFrom to iFieldTo
                 If (aAPIColumnCompare[iCount].bExistsFrom = True and iFieldTo = 0) Begin
                     Get UtilColumnExistsWithOtherNumber aAPIColumnCompare iCount to iColumnNumber
-                    Get UtilColumnShouldBeRenamed aAPIColumnCompare[iCount]      to bRenameField
+                    Get UtilColumnIsRename aAPIColumnCompare iCount              to bRenameField
                     If (iColumnNumber = -1 and bRenameField = False) Begin
                         Move aAPIColumnCompare[iCount].iFieldNumber     to aAPIColumnsToInsert[iItem].iFieldNumber
                         Move aAPIColumnCompare[iCount].sFieldNameFrom   to aAPIColumnsToInsert[iItem].sFieldNameFrom
@@ -4431,43 +4476,63 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function UtilColumnsMove Handle hTable tAPIColumn[] aColumnsFrom tAPIColumn[] aColumnsTo tAPIColumnCompare[] aAPIColumnsToMove Returns Boolean
-        Integer iSize iCount
-        Boolean bOK
+        Integer iSize iCount iItem iMoves iMaxMoves iLastFrom iLastTo
+        Boolean bOK bDone
         tAPIColumnCompare[] aAPIColumnCompare
 
-        Move (SizeOfArray(aAPIColumnsToMove)) to iSize
-        If (iSize = 0) Begin
+        If (SizeOfArray(aAPIColumnsToMove) = 0) Begin
             Function_Return True
         End
 
         Move False to Err
-        Decrement iSize
-        For iCount from 0 to iSize
-            Set Error_Report_Mode to DUF_ERROR_NO_REPORT
-            Send Ignore_Error of Error_Object_Id DFERR_ARRAY_INDEX_OUT_OF_BOUNDS
-            If (aAPIColumnsToMove[iCount].bExistsFrom = True and aAPIColumnsToMove[iCount].bExistsTo = True) Begin
-                Get ApiColumnMove hTable aAPIColumnsToMove[iCount].iFieldNumberTo aAPIColumnsToMove[iCount].iFieldNumber aAPIColumnsToMove[iCount].bIsSQLTypeFrom aAPIColumnsToMove[iCount].iLengthFrom aAPIColumnsToMove[iCount].iPrecisionFrom to bOK
+        Move True  to bOK
+        Move False to bDone
+        Move 0  to iMoves
+        Move -1 to iLastFrom
+        Move -1 to iLastTo
+        // No table needs more moves than it has columns.
+        Move (SizeOfArray(aColumnsFrom) + SizeOfArray(aColumnsTo)) to iMaxMoves
+
+        // Always the first move of the list. After every move the table is read again and the list is made
+        // anew, so its first entry is the leftmost column that is not in its place yet. (The loop used to go
+        // on with the second entry of the new list, and left columns behind.)
+        While (bDone = False)
+            Move -1 to iItem
+            Move (SizeOfArray(aAPIColumnsToMove)) to iSize
+            Decrement iSize
+            For iCount from 0 to iSize
+                If (iItem = -1 and aAPIColumnsToMove[iCount].bExistsFrom = True and aAPIColumnsToMove[iCount].bExistsTo = True) Begin
+                    Move iCount to iItem
+                End
+            Loop
+            If (iItem = -1) Begin
+                Move True to bDone
+            End
+            Else If (iMoves >= iMaxMoves or (aAPIColumnsToMove[iItem].iFieldNumber = iLastFrom and aAPIColumnsToMove[iItem].iFieldNumberTo = iLastTo)) Begin
+                // The same move is asked for again: the last one changed nothing.
+                Set Error_Report_Mode to DUF_ERROR_REPORT
+                Error DFERR_PROGRAM ("Function 'UtilColumnsMove'. The columns of table number:" * String(hTable) * "could not be brought into the order of the description. Column" * String(aAPIColumnsToMove[iItem].sFieldNameFrom) * "did not move from number" * String(aAPIColumnsToMove[iItem].iFieldNumberTo) * "to number" * String(aAPIColumnsToMove[iItem].iFieldNumber) + ".")
+                Move False to bOK
+                Move True  to bDone
+            End
+            Else Begin
+                Move aAPIColumnsToMove[iItem].iFieldNumber   to iLastFrom
+                Move aAPIColumnsToMove[iItem].iFieldNumberTo to iLastTo
+                Set Error_Report_Mode to DUF_ERROR_NO_REPORT
+                Get ApiColumnMove hTable aAPIColumnsToMove[iItem].iFieldNumberTo aAPIColumnsToMove[iItem].iFieldNumber aAPIColumnsToMove[iItem].bIsSQLTypeFrom aAPIColumnsToMove[iItem].iLengthFrom aAPIColumnsToMove[iItem].iPrecisionFrom to bOK
+                Increment iMoves
                 If (bOK = True) Begin
                     Get UtilColumnsStructFill hTable to aColumnsTo
                     Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
                     Get UtilColumnsCheckForMoves hTable aAPIColumnCompare to aAPIColumnsToMove
-                    If (SizeOfArray(aAPIColumnsToMove)) Begin
-                        Move (SizeOfArray(aAPIColumnsToMove)) to iSize
-                        Decrement iSize
-                        Move 0 to iCount
-                    End
                 End
                 Else Begin
-                    Move iSize to iCount // We're out of here! Else there will be an error generated for each field.
+                    Move True to bDone
                 End
             End
         Loop
 
         Set Error_Report_Mode to DUF_ERROR_REPORT
-        Send Trap_Error of Error_Object_Id DFERR_ARRAY_INDEX_OUT_OF_BOUNDS
-        If (LastErr = DFERR_ARRAY_INDEX_OUT_OF_BOUNDS) Begin
-            Move 0 to LastErr
-        End
         Function_Return bOK
     End_Function
 
@@ -4501,6 +4566,104 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 //        End
 
         Function_Return bShouldRename
+    End_Function
+
+    // Is the column of the description at this place the table's column at this place under a new name?
+    // UtilColumnShouldBeRenamed says yes for the same place and the same form. Two more things have to hold:
+    // the new name is not in the table under another number (then the column was moved), and the old name is
+    // no longer in the description (then the old column still exists and the described one is new). Without
+    // the second test a new column put in front of a column of the same form took that column's place.
+    Function UtilColumnIsRename tAPIColumnCompare[] aAPIColumnCompare Integer iColumn Returns Boolean
+        Boolean bRename
+        Integer iCount iSize iOther
+        String sFieldNameTo
+
+        Get UtilColumnShouldBeRenamed aAPIColumnCompare[iColumn] to bRename
+        If (bRename = False) Begin
+            Function_Return False
+        End
+        Get UtilColumnExistsWithOtherNumber aAPIColumnCompare iColumn to iOther
+        If (iOther <> -1) Begin
+            Function_Return False
+        End
+        Move (Uppercase(aAPIColumnCompare[iColumn].sFieldNameTo)) to sFieldNameTo
+        Move (SizeOfArray(aAPIColumnCompare)) to iSize
+        Decrement iSize
+        For iCount from 0 to iSize
+            If (aAPIColumnCompare[iCount].bExistsFrom = True and Uppercase(aAPIColumnCompare[iCount].sFieldNameFrom) = sFieldNameTo) Begin
+                Move False to bRename
+            End
+        Loop
+        Function_Return bRename
+    End_Function
+
+    // Returns the name of the leftmost column of the table that the description no longer has, or "" when
+    // there is none. A column that UtilColumnIsRename takes for the old name of a renamed column is not one.
+    Function UtilColumnsFirstToRemove tAPIColumnCompare[] aAPIColumnCompare Returns String
+        Integer iSize iCount iFrom
+        String sFieldNameTo
+        Boolean bInDescription bRename
+
+        Move (SizeOfArray(aAPIColumnCompare)) to iSize
+        Decrement iSize
+        For iCount from 0 to iSize
+            If (aAPIColumnCompare[iCount].bExistsTo = True) Begin
+                Move (Uppercase(aAPIColumnCompare[iCount].sFieldNameTo)) to sFieldNameTo
+                Move False to bInDescription
+                For iFrom from 0 to iSize
+                    If (aAPIColumnCompare[iFrom].bExistsFrom = True and Uppercase(aAPIColumnCompare[iFrom].sFieldNameFrom) = sFieldNameTo) Begin
+                        Move True to bInDescription
+                    End
+                Loop
+                If (bInDescription = False) Begin
+                    Get UtilColumnIsRename aAPIColumnCompare iCount to bRename
+                    If (bRename = False) Begin
+                        Function_Return aAPIColumnCompare[iCount].sFieldNameTo
+                    End
+                End
+            End
+        Loop
+        Function_Return ""
+    End_Function
+
+    // Removes one column, found by its name, in a restructure of its own.
+    // Returns False when the table cannot be opened, the column is not there or the restructure failed.
+    Function UtilColumnRemoveByName Handle hTable String sFieldName Returns Boolean
+        Integer iFields iField iRemove
+        String sName sDriverID
+        Handle hFile
+        Boolean bOK
+
+        Get AutoConnectionIDLogin to bOK
+        Close hTable
+        Get OpenTableExclusive hTable to bOK
+        If (bOK = False) Begin
+            Error DFERR_PROGRAM ("Function 'UtilColumnRemoveByName'. Can't open table number:" * String(hTable))
+            Function_Return False
+        End
+        Get_Attribute DF_FILE_DRIVER of hTable to sDriverID
+        Get_Attribute DF_FILE_NUMBER_FIELDS of hTable to iFields
+        Move 0 to iRemove
+        For iField from 1 to iFields
+            Get_Attribute DF_FIELD_NAME of hTable iField to sName
+            If (Uppercase(sName) = Uppercase(sFieldName)) Begin
+                Move iField to iRemove
+            End
+        Loop
+        If (iRemove = 0) Begin
+            Function_Return False
+        End
+
+        Set Private.phCurrentTable to hTable
+        Set Private.piCurrentField to iRemove
+        Move False to Err
+        Move hTable to hFile
+        Structure_Start hFile sDriverID
+            Delete_Field hFile iRemove
+            Set Action_Text of ghoStatusPanel to "Restructures table..."
+        Structure_End hFile DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Set Action_Text of ghoStatusPanel to ""
+        Function_Return (Err = False)
     End_Function
 
     // Returns -1 if the passed iColumn number doesn't exist with the same name in the aAPIColumnCompare struct array.
@@ -4543,7 +4706,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             If (Uppercase(aAPIColumnCompare[iCount].sFieldNameFrom) <> Uppercase(aAPIColumnCompare[iCount].sFieldNameTo)) Begin
                 // Check if the field exists in another position (other field number)
                 Get UtilColumnExistsWithOtherNumber aAPIColumnCompare iCount to iShouldMove
-                Get UtilColumnShouldBeRenamed aAPIColumnCompare[iCount] to bRenameField
+                Get UtilColumnIsRename aAPIColumnCompare iCount to bRenameField
                 If (aAPIColumnCompare[iCount].bExistsFrom = True and iShouldMove = -1 and bRenameField = True) Begin
                     Move aAPIColumnCompare[iCount].iFieldNumber     to aAPIColumnsToRename[iItem].iFieldNumber
                     Move iFieldTo                                   to aAPIColumnsToRename[iItem].iFieldNumberTo
@@ -4599,8 +4762,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Integer iCount2 iColumn2
         Handle hFile
         Boolean bFieldExistsFrom bFieldExistsTo bIsSQLDriver bIsSame bOK bSkip
-        Boolean bRecnum bIsSQLTableTo bRecnumTable bIsOpen bSkipTypeChange bIsDateType
-        String sFieldNameFrom sFieldNameTo sDriverIDTo sDefaultValue
+        Boolean bRecnum bIsSQLTableTo bRecnumTable bIsOpen bSkipTypeChange bIsDateType bMismatch
+        String sFieldNameFrom sFieldNameTo sDriverIDTo sDefaultValue sRemove
+        Integer iRemoved iMaxRemove
         tAPIColumnCompare[] aAPIColumnCompare aApiInsertColumns aAPIMoveColumns aAPIRenameColumns aAPIRemoveColumns
         tColumnType ColumnType
 
@@ -4620,8 +4784,25 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
 
-        // Before we start to change the table we need to do three things;
-        // 1) Insert any new fields
+        // Before we start to change the table we need to do four things;
+        // 1) Remove the columns that the description no longer has, one at a time and from the left.
+        //    With a column gone the columns behind it stand where they are described and need not be moved
+        //    up one by one, and a column that only changed its name comes to stand where its new name is.
+        Move 0 to iRemoved
+        Move (SizeOfArray(aColumnsTo)) to iMaxRemove
+        Get UtilColumnsFirstToRemove aAPIColumnCompare to sRemove
+        While (sRemove <> "" and iRemoved < iMaxRemove)
+            Get UtilColumnRemoveByName hTable sRemove to bOK
+            If (bOK = False) Begin
+                Function_Return False
+            End
+            Increment iRemoved
+            Get UtilColumnsStructFill hTable to aColumnsTo
+            Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
+            Get UtilColumnsFirstToRemove aAPIColumnCompare to sRemove
+        Loop
+
+        // 2) Insert any new fields
         Get UtilColumnsCheckForInserts hTable aAPIColumnCompare to aApiInsertColumns
         If (SizeOfArray(aApiInsertColumns)) Begin
             Get UtilColumnsInsert sDriverIDFrom hTable aApiInsertColumns to bOK
@@ -4633,7 +4814,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
         End
 
-        // 2) Move fields with same names
+        // 3) Move fields with same names
         Get UtilColumnsCheckForMoves hTable aAPIColumnCompare to aAPIMoveColumns
         If (SizeOfArray(aAPIMoveColumns)) Begin
             Get UtilColumnsMove hTable aColumnsFrom aColumnsTo aAPIMoveColumns to bOK
@@ -4644,7 +4825,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
         End
         
-        // 3) Rename fields
+        // 4) Rename fields
         Get UtilColumnsCheckForRenames hTable aAPIColumnCompare to aAPIRenameColumns
         If (SizeOfArray(aAPIRenameColumns)) Begin
             Get UtilColumnsRename hTable aAPIRenameColumns to bOK
@@ -4655,11 +4836,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
         End
 
-        // Note: Fields will be removed if needed in the Structure_Start/End below.
-        // Get utilColumnsCheckForRemoves hTable aAPIColumnCompare to aAPIRemoveColumns
-
-        // If any of the fields were changed by "Insert", "Rename" or "Move", we need to compare the fields again:
-        If (SizeOfArray(aApiInsertColumns) or SizeOfArray(aAPIRenameColumns) or SizeOfArray(aAPIMoveColumns)) Begin
+        // If any of the fields were changed by "Remove", "Insert", "Rename" or "Move", we need to compare the fields again:
+        If (iRemoved > 0 or SizeOfArray(aApiInsertColumns) or SizeOfArray(aAPIRenameColumns) or SizeOfArray(aAPIMoveColumns)) Begin
             Get UtilColumnsCompare sDriverIDFrom sDriverIDTo bIsSQLTableFrom bIsSQLTableTo aAPIColumnCompare bCompareDate_DateTime to bIsSame
             If (bIsSame = True) Begin
                 Function_Return True
@@ -4673,6 +4851,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move hTable to hFile
         Structure_Start hFile sDriverIDTo
 
+            Move False to bMismatch
             Move (SizeOfArray(aAPIColumnCompare)) to iColumns
             Decrement iColumns
             for iCount from 0 to iColumns
@@ -4726,7 +4905,16 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                             Set Private.piCurrentField to iColumn
                         End
 
-                        If (sFieldNameFrom <> sFieldNameTo) Begin
+                        If (bFieldExistsTo = True and Uppercase(sFieldNameFrom) <> Uppercase(sFieldNameTo)) Begin
+                            // A column of another name stands where this one is described: the steps above did not bring the
+                            // columns into the order of the description. Giving it the described name and form would put one
+                            // column's values under another column's name, so the update of this table stops here.
+                            If (bMismatch = False) Begin
+                                Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Table number:" * String(hTable) * "was left as it was: column number" * String(iColumn) * "is" * sFieldNameTo + ", and the description has" * sFieldNameFrom * "there.")
+                            End
+                            Move True to bMismatch
+                        End
+                        Else If (sFieldNameFrom <> sFieldNameTo) Begin
                             Set_Attribute DF_FIELD_NAME of hFile iColumn to sFieldNameFrom
                         End
 
@@ -4812,7 +5000,16 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                     Move False to bOK
                     Move iColumns to iCount
                 End
+                If (bMismatch = True) Begin
+                    Move iColumns to iCount
+                End
             Loop
+
+            If (bMismatch = True) Begin
+                Structure_Abort hFile
+                Set Action_Text of ghoStatusPanel to ""
+                Function_Return False
+            End
 
             Set Action_Text of ghoStatusPanel to "Restructuring table..."
         Structure_End hFile DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler

@@ -3,7 +3,7 @@
 //
 // The tables live in a folder of their own with a Filelist of their own. Every test makes that folder in
 // the temp folder, points the runtime and the workspace object at it, and removes it again afterwards.
-// The Filelist and the Data folder of the workspace are not touched.
+// The Filelist, the Data folder and the DDSrc folder of the workspace are not touched.
 //
 // Errors are taken the way cDbUpdateHandler takes them: dropped while the library has its report mode
 // switched off, counted otherwise. A test that expects a clean run asserts that the count is 0.
@@ -19,6 +19,7 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
     Property String psOldOpenPath ""
     Property String psOldDataPath ""
     Property String psOldFileList ""
+    Property String psOldDdSrcPath ""
     Property Handle phOldErrorObject 0
     Property String psTable ""
     Property Handle phTable 0
@@ -76,6 +77,8 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Set psOldDataPath to sValue
         Get psFileList of hoWorkspace to sValue
         Set psOldFileList to sValue
+        Get psDdSrcPath of hoWorkspace to sValue
+        Set psOldDdSrcPath to sValue
 
         // A copy of the workspace's Filelist: the tests take a free slot of the copy.
         CopyFile (psOldFileList(Self)) to (sFolder + "\Filelist.cfg")
@@ -83,6 +86,8 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Set_Attribute DF_OPEN_PATH     to (sFolder + ";" + psOldOpenPath(Self))
         Set psDataPath of hoWorkspace  to sFolder
         Set psFileList of hoWorkspace  to (sFolder + "\Filelist.cfg")
+        // A column that is added writes the table's .fd file into the DDSrc folder.
+        Set psDdSrcPath of hoWorkspace to sFolder
 
         Set pbCompareDate_DateTime  of ghoDbUpdateFunctionLibrary to False
         Set pbCompareIndexAscending of ghoDbUpdateFunctionLibrary to False
@@ -104,6 +109,7 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Set_Attribute DF_OPEN_PATH     to (psOldOpenPath(Self))
         Set psDataPath of hoWorkspace  to (psOldDataPath(Self))
         Set psFileList of hoWorkspace  to (psOldFileList(Self))
+        Set psDdSrcPath of hoWorkspace to (psOldDdSrcPath(Self))
 
         // Only what the test made, in the folder the test made.
         If (sFolder <> "" and (Uppercase(sFolder) contains "DUFTABLETESTS")) Begin
@@ -438,6 +444,169 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Close h
         Send AssertIAreEqual 3 iLast "No index was added under a new number."
         Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "Name")) "The values followed their columns."
+    End_Procedure
+
+    // How many records the table has
+    Function RecordCount Returns Integer
+        Handle h
+        Integer iRecords
+        Get phTable to h
+        Open h
+        Move 0 to iRecords
+        Clear h
+        Repeat
+            Vfind h 0 GT
+            If (Found) Begin
+                Increment iRecords
+            End
+        Until (not(Found))
+        Close h
+        Function_Return iRecords
+    End_Function
+
+    { Published=True }
+    Procedure Test_A_Column_Removed_From_The_Middle_Leaves_The_Others_As_They_Are
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+        Date dFirst
+
+        // Code goes. Three columns stand behind it, one of them in an index.
+        Send MakeBaseTable "DUFTT6" 5 True
+        Get Col 1 "Id" DF_BCD 6 0        to aColumns[0]
+        Get Col 2 "Name" DF_ASCII 30 0   to aColumns[1]
+        Get Col 3 "Created" DF_DATE 6 0  to aColumns[2]
+        Get Col 4 "Amount" DF_BCD 8 2    to aColumns[3]
+        Get Idx 1 1 "Id" -1 "" -1 ""        to aIndexes[0]
+        Get Idx 2 2 "Name" 1 "Id" -1 ""     to aIndexes[1]
+        Get Idx 3 3 "Created" 1 "Id" -1 ""  to aIndexes[2]
+
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The first run is without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id,Name,Created,Amount" (ColumnNames(Self)) "Code is gone and the others are in their order."
+        Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "Name")) "Name holds its text."
+        Move (DateSet(2026, 1, 15)) to dFirst
+        Send AssertSAreEqual (String(DF_DATE) + "|" + String(dFirst)) (ColumnTypeAndFirstValue(Self, "Created")) "Created holds its date."
+        Send AssertSAreEqual "Name,Id" (IndexColumns(Self, 2)) "Index 2 is on Name and Id."
+        Send AssertSAreEqual "Created,Id" (IndexColumns(Self, 3)) "Index 3 is on Created and Id."
+        Send AssertIAreEqual 2 (RecordCount(Self)) "Both records are there."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_New_Column_Beside_A_Column_Of_The_Same_Form_Is_A_New_Column
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+        Date dFirst
+
+        // Title is new, in front of Name, and has the type and the length of Name. It is not Name renamed:
+        // Name is still in the description.
+        Send MakeBaseTable "DUFTT7" 5 False
+        Get Col 1 "Id" DF_BCD 6 0        to aColumns[0]
+        Get Col 2 "Code" DF_ASCII 5 0    to aColumns[1]
+        Get Col 3 "Title" DF_ASCII 30 0  to aColumns[2]
+        Get Col 4 "Name" DF_ASCII 30 0   to aColumns[3]
+        Get Col 5 "Created" DF_DATE 6 0  to aColumns[4]
+        Get Col 6 "Amount" DF_BCD 8 2    to aColumns[5]
+        Get Idx 1 1 "Id" -1 "" -1 ""     to aIndexes[0]
+
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id,Code,Title,Name,Created,Amount" (ColumnNames(Self)) "Title stands in front of Name."
+        Send AssertSAreEqual (String(DF_ASCII) + "|") (ColumnTypeAndFirstValue(Self, "Title")) "The new column is empty."
+        Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "Name")) "Name holds its text."
+        Move (DateSet(2026, 1, 15)) to dFirst
+        Send AssertSAreEqual (String(DF_DATE) + "|" + String(dFirst)) (ColumnTypeAndFirstValue(Self, "Created")) "Created holds its date."
+        Send AssertSAreEqual (String(DF_BCD) + "|" + String(12.5)) (ColumnTypeAndFirstValue(Self, "Amount")) "Amount holds its number."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_Column_Removed_And_The_Next_One_Renamed_Keeps_The_Renamed_Values
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+
+        // Code goes, and Name is now FullName, same type and length.
+        Send MakeBaseTable "DUFTT8" 5 False
+        Get Col 1 "Id" DF_BCD 6 0          to aColumns[0]
+        Get Col 2 "FullName" DF_ASCII 30 0 to aColumns[1]
+        Get Col 3 "Created" DF_DATE 6 0    to aColumns[2]
+        Get Col 4 "Amount" DF_BCD 8 2      to aColumns[3]
+        Get Idx 1 1 "Id" -1 "" -1 ""       to aIndexes[0]
+
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id,FullName,Created,Amount" (ColumnNames(Self)) "Code is gone and Name is FullName."
+        Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "FullName")) "FullName holds the names."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_Columns_In_Another_Order_Are_Moved_Into_Place
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+        Date dFirst
+
+        // The four columns behind Id in the opposite order: three moves.
+        Send MakeBaseTable "DUFTT9" 5 False
+        Get Col 1 "Id" DF_BCD 6 0        to aColumns[0]
+        Get Col 2 "Amount" DF_BCD 8 2    to aColumns[1]
+        Get Col 3 "Created" DF_DATE 6 0  to aColumns[2]
+        Get Col 4 "Name" DF_ASCII 30 0   to aColumns[3]
+        Get Col 5 "Code" DF_ASCII 5 0    to aColumns[4]
+        Get Idx 1 1 "Id" -1 "" -1 ""     to aIndexes[0]
+
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id,Amount,Created,Name,Code" (ColumnNames(Self)) "The columns are in the described order."
+        Send AssertSAreEqual (String(DF_ASCII) + "|C1") (ColumnTypeAndFirstValue(Self, "Code")) "Code holds its text."
+        Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "Name")) "Name holds its text."
+        Move (DateSet(2026, 1, 15)) to dFirst
+        Send AssertSAreEqual (String(DF_DATE) + "|" + String(dFirst)) (ColumnTypeAndFirstValue(Self, "Created")) "Created holds its date."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_Table_Is_Found_When_The_Data_Path_Names_Two_Folders
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+        String sFolder
+
+        Send MakeBaseTable "DUFTT10" 5 True
+        Get psFolder to sFolder
+        Set psDataPath of (phoWorkspace(ghoApplication)) to (sFolder + ";" + sFolder + "\Second")
+
+        // The same description: nothing is to be done. The table must not be taken for a new one.
+        Get BaseColumns to aColumns
+        Get BaseIndexes to aIndexes
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertIAreEqual 2 (RecordCount(Self)) "The table still has its two records."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_Data_File_Without_A_Filelist_Entry_Keeps_Its_Records
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+        Handle h
+        String sRoot
+
+        Send MakeBaseTable "DUFTT11" 5 True
+        // The table loses its Filelist entry. Its files stay.
+        Get phTable to h
+        Close h
+        Set_Attribute DF_FILE_ROOT_NAME    of h to ""
+        Set_Attribute DF_FILE_LOGICAL_NAME of h to ""
+        Set_Attribute DF_FILE_DISPLAY_NAME of h to ""
+
+        Get BaseColumns to aColumns
+        Get BaseIndexes to aIndexes
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Get_Attribute DF_FILE_ROOT_NAME of h to sRoot
+        Send AssertSAreEqual "DUFTT11" sRoot "The table is in the Filelist again."
+        Send AssertIAreEqual 2 (RecordCount(Self)) "The table still has its two records."
     End_Procedure
 
 End_Object

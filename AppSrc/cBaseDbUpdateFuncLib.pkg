@@ -2391,6 +2391,27 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return FilelistLogicalTables
     End_Function 
     
+    // Is the data file of an embedded table in the data path? The data path can name several folders, so each
+    // of them is looked at. (The whole path used to be taken for one folder name. With two folders no table
+    // was found, and a table that is not found is created.)
+    Function _UtilEmbeddedTableFileExists String sRootName Returns Boolean
+        String sDataPath sFolder
+        Integer iPaths iPath
+        Boolean bExists
+
+        Move False to bExists
+        Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
+        Get CountOfPaths of (phoWorkspace(ghoApplication)) sDataPath to iPaths
+        For iPath from 1 to iPaths
+            If (bExists = False) Begin
+                Get PathAtIndex of (phoWorkspace(ghoApplication)) sDataPath iPath to sFolder
+                Get vFolderFormat sFolder to sFolder
+                Get vFilePathExists (sFolder + sRootName + ".dat") to bExists
+            End
+        Loop
+        Function_Return bExists
+    End_Function
+
     // Checks that the passed hTable number both exists in Filelist.cfg and
     // that the embedded .dat file exists on disk _or_ that the SQL table exists
     // if it is an SQL table
@@ -2413,9 +2434,7 @@ Class cBaseDbUpdateFuncLib is a cObject
             Function_Return bExists
         End
         Else Begin
-            Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
-            Get vFolderFormat sDataPath to sDataPath
-            Get vFilePathExists (sDataPath + sRootName + ".dat") to bExists
+            Get _UtilEmbeddedTableFileExists sRootName to bExists
         End
 
         Function_Return bExists
@@ -2445,9 +2464,7 @@ Class cBaseDbUpdateFuncLib is a cObject
             Function_Return bExists
         End
         Else Begin
-            Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
-            Get vFolderFormat sDataPath to sDataPath
-            Get vFilePathExists (sDataPath + sRootName + ".dat") to bExists
+            Get _UtilEmbeddedTableFileExists sRootName to bExists
         End
 
         Function_Return bExists
