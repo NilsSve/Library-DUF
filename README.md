@@ -37,6 +37,45 @@ These sections can be found in the `Developer5.chm` Help file located in the `/H
 
 The workspace also uses three other libraries from Nils Sve's GitHub page — DFAbout, RDCToolsLib and vwin32fh. As of the flattening described below, they are **no longer nested submodules of DUF**; they are separate sibling libraries. See the Dependencies section for why, and what a consuming application must do.
 
+## What is new in 1.0.1
+
+Fixes, most of them in the update run: the part that changes the tables at a customer's site.
+
+The update of a table (`ApiTableUpdate`), measured on DataFlex 19.1 to 26, on embedded tables and, where it
+applies, on Microsoft SQL:
+
+- A changed index is changed. The table kept its old index: an embedded table got a second one at every run,
+  and on Microsoft SQL the program stopped at every start. An index removed from the middle no longer takes
+  the wrong one with it, an index that gained or lost a segment counts as changed, and the indexes are
+  compared after the columns have changed, not before.
+- A Date column that gets a new number keeps its type and its dates. It came back as text of length 0.
+- A column removed from the middle works at the first start, however many columns stand behind it.
+- A new column beside a column of the same type and length is a new column. It was taken for that column
+  under a new name, and values ended up under other names.
+- A column renamed and made longer in the same update keeps its values. One column gone and one new between
+  the same two neighbours, of the same type and with room for every value, is the same column under a new
+  name; the log names both. Update code can say it outright, in front of `ApiTableUpdate`: `ApiColumnRename`
+  for a rename, `ApiColumnRemove` for a column that is to go. A column renamed and made shorter, or given
+  another type, is still a new column and starts empty.
+- A table is found when the data path names several folders, and a data file that lost its Filelist entry is
+  entered in the Filelist again. Both were created anew, empty, over the file.
+
+The rest:
+
+- The update lock is released when the update is over. It was held until the program closed, and every other
+  start of the program showed "update in progress" for that long.
+- `pbCheckDataFlexUserCount = False` switches off the count of DataFlex licence users and nothing else. It
+  also switched off the test for an exclusive open and the count of running programs. An application that
+  sets it to False can now stop with "database in use" where it started its update before.
+- A `cDbUpdateVersion` object whose `pnVersionNumber` was never set stops the program. Its `OnUpdate` was
+  skipped and nothing said so.
+- Columns added through `SqlColumnAdd` no longer use up the sequential channels, one for each column.
+- SQL Repair Utility: a ticked "Create database backup" makes the backup when a collation is changed. It was
+  the other way round. "Recreate all *.int files" saves every .int file first, not just one.
+- Compare Databases lists an index whose two sides differ in their number of segments.
+- More unit tests: `oDbUpdateTableUpdate-Tests.pkg` runs `ApiTableUpdate` against real embedded tables in a
+  temp folder, and `oDbUpdateUserCount-Tests.pkg` tests the update lock.
+
 ## Setup after cloning
 
 **Building DUF on its own** (working on the framework itself): after cloning, run **`setup.bat`**
@@ -111,12 +150,12 @@ vwin32fh come with it. A package brings the sources of DUF's programs, but no pr
 Add it with the version after a `#`:
 
 ```
-https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.0
+https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.1
 ```
 
-Each release has a version tag (`1.0.0`, ...), listed under Tags on GitHub. Without the `#` part the workspace
-gets a commit. A workspace that also names RDCToolsLib or DFAbout itself lists them before DUF, in a version
-DUF accepts: RDCToolsLib 1.0.11 or later, DFAbout 1.0.2 or later.
+Each release has a version tag (`1.0.0`, `1.0.1`, ...), listed under Tags on GitHub. Without the `#` part the
+workspace gets a commit. A workspace that also names RDCToolsLib or DFAbout itself lists them before DUF, in a
+version DUF accepts: RDCToolsLib 1.0.11 or later, DFAbout 1.0.2 or later.
 
 The package puts **`BuildDUFUtilities.bat`** into the workspace folder. Start it there. It compiles
 `DUFCodeGenerator` and `DUFSQLRepairUtility` into the workspace's `Programs` folder:
