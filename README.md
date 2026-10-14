@@ -37,6 +37,46 @@ These sections can be found in the `Developer5.chm` Help file located in the `/H
 
 The workspace also uses three other libraries from Nils Sve's GitHub page — DFAbout, RDCToolsLib and vwin32fh. As of the flattening described below, they are **no longer nested submodules of DUF**; they are separate sibling libraries. See the Dependencies section for why, and what a consuming application must do.
 
+## What is new in 1.0.2
+
+The update of a table (`ApiTableUpdate`):
+
+- An SQL table stays on SQL when the update code was made from an embedded table, and gets its changes. It was
+  turned into an embedded table, and the SQL table was left behind on the server. Set `pbApiTableUpdateAuto` to
+  True for the old behaviour, or call `SqlTableConvertToEmbedded` in an update of its own. Columns that such an
+  update adds or changes get the SQL type the driver picks; they arrived as `char` or `numeric`.
+- A text column that the update code makes a Date column becomes one when it holds dates only, written the way
+  the program writes dates. Otherwise it keeps its type, and an error names the column and its first value: the
+  restructure would have emptied the other values or made them into other dates, without a word. Before,
+  nothing happened at all.
+- A new index gets the uppercase and descending segments of the update code, also with the two compare
+  switches off.
+- A renamed embedded table keeps its data when the copy to the new name fails, and it is renamed in the folder
+  of the data path that holds it. The old files were deleted whether the copy was made or not.
+- The update of a table stops at the first step that fails. A later step covered the failure.
+
+Connections to the database server:
+
+- A failed login is reported where it happens. A connection ID that DUF made itself was reported as "could not
+  be created", and a good login counted as failed after an earlier error.
+- No password in error messages, in the update log or on screen: the value of PWD and Password shows as ***.
+- A password, a database name or a user name with a space in it keeps the space. For the SQL Server client 18
+  and later every space was taken out of the connection string.
+- Manage SQL Connections: the field "Additional Connect String Options" is hidden. It showed the password, and
+  could write an old password back over a new one.
+
+The rest:
+
+- Version objects in the wrong order, such as 1.2 before 1.1, stop the program with a message. The 1.1 update
+  was skipped for good. These and the other set-up mistakes that end with "Program will now exit!" are shown on
+  screen as well as logged, unless `pbSilentMode` is True.
+- With `pbUseIntFilesBackup` True, the Filelist.cfg compiled into the program is written only when there is no
+  Filelist.cfg. It replaced the live one after every update.
+- SQL Repair Utility: the Filelist repair writes the prefix of the table's own driver, not MSSQLDRV always.
+- A column added on SQL is entered in the .tag file once. It was added again on every call.
+- Compare Databases says "Ascending: Yes" for ascending index segments. It said so for descending ones.
+- More unit tests, 56 in all.
+
 ## What is new in 1.0.1
 
 Fixes, most of them in the update run: the part that changes the tables at a customer's site.
@@ -150,12 +190,12 @@ vwin32fh come with it. A package brings the sources of DUF's programs, but no pr
 Add it with the version after a `#`:
 
 ```
-https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.1
+https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.2
 ```
 
-Each release has a version tag (`1.0.0`, `1.0.1`, ...), listed under Tags on GitHub. Without the `#` part the
-workspace gets a commit. A workspace that also names RDCToolsLib or DFAbout itself lists them before DUF, in a
-version DUF accepts: RDCToolsLib 1.0.11 or later, DFAbout 1.0.2 or later.
+Each release has a version tag (`1.0.0`, `1.0.1`, `1.0.2`, ...), listed under Tags on GitHub. Without the `#`
+part the workspace gets a commit. A workspace that also names RDCToolsLib or DFAbout itself lists them before
+DUF, in a version DUF accepts: RDCToolsLib 1.0.11 or later, DFAbout 1.0.2 or later.
 
 The package puts **`BuildDUFUtilities.bat`** into the workspace folder. Start it there. It compiles
 `DUFCodeGenerator` and `DUFSQLRepairUtility` into the workspace's `Programs` folder:
