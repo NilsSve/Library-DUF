@@ -946,4 +946,27 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Send AssertIAreEqual DF_DESCENDING iDirection "Its Created segment is descending."
     End_Procedure
 
+    // The version table is DUF's own: update code that describes it leaves it as it is. (The guard in
+    // ApiTableUpdate compared a name that was never filled in, so the table was changed like any other.)
+    { Published=True }
+    Procedure Test_The_DbVersion_Table_Is_Left_As_It_Is
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+
+        // The table is made under a name of its own (made under the name DbVersion, the guard would skip it), then
+        // described to ApiTableUpdate under the name DbVersion, with one more column.
+        Send MakeBaseTable "DUFTT23" 5 True
+        Set_Attribute DF_FILE_LOGICAL_NAME of (phTable(Self)) to "DbVersion"
+        Set psOtherTable to "DbVersion"
+        Get BaseColumns to aColumns
+        Get BaseIndexes to aIndexes
+        Get Col 6 "Note" DF_ASCII 20 0 to aColumns[5]
+        Set psTable to "DbVersion"
+        Get UpdateTable aColumns aIndexes to iErrors
+        Set psTable to "DUFTT23"
+        Send AssertIAreEqual 0 iErrors ("The call answers True and raises no error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id,Code,Name,Created,Amount" (ColumnNames(Self)) "The table keeps its columns; Note is not added."
+    End_Procedure
+
 End_Object

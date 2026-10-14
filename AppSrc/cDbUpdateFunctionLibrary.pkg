@@ -33,6 +33,7 @@
 Use cBaseDbUpdateFuncLib.pkg
 
 Register_Function pbExitIfDebuggerActive Returns Boolean
+Register_Function piDbVersionFileNumber Returns Integer
 Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     Procedure Construct_Object
@@ -3486,12 +3487,30 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     // Note: This table update function does _not_ convert an embedded table to SQL. Use function ApiTableConvertToSQL first for that.
+    // Is this the framework's own DbVersion table, the one the update handler keeps the database's version number in?
+    // The logical name is DbVersion, and when the handler has a number for its version table (piDbVersionFileNumber)
+    // it is that number. An application table that holds the version in one of its columns (pbUseCustomDbVersion,
+    // e.g. a system table) has other columns as well, and its update code must be able to change it: it is not this.
+    Function UtilTableIsDbVersionTable tAPITableNameInfo APITableNameInfo Returns Boolean
+        Integer iDbVersionFileNumber
+
+        If (Lowercase(Trim(APITableNameInfo.sLogicalName)) <> "dbversion") Begin
+            Function_Return False
+        End
+        If (ghoDbUpdateHandler <> 0) Begin
+            Get piDbVersionFileNumber of ghoDbUpdateHandler to iDbVersionFileNumber
+            If (iDbVersionFileNumber > 0) Begin
+                Function_Return (iDbVersionFileNumber = APITableNameInfo.iTableNumber)
+            End
+        End
+        Function_Return True
+    End_Function
+
     Function ApiTableUpdate tAPITableNameInfo APITableNameInfoFrom tAPIColumn[] aColumnsFrom tAPIIndex[] aIndexesFrom tAPIRelation[] aRelationsFrom Returns Boolean
         Handle hTable
-        String sTableName
         String sDriverIDFrom sDriverIDTo sLogicalNameTo
         Integer iDbType
-        Boolean bOk bOpened bApiTableUpdateAuto bLogicalNameOK bSysfile
+        Boolean bOk bOpened bApiTableUpdateAuto bLogicalNameOK bSysfile bIsVersionTable
         Boolean bUseConnectionID bToANSI bRecnum bCopyData bCompareDate_DateTime bCompareIndexAscending bCompareIndexUppercase bTableExists
         Boolean bIsSame bFilelistError bIsAliasFrom bIsSQLTableFrom bIsSQLTableTo
         tSQLConnection SQLConnection
@@ -3501,9 +3520,13 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         tAPIIndexCompare[]    aAPIIndexCompare
         tAPIRelationCompare[] aAPIRelationCompare
 
-        // We don't allow changes to the framework's DbVersion table.
-        If (Lowercase(sTableName) = "dbversion") Begin
-            Function_Return False
+        // We don't allow changes to the framework's DbVersion table: it holds the version number that decides which
+        // updates still run. It is skipped with a line in the log. (This compared a name that was never filled in,
+        // so it never stopped anything.)
+        Get UtilTableIsDbVersionTable APITableNameInfoFrom to bIsVersionTable
+        If (bIsVersionTable = True) Begin
+            Send LogError ("Table" * String(APITableNameInfoFrom.sLogicalName) * "was skipped: it holds the database version, and the update handler keeps it itself.") False
+            Function_Return True
         End
         
         Move True to bOk
