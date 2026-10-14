@@ -37,6 +37,14 @@ These sections can be found in the `Developer5.chm` Help file located in the `/H
 
 The workspace also uses three other libraries from Nils Sve's GitHub page — DFAbout, RDCToolsLib and vwin32fh. As of the flattening described below, they are **no longer nested submodules of DUF**; they are separate sibling libraries. See the Dependencies section for why, and what a consuming application must do.
 
+## What is new in 1.0.3
+
+- `ApiTableUpdate` leaves the framework's `DbVersion` table alone, the table whose version number decides which
+  updates still run. A `DbVersion` description in the update code is skipped with a line in the update log. The
+  check for it was there, but it compared a name that was never filled in, so the table was changed like any
+  other. An application table that holds the version number in one of its columns (`pbUseCustomDbVersion`) is
+  updated as before.
+
 ## What is new in 1.0.2
 
 The update of a table (`ApiTableUpdate`):
@@ -190,12 +198,12 @@ vwin32fh come with it. A package brings the sources of DUF's programs, but no pr
 Add it with the version after a `#`:
 
 ```
-https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.2
+https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.3
 ```
 
-Each release has a version tag (`1.0.0`, `1.0.1`, `1.0.2`, ...), listed under Tags on GitHub. Without the `#`
-part the workspace gets a commit. A workspace that also names RDCToolsLib or DFAbout itself lists them before
-DUF, in a version DUF accepts: RDCToolsLib 1.0.11 or later, DFAbout 1.0.2 or later.
+Each release has a version tag (`1.0.0`, `1.0.1`, `1.0.2`, `1.0.3`, ...), listed under Tags on GitHub. Without
+the `#` part the workspace gets a commit. A workspace that also names RDCToolsLib or DFAbout itself lists them
+before DUF, in a version DUF accepts: RDCToolsLib 1.0.11 or later, DFAbout 1.0.2 or later.
 
 The package puts **`BuildDUFUtilities.bat`** into the workspace folder. Start it there. It compiles
 `DUFCodeGenerator` and `DUFSQLRepairUtility` into the workspace's `Programs` folder:
