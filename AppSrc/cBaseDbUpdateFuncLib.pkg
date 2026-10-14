@@ -2033,8 +2033,8 @@ Class cBaseDbUpdateFuncLib is a cObject
     // Subfunction to the ApiTableUpdate function (et al)
     Function _UtilTableCheckChangeFilelistNames tAPITableNameInfo APITableNameInfoFrom Boolean bIsSQLTableTo Returns Boolean
         Handle hTable
-        String sConnectionID sRootName sLogicalName sDisplayName
-        Boolean bTableExists bSameTableNames bANSI bOK
+        String sConnectionID sRootName sLogicalName sDisplayName sBareTo sBareFrom
+        Boolean bTableExists bSameTableNames bANSI bOK bChangeRoot
 
         Get _ApiTableFilelistNamesCompare True APITableNameInfoFrom to bSameTableNames
         If (bSameTableNames = True) Begin
@@ -2046,7 +2046,15 @@ Class cBaseDbUpdateFuncLib is a cObject
         Set Private.phCurrentTable              to hTable
         
         Get_Attribute DF_FILE_ROOT_NAME         of hTable to sRootName
-        If (sRootName <> APITableNameInfoFrom.sRootName) Begin
+        Move (sRootName <> APITableNameInfoFrom.sRootName) to bChangeRoot
+        // An SQL table under a description for an embedded table stays on SQL (ApiTableUpdate): it keeps its root
+        // name with the driver when the names are the same without it. (It was given the bare embedded name.)
+        If (bChangeRoot = True and APITableNameInfoFrom.bIsSQL = False and (sRootName contains ":")) Begin
+            Get _TableNameOnly sRootName                        to sBareTo
+            Get _TableNameOnly APITableNameInfoFrom.sRootName   to sBareFrom
+            Move (Uppercase(sBareTo) <> Uppercase(sBareFrom)) to bChangeRoot
+        End
+        If (bChangeRoot = True) Begin
             Set_Attribute DF_FILE_ROOT_NAME     of hTable to APITableNameInfoFrom.sRootName
         End
         

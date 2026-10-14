@@ -3673,7 +3673,15 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 End
             End
             Else If (bIsSQLTableFrom = False and bIsSQLTableTo = True) Begin
-                Get SqlTableConvertToEmbedded hTable True to bOk
+                // An SQL table goes back to embedded only when the update code asks for it: pbApiTableUpdateAuto
+                // True, or SqlTableConvertToEmbedded in an update of its own. Otherwise it stays on SQL and has had
+                // the changes of the description. (It was always converted, and the SQL table was left behind.)
+                If (bApiTableUpdateAuto = True) Begin
+                    Get SqlTableConvertToEmbedded hTable True to bOk
+                End
+                Else Begin
+                    Send LogError ("Table" * String(APITableNameInfoFrom.sLogicalName) * "stays on SQL. The description is for an embedded table; pbApiTableUpdateAuto is False.") False
+                End
             End
 
             // Filelist Names: only when the conversion went well (its result used to be overwritten here).
@@ -3781,7 +3789,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Adds a column name to the passed table number.
     Function ApiColumnInsert String sDriverIDFrom Handle hTable Integer iColumn String sFieldName Integer iType Integer iLength Integer iPrec Boolean bIsSQLType Returns Boolean
         Integer iCount iFile iPrecision iNumberOfFields iDbType
-        Boolean bExists bOK bIsDateType bIsSQLTypeTo
+        Boolean bExists bOK bIsDateType bIsSQLTypeTo bNativeType
         String sDdSrcPath sTableName
 
         Get UtilColumnExists hTable sFieldName to bExists
@@ -3799,6 +3807,16 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get AutoConnectionIDLogin to bOK
         Move False to Err
         Get _UtilTableIsSql hTable to bIsSQLTypeTo
+        // A native SQL type only when the table is SQL and the caller says iType is one (bIsSQLType); a DataFlex type
+        // otherwise, and on an SQL table the driver picks the native type. (Any type used to be written as the native
+        // type of an SQL table, so a DataFlex type of an embedded description arrived as char or numeric.) A caller
+        // that does not pass bIsSQLType keeps the old behaviour: native on an SQL table.
+        If (num_arguments > 7) Begin
+            Move (bIsSQLTypeTo = True and bIsSQLType = True) to bNativeType
+        End
+        Else Begin
+            Move bIsSQLTypeTo to bNativeType
+        End
         // If one of the two tables are SQL and the other Embedded we need to "translate"
         // data types between Embedded and SQL, else we can't compare the data types. 
         Get piDbType to iDbType
@@ -3830,13 +3848,13 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Structure_Start iFile
             Create_Field iFile At iColumn
             Set_Attribute DF_FIELD_NAME            of iFile iColumn to sFieldName
-            If (bIsSQLTypeTo = False) Begin
+            If (bNativeType = False) Begin
                 Set_Attribute DF_FIELD_TYPE        of iFile iColumn to iType
             End
             Else Begin
                 Set_Attribute DF_FIELD_NATIVE_TYPE of iFile iColumn to iType
             End
-            Get UtilColumnIsDateType iType bIsSQLTypeTo to bIsDateType
+            Get UtilColumnIsDateType iType bNativeType to bIsDateType
             If (bIsDateType = False) Begin
                 Set_Attribute DF_FIELD_LENGTH       of iFile iColumn to (iLength + iPrecision)
                 Set_Attribute DF_FIELD_PRECISION    of iFile iColumn to iPrecision
@@ -5138,8 +5156,16 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                             Move (iTypeFrom + 1500)                     to iTypeFrom
                         End
 
+                        // The table's values first: the translation below works on them.
+                        Move aAPIColumnCompare[iCount].sFieldNameTo to sFieldNameTo
+                        Move aAPIColumnCompare[iCount].iLengthTo    to iLengthTo
+                        Move aAPIColumnCompare[iCount].iPrecisionTo to iPrecisionTo
+                        Move aAPIColumnCompare[iCount].iOptionsTo   to iOptionTo
+                        Move aAPIColumnCompare[iCount].iTypeTo      to iTypeTo
+
                         // If one of the two tables are SQL and the other Embedded we need to "translate"
                         // data types between Embedded and SQL, else we can't compare the data types.
+                        // (The TO type used to be translated before it was read, and then overwritten.)
                         If (bIsSQLTableFrom = True and bIsSQLTableTo = False) Begin
                             Get UtilSQLColumnTypeToDataFlexType sDriverIDFrom iDbType iTypeFrom iLengthFrom to iTypeFrom
                             If (iTypeFrom = DF_DATETIME) Begin // DateTime cannot be used by the embedded database.
@@ -5150,15 +5176,13 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                             Get UtilSqlColumnTypeToDataFlexType sDriverIDTo   iDbType iTypeTo   iLengthTo   to iTypeTo
                         End
 
-                        Move aAPIColumnCompare[iCount].sFieldNameTo to sFieldNameTo
-                        Move aAPIColumnCompare[iCount].iLengthTo    to iLengthTo
-                        Move aAPIColumnCompare[iCount].iPrecisionTo to iPrecisionTo
-                        Move aAPIColumnCompare[iCount].iOptionsTo   to iOptionTo
-                        Move aAPIColumnCompare[iCount].iTypeTo      to iTypeTo
-
                         Move False to bSkipTypeChange
                         If (bCompareDate_DateTime = False) Begin
                             Move ((iTypeFrom = SQL_TYPE_DATE or iTypeFrom = SQL_TYPE_TIME or iTypeFrom = SQL_TYPE_TIMESTAMP) and (iTypeTo = SQL_TYPE_DATE or iTypeTo = SQL_TYPE_TIME or iTypeTo = SQL_TYPE_TIMESTAMP)) to bSkipTypeChange
+                            // With one table SQL and the other embedded both types are DataFlex types now.
+                            If (bIsSQLTableFrom <> bIsSQLTableTo) Begin
+                                Move ((iTypeFrom = DF_DATE or iTypeFrom = DF_DATETIME) and (iTypeTo = DF_DATE or iTypeTo = DF_DATETIME)) to bSkipTypeChange
+                            End
                         End
 
                         If (bFieldExistsTo = False) Begin
@@ -5193,7 +5217,12 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
                         If (bSkipTypeChange = False) Begin
                             If (iTypeFrom <> iTypeTo) Begin
-                                If (bIsSQLTableTo = True) Begin
+                                If (bIsSQLTableTo = True and bIsSQLTableFrom = False) Begin
+                                    // A DataFlex type for an SQL table: the driver picks the native type. (The DataFlex
+                                    // type number used to be written as the native type.)
+                                    Set_Attribute DF_FIELD_TYPE of hFile iColumn to iTypeFrom
+                                End
+                                Else If (bIsSQLTableTo = True) Begin
                                     Set_Attribute DF_FIELD_NATIVE_TYPE of hFile iColumn to iTypeFrom
                                 End
                                 Else Begin                                                   
@@ -5205,7 +5234,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                             End
                         End
 
-                        Get UtilColumnIsDateType iTypeFrom bIsSQLTableTo to bIsDateType
+                        // iTypeFrom is a native SQL type only when both tables are SQL; else it is a DataFlex type.
+                        Get UtilColumnIsDateType iTypeFrom (bIsSQLTableFrom = True and bIsSQLTableTo = True) to bIsDateType
                         // We can't set the length or precision for Date type columns (they are fixed).
                         If (bIsDateType = False and iLengthFrom <> iLengthTo) Begin
                             Set_Attribute DF_FIELD_LENGTH of hFile iColumn to iLengthFrom
