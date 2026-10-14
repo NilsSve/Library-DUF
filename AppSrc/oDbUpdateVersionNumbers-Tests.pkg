@@ -1,0 +1,69 @@
+// oDbUpdateVersionNumbers-Tests.pkg - DbVersionNumbersProblem, the test cDbUpdateHandler makes each time a
+// cDbUpdateVersion object starts: its version number must be new, and higher than the one of the object before it.
+// An object out of order used to pass without a word, and its update was then skipped for ever.
+//
+// Three plain objects stand in for the version objects; only their names are read. No database is touched.
+//
+// Only procedures carrying { Published=True } are run as tests.
+
+Use DFUnit\Fixturing\Fixture.pkg
+Use cDbUpdateHandler.h.pkg
+
+Object oDbUpdateVersionNumbers_Tests is a cTestFixture
+    Set psTestFixtureName to "DbVersionNumbersProblem - the order of the version objects"
+
+    Object oVersionA is a cObject
+    End_Object
+    Object oVersionB is a cObject
+    End_Object
+    Object oVersionC is a cObject
+    End_Object
+
+    // The three objects with these numbers, in the order A, B, C
+    Function Versions Number n1 Number n2 Number n3 Returns tDbVersionInfo[]
+        tDbVersionInfo[] aVersions
+
+        Move n1 to aVersions[0].nVersionNumber
+        Move (oVersionA(Self)) to aVersions[0].hObject
+        Move n2 to aVersions[1].nVersionNumber
+        Move (oVersionB(Self)) to aVersions[1].hObject
+        Move n3 to aVersions[2].nVersionNumber
+        Move (oVersionC(Self)) to aVersions[2].hObject
+        Function_Return aVersions
+    End_Function
+
+    { Published=True }
+    Procedure Test_Rising_Numbers_Are_No_Problem
+        tDbVersionInfo[] aVersions
+        String sProblem
+
+        Get Versions 1.0 1.1 1.2 to aVersions
+        Move (DbVersionNumbersProblem(aVersions)) to sProblem
+        Send AssertSAreEqual "" sProblem "1.0, 1.1, 1.2 is the right order."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_Lower_Number_After_A_Higher_One_Is_Out_Of_Order
+        tDbVersionInfo[] aVersions
+        String sProblem
+
+        Get Versions 1.0 1.2 1.1 to aVersions
+        Move (DbVersionNumbersProblem(aVersions)) to sProblem
+        Send Assert (sProblem contains "out of order") ("1.1 after 1.2 is out of order: " + sProblem)
+        Send Assert (sProblem contains "oVersionB" and sProblem contains "oVersionC") ("The two objects are named: " + sProblem)
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_The_Same_Number_Twice_Names_Both_Objects
+        tDbVersionInfo[] aVersions
+        String sProblem
+
+        // C has the number of A. The object before C, B, is not part of it.
+        Get Versions 1.0 1.1 1.0 to aVersions
+        Move (DbVersionNumbersProblem(aVersions)) to sProblem
+        Send Assert (sProblem contains "Duplicate") ("1.0 twice is a duplicate: " + sProblem)
+        Send Assert (sProblem contains "oVersionA" and sProblem contains "oVersionC") ("The two objects with the same number are named: " + sProblem)
+        Send AssertFalse (sProblem contains "oVersionB") ("The object between them is not: " + sProblem)
+    End_Procedure
+
+End_Object

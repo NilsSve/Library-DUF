@@ -387,8 +387,8 @@ End_Struct
 Struct tAPIIndexSegment
     Integer iFieldNumber
     String  sFieldName
-    Boolean bUppercase
-    Boolean bAscending
+    Boolean bUppercase     // DF_INDEX_SEGMENT_CASE: True = DF_CASE_IGNORED (uppercase), False = DF_CASE_USED
+    Boolean bAscending     // DF_INDEX_SEGMENT_DIRECTION: False = DF_ASCENDING, True = DF_DESCENDING - the name says the opposite
     Boolean bShouldChange
     Boolean bCancel
     Boolean bError

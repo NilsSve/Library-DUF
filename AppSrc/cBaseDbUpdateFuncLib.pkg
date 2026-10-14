@@ -154,14 +154,16 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return bIsSame
     End_Function
 
+    // Makes the connection ID sConnectionID with the connection of ghoSQLConnectionHandler. True when it was made.
+    // (This used to answer (iRetval = 0) on the handler's Boolean: False when the ID was made, True when not.)
     Function AutoSetConnectionID String sConnectionID Returns Boolean
-        Integer iRetval
-        Move 1 to iRetval
+        Boolean bOK
+        Move False to bOK
         If (ghoSQLConnectionHandler <> 0) Begin
             Set psConnectionID of ghoSQLConnectionHandler to sConnectionID
-            Get AutoSetConnectionID of ghoSQLConnectionHandler to iRetval
+            Get AutoSetConnectionID of ghoSQLConnectionHandler to bOK
         End
-        Function_Return (iRetval = 0)
+        Function_Return bOK
     End_Function
 
     Function _AddFolderDelimiter String sPath Returns String
@@ -4351,15 +4353,18 @@ Class cBaseDbUpdateFuncLib is a cObject
         String sExistingColumn
 
         Move False to bExists
+        // One channel at a time, each one given back on every path. (Both used to be taken here: the output
+        // channel was kept when the column was in the file already, so each added SQL column cost a channel.)
         Get Seq_New_Channel to iChIn
-        Get Seq_New_Channel to iChOut
-        If (iChIn = DF_SEQ_CHANNEL_NOT_AVAILABLE or iChOut = DF_SEQ_CHANNEL_NOT_AVAILABLE) Begin
-            Function_Return True
+        If (iChIn = DF_SEQ_CHANNEL_NOT_AVAILABLE) Begin
+            Function_Return False
         End
 
         Move False to Err
         // The following line should also use the channel attribute. (Thank you, Hans van de Laar)
-        Direct_Input channel iChIn ("'" + sFullTAGFileName + "'")
+        // The name as it is: wrapped in single quotes the file was not opened, so a name already in the file was
+        // never found and was added once more by every call (measured on DataFlex 26).
+        Direct_Input channel iChIn sFullTAGFileName
         While (not(SeqEof))
             Readln channel iChIn sExistingColumn
             If (Uppercase(sExistingColumn) = Uppercase(sColumnName)) Begin
@@ -4373,6 +4378,10 @@ Class cBaseDbUpdateFuncLib is a cObject
         Send Seq_Release_Channel iChIn
 
         If (bExists = False) Begin
+            Get Seq_New_Channel to iChOut
+            If (iChOut = DF_SEQ_CHANNEL_NOT_AVAILABLE) Begin
+                Function_Return False
+            End
             Append_Output channel iChOut sFullTAGFileName
             Writeln channel iChOut sColumnName
             Close_Output channel iChOut

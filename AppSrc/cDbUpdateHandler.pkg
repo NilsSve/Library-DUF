@@ -433,10 +433,14 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
         Move (IsDebuggerPresent()) to bDevelop
         // Is this a client machine?
         If (bDevelop = False) Begin
-            If (bNewer = True) Begin
+            // The copy compiled into the program is written only when there is no Filelist.cfg. (It used to be
+            // written over the live file whenever that was newer than the backup file - after every update, and
+            // always where no backup file exists - so entries the update or the site had made were lost.)
+            Get vFilePathExists sFileListName to bFileListExist
+            If (bFileListExist = False) Begin
                 // Create filelist.cfg from resource backup file.
                 Get ReadFileListResource "res_EmbeddedFilelistCfg" to asFileListArray
-                Get WriteFileListResource asFileListArray sFileListName to bOK  
+                Get WriteFileListResource asFileListArray sFileListName to bOK
             End
         End
 
@@ -1038,10 +1042,10 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
             Function_Return False
         End                      
         
+        // Write, not Writeln: the bytes as they are, without a line end after them (measured: Writeln adds two).
         Direct_Output channel iCh sFileListName
-        Writeln channel iCh asFileListArray
-                
-        Close_Input channel iCh
+        Write channel iCh asFileListArray
+        Close_Output channel iCh
         Send Seq_Release_Channel iCh
         Move (not(Err)) to bOK
         Move bErr to Err
@@ -1116,9 +1120,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
 
         If (hTable < 1) Begin
             Set Private.pbIntFilesTablesCheckDone to False
-            Move (piCurrentErrorHandlerID(Self)) to Error_Object_Id
-            Error DFERR_PROGRAM "The piIntFilesFileNumber has been set! The property MUST be set to a free Filelist.cfg slot in the cDbUpdateHandler object.\nProgram will now exit!"
-            Send Exit_Application
+            Send StopForSetupError "The piIntFilesFileNumber has not been set! The property MUST be set to a free Filelist.cfg slot in the cDbUpdateHandler object.\nProgram will now exit!"
         End
         
         Get IsIntFileTable hTable to bTableExists
@@ -1229,9 +1231,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
         Get piDbVersionFileNumber to iDbVersionFileNumber
         Get pbAutoCreateDbVersionTable to bAutoCreateDbVersionTable
         If (bAutoCreateDbVersionTable = True and iDbVersionFileNumber < 1) Begin
-            Move (piCurrentErrorHandlerID(Self)) to Error_Object_Id
-            Error DFERR_PROGRAM "The iDbVersionFileSlotNumber = -1. It MUST be set to a free Filelist.cfg slot in the cDbUpdateHandler object. Could not auto-create the DbVersion table.\nProgram will now exit!"
-            Send Exit_Application
+            Send StopForSetupError "The iDbVersionFileSlotNumber = -1. It MUST be set to a free Filelist.cfg slot in the cDbUpdateHandler object. Could not auto-create the DbVersion table.\nProgram will now exit!"
         End
 
         If (bAutoCreateDbVersionTable = True) Begin
@@ -2129,46 +2129,36 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
 
     // This checks for both duplicate pnVersionNumbers _and_ that
     // the cDbVersion object pnVersionNumber's all are consecutive (higher than the previous).
+    // nVersion is the number of the object that has just started; it is the last one of paDbVersionInfoArray.
+    // (The order test used to sit inside the test for a duplicate, so an object out of order was never reported.)
     Procedure CheckForDuplicates Number nVersion
         tDbVersionInfo[] DbVersionInfoArray
-        Integer iCount iSize iHits iDuplicateIndex
-        Number nCompare
-        Handle hObject1 hObject2
-        String sObjectName1 sObjectName2
-        Boolean bObjectOrderError
+        String sProblem
 
         Get paDbVersionInfoArray to DbVersionInfoArray
-        Move (SizeOfArray(DbVersionInfoArray)) to iSize
-        Decrement iSize
-        Move 0 to iHits
-        Move 0 to nCompare
-        Move False to bObjectOrderError
-        For iCount from 0 to iSize
-            If (nVersion = DbVersionInfoArray[iCount].nVersionNumber) Begin
-                Increment iHits
-                If (iHits > 1) Begin
-                    Move iCount to iDuplicateIndex
-                    If (nCompare <> 0) Begin
-                        Move (nCompare >= DbVersionInfoArray[iCount].nVersionNumber) to bObjectOrderError
-                    End
-                End
-            End
-            Move DbVersionInfoArray[iCount].nVersionNumber to nCompare
-        Loop
-        If (iHits > 1) Begin
-            Move (piCurrentErrorHandlerID(Self)) to Error_Object_Id
-            Move DbVersionInfoArray[(iDuplicateIndex   )].hObject to hObject1
-            Move DbVersionInfoArray[(iDuplicateIndex -1)].hObject to hObject2
-            Move (Name(hObject1)) to sObjectName1
-            Move (Name(hObject2)) to sObjectName2
-            Error DFERR_PROGRAM ("Duplicate version numbers! The SAME pnVersionNumber value was set for the following two objects; Program will now exit!\n\n" + sObjectName1 + "\n" + sObjectName2)
-            Send Exit_Application
+        Move (DbVersionNumbersProblem(DbVersionInfoArray)) to sProblem
+        If (sProblem <> "") Begin
+            Send StopForSetupError sProblem
         End
-        Else If (bObjectOrderError = True) Begin
-            Move (piCurrentErrorHandlerID(Self)) to Error_Object_Id
-            Error DFERR_PROGRAM ("cDbVersion objects out of order! One or more of the cDbVersion objects has been placed out of order. This means that at least one pnVersionNumber is HIGHER than the following object's pnVersionNumber.\nProgram will now exit!")
-            Send Exit_Application
+    End_Procedure
+
+    // A mistake in the set-up of the update objects. The text is written to the update log and, unless
+    // pbSilentMode is True, shown in a box; then the program exits. (These texts were raised as errors with this
+    // object as the error object, and its Error_Report only logs: the program closed without a word.)
+    Procedure StopForSetupError String sText
+        Handle hoLogFile
+        Number nVersion
+
+        Get pnCurrentVersionUpdate to nVersion
+        Get phoLogFile to hoLogFile
+        If (hoLogFile <> 0) Begin
+            Send LogError of hoLogFile nVersion DFERR_PROGRAM sText 0 True
         End
+        If (pbSilentMode(Self) = False) Begin
+            Send StopStatusPanel
+            Send Stop_Box sText
+        End
+        Send Exit_Application
     End_Procedure
 
     // We take care of all errors in the Error_Report below and

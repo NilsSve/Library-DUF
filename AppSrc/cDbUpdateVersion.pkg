@@ -641,6 +641,8 @@ Class cDbUpdateVersion is a cObject
 
 // Property of the container object (cDbUpdateHandler)
 Register_Function piCurrentErrorHandlerID Returns Integer
+// Message of the container object (cDbUpdateHandler)
+Register_Procedure StopForSetupError String sText
 
     Procedure End_Construct_Object
         Forward Send End_Construct_Object
@@ -666,10 +668,8 @@ Register_Function piCurrentErrorHandlerID Returns Integer
         // This is a programmer error and should be discovered before any customer sees it. Thus no point in translating...
         Get pnVersionNumber to nVersion
         If (nVersion <= 0) Begin
-            Get piCurrentErrorHandlerID to Error_Object_Id
             Move (Name(Self)) to sObjectName
-            Error DFERR_PROGRAM ("The pnVersionNumber property was not set properly by the programmer for the following object; Program will now exit!\n\n" + sObjectName)
-            Send Exit_Application
+            Delegate Send StopForSetupError ("The pnVersionNumber property was not set properly by the programmer for the following object; Program will now exit!\n\n" + sObjectName)
         End
 
         // These are send to the parent container object (cDbUpdateHandler). The order is very sensitive!

@@ -125,8 +125,10 @@ Class cDbUpdateGenericDatabaseDriver is a cObject
                 Else Begin
                     Append sOptions (If(SQLConnection.bTrustedCertificate = True, (CS_SQLIniTrustServerCertificate + "=yes"), (CS_SQLIniTrustServerCertificate + "=no")))
                 End
+                // The spaces go out of the options only. (They were taken out of the whole string, so a password,
+                // a database name or a user name with a space in it no longer matched.)
+                Move (Replaces(" ", sOptions, "")) to sOptions
                 Append sConnectionString ";" sOptions
-                Move (Replaces(" ", sConnectionString, "")) to sConnectionString
             End
         End
         
@@ -390,6 +392,9 @@ Class cDbUpdateMSSQLDriver is a cDbUpdateGenericDatabaseDriver
         
         Get ConstructConnectionString SQLConnection to sConnectionString
         
+        // The answer is read from Err, so an error from before must not count (as in the DB2 and PostgreSQL
+        // classes). Measured: with Err set before, a good login answered False.
+        Move False to Err
         Login sConnectionString "" "" MSSQLDRV_ID
 
         Move (not(Err)) to bLoginSuccessful

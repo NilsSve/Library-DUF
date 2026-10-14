@@ -1,0 +1,53 @@
+// oDbUpdateConnectionID-Tests.pkg - AutoSetConnectionID of the function library, which makes a connection ID
+// with the connection of ghoSQLConnectionHandler. It used to answer the other way round: False when the ID was
+// made, and True when it was not.
+//
+// No database server is needed: the connection the tests set names the DataFlex driver, for which no
+// connection ID can be made. The handler's connection is put back afterwards.
+//
+// Only procedures carrying { Published=True } are run as tests.
+
+Use DFUnit\Fixturing\Fixture.pkg
+Use cDbUpdateFunctionLibrary.pkg
+
+Object oDbUpdateConnectionID_Tests is a cTestFixture
+    Set psTestFixtureName to "cDbUpdateFunctionLibrary - making a connection ID"
+
+    // Takes the errors the handler raises for a connection that cannot be made, and counts them.
+    Object oErrors is a cObject
+        Property Integer piErrors 0
+        Procedure Error_Report Integer iErr Integer iLine String sMsg
+            Set piErrors to (piErrors(Self) + 1)
+        End_Procedure
+    End_Object
+
+    Procedure Setup
+        Handle ho
+        If (ghoDbUpdateFunctionLibrary = 0) Begin
+            Get Create (RefClass(cDbUpdateFunctionLibrary)) to ho
+        End
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_AutoSetConnectionID_Answers_False_When_No_ID_Is_Made
+        tSQLConnection SavedConnection NoConnection
+        Handle hoOld
+        Boolean bOK
+
+        Get pSQLConnection of ghoSQLConnectionHandler to SavedConnection
+        Move DATAFLEX_ID to NoConnection.sDriverID
+        Set pSQLConnection of ghoSQLConnectionHandler to NoConnection
+
+        Set piErrors of oErrors to 0
+        Move Error_Object_Id to hoOld
+        Move (oErrors(Self)) to Error_Object_Id
+        Get AutoSetConnectionID of ghoDbUpdateFunctionLibrary "DUFUnitTestID" to bOK
+        Move hoOld to Error_Object_Id
+        Move False to Err
+        Set pSQLConnection of ghoSQLConnectionHandler to SavedConnection
+
+        Send AssertFalse bOK "No connection ID can be made for the DataFlex driver, and the answer says so."
+        Send Assert (piErrors(oErrors(Self)) > 0) "The handler raised an error that says why."
+    End_Procedure
+
+End_Object

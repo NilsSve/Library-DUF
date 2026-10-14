@@ -1010,14 +1010,15 @@ Object oCompareDatabases_vw is a dbView
                         Writeln channel iCh sFrom sTo
                     End
 
-                    // Ascending/Descending Index:
+                    // Ascending/Descending Index: bAscending holds DF_INDEX_SEGMENT_DIRECTION, so DF_ASCENDING (0) is
+                    // "Yes". (This said "Yes" for 1, which is DF_DESCENDING.)
                     If (bCompareIndexAscending = True) Begin
                         Get MakeStringLength "Ascending:" CI_ReportColumn1                                        to sFrom
                         If (bIsSqlTableFrom = True) Begin
                             Move (sFrom + CS_ReportIndexNotApplicable)                                            to sFrom
                         End
                         Else If (iCount2 < iSegmentSizeFrom) Begin
-                            Move (sFrom + String(If(aApiIndexSegmentsFrom[iCount2].bAscending = 1, "Yes", "No"))) to sFrom
+                            Move (sFrom + String(If(aApiIndexSegmentsFrom[iCount2].bAscending = DF_ASCENDING, "Yes", "No"))) to sFrom
                         End
                         Get MakeStringLength sFrom CI_ReportColumn2                                               to sFrom
                         Move "" to sTo
@@ -1025,7 +1026,7 @@ Object oCompareDatabases_vw is a dbView
                             Move CS_ReportIndexNotApplicable                                                      to sTo
                         End
                         Else If (iCount2 < iSegmentSizeTo) Begin
-                            Move (String(If(aApiIndexSegmentsTo[iCount2].bAscending = 1, "Yes", "No")))           to sTo
+                            Move (String(If(aApiIndexSegmentsTo[iCount2].bAscending = DF_ASCENDING, "Yes", "No")))  to sTo
                         End
                         Writeln channel iCh sFrom sTo
                     End

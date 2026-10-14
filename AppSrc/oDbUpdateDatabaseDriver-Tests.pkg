@@ -1,0 +1,37 @@
+// oDbUpdateDatabaseDriver-Tests.pkg - the connection string a DUF driver object builds from a tSQLConnection.
+//
+// For the SQL Server client 18 and later every space used to be taken out of the whole string, the values with
+// them. On a machine with an older client that part is not reached, and the test passes either way.
+//
+// String tests only: no login, no database.
+//
+// Only procedures carrying { Published=True } are run as tests.
+
+Use DFUnit\Fixturing\Fixture.pkg
+Use cDbUpdateDatabaseDriver.pkg
+
+Object oDbUpdateDatabaseDriver_Tests is a cTestFixture
+    Set psTestFixtureName to "cDbUpdateDatabaseDriver - the connection string"
+
+    { Published=True }
+    Procedure Test_Spaces_In_The_Values_Stay
+        tSQLConnection SQLConnection
+        Handle hoDriver
+        String sConnectionString
+
+        Move "MyServer"           to SQLConnection.sServer
+        Move "Order Entry"        to SQLConnection.sDatabase
+        Move False                to SQLConnection.bTrusted
+        Move "Sales User"         to SQLConnection.sUserID
+        Move "Secret with spaces" to SQLConnection.sPassword
+        Move True                 to SQLConnection.bTrustedCertificate
+        Get CreateDatabaseDriverObject MSSQLDRV_ID to hoDriver
+        Get ConstructConnectionString of hoDriver SQLConnection to sConnectionString
+        Send Destroy of hoDriver
+
+        Send Assert (sConnectionString contains "=Order Entry") ("The database name keeps its space: " + SQLConnectionStringMasked(sConnectionString))
+        Send Assert (sConnectionString contains "=Sales User") ("The user name keeps its space: " + SQLConnectionStringMasked(sConnectionString))
+        Send Assert (sConnectionString contains "=Secret with spaces") "The password keeps its spaces."
+    End_Procedure
+
+End_Object

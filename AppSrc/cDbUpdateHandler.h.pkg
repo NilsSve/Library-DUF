@@ -24,6 +24,27 @@ Struct tDbVersionInfo
 End_Struct
 #ENDIF
 
+// The last object of aVersions - the cDbUpdateVersion object that has just started - against the objects before
+// it: "" when its version number is new and higher than the one before it, else the text that names the two
+// objects. cDbUpdateHandler.CheckForDuplicates asks it each time an object starts, so each pair is seen once.
+Function DbVersionNumbersProblem Global tDbVersionInfo[] aVersions Returns String
+    Integer iLast iCount
+
+    Move (SizeOfArray(aVersions) - 1) to iLast
+    If (iLast < 1) Begin
+        Function_Return ""
+    End
+    For iCount from 0 to (iLast - 1)
+        If (aVersions[iCount].nVersionNumber = aVersions[iLast].nVersionNumber) Begin
+            Function_Return ("Duplicate version numbers! The SAME pnVersionNumber value was set for the following two objects; Program will now exit!\n\n" + Name(aVersions[iCount].hObject) + "\n" + Name(aVersions[iLast].hObject))
+        End
+    Loop
+    If (aVersions[iLast - 1].nVersionNumber > aVersions[iLast].nVersionNumber) Begin
+        Function_Return ("cDbVersion objects out of order! Each pnVersionNumber must be HIGHER than the one of the object before it, and" * Name(aVersions[iLast].hObject) * "(" + String(aVersions[iLast].nVersionNumber) + ") comes after" * Name(aVersions[iLast - 1].hObject) * "(" + String(aVersions[iLast - 1].nVersionNumber) + ").\nProgram will now exit!")
+    End
+    Function_Return ""
+End_Function
+
 #IFNDEF _struct_tDbUpdateError
 Struct tDbUpdateError
     Number nUpdateVersion

@@ -1518,7 +1518,7 @@ Object oFilelistFixerView is a cRDCDbView
         Integer iCounter iIntError iSize
         Handle hTable hMasterTable
         String sLogicalNameOrg sRootNameOrg sDisplayNameOrg sFileList
-        String sDriver sNoDriverRootname sRootNameNew sLogicalNameNew sDisplayNameNew
+        String sDriver sNoDriverRootname sRootNameNew sLogicalNameNew sDisplayNameNew sMasterRootName sMasterDriver
         Boolean bIsAlias bIsIntTable bIsAliasSQL bIsMasterSQL bOK bCancel
         tFilelist[] FilelistArray
         
@@ -1551,16 +1551,25 @@ Object oFilelistFixerView is a cRDCDbView
                         Get _IsSQLEntry of ghoDUF hTable       to bIsAliasSQL
                         Get _IsSQLEntry of ghoDUF hMasterTable to bIsMasterSQL
                         Get _FindAliasEntryError of ghoDUF hTable to iIntError
+                        // The driver of the master table's root name, else the driver of the library's connection.
+                        // (This used to be MSSQLDRV always, also on a DB2 or ODBC workspace.)
+                        Get_Attribute DF_FILE_ROOT_NAME of hMasterTable to sMasterRootName
+                        Move "" to sMasterDriver
+                        Get _RemoveDriverFromRootName of ghoDUF sMasterRootName (&sMasterDriver) to sMasterRootName
+                        If (sMasterDriver = "") Begin
+                            Get psDriverID of ghoDUF to sMasterDriver
+                        End
                         If (iIntError = 1) Begin
                             If ((bIsAliasSQL = False and bIsIntTable = False) and bIsMasterSQL = True) Begin
-                                Move (MSSQLDRV_ID + ":" + sRootNameOrg) to sRootNameNew
+                                Move (sMasterDriver + ":" + sNoDriverRootname) to sRootNameNew
                                 Set_Attribute DF_FILE_ROOT_NAME of hTable to sRootNameNew
                             End
                             Else If ((bIsAliasSQL = True or bIsIntTable = True) and bIsMasterSQL = False) Begin
                                 Set_Attribute DF_FILE_ROOT_NAME of hTable to sNoDriverRootname
                             End 
                             Else If ((bIsAliasSQL = True or bIsIntTable = True) and bIsMasterSQL = True) Begin
-                                Move (MSSQLDRV_ID + ":" + sRootNameOrg) to sRootNameNew
+                                // The name without the driver or ".int" it may have, so that no second prefix is put in front.
+                                Move (sMasterDriver + ":" + sNoDriverRootname) to sRootNameNew
                                 Set_Attribute DF_FILE_ROOT_NAME of hTable to sRootNameNew                                
                             End
                             Move (sNoDriverRootname * "ALIAS") to sDisplayNameNew
@@ -1651,7 +1660,12 @@ Object oFilelistFixerView is a cRDCDbView
                 Else Begin
                     Get _IntFileExists of ghoDUF hTable to bExists
                     If (bExists = True) Begin
-                        Move (MSSQLDRV_ID + ":" + sNoDriverRootname) to sRootNameNew
+                        // The driver the root name had, else the driver of the library's connection - the one the
+                        // list of SQL tables came from. (This used to be MSSQLDRV always.)
+                        If (sDriver = "") Begin
+                            Get psDriverID of ghoDUF to sDriver
+                        End
+                        Move (sDriver + ":" + sNoDriverRootname) to sRootNameNew
                     End
                     Else Begin
                         // If the .int file wasn't found, we will not make a filelist change.

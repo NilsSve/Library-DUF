@@ -182,7 +182,8 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
                 Move aiFields[i] to x.IndexSegmentArray[i].iFieldNumber
                 Move asNames[i]  to x.IndexSegmentArray[i].sFieldName
                 Move False       to x.IndexSegmentArray[i].bUppercase
-                Move True        to x.IndexSegmentArray[i].bAscending
+                // bAscending holds DF_INDEX_SEGMENT_DIRECTION: DF_ASCENDING is 0, False.
+                Move DF_ASCENDING to x.IndexSegmentArray[i].bAscending
             End
         Loop
         Function_Return x
@@ -859,6 +860,90 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Send Assert (FileThere(Self, "DUFTT19R.dat")) "The copy is made in the folder that holds the table."
         Send AssertFalse (FileThere(Self, "DUFTT19.dat")) "The data file of the old name is gone."
         Send AssertIAreEqual 2 (RecordCount(Self)) "The table has its two records under the new name."
+    End_Procedure
+
+    // A text column that the description makes a Date. It becomes one when it holds dates only. When a value is
+    // not a date it keeps its type: the restructure would empty that value or make it into another date.
+    { Published=True }
+    Procedure Test_A_Text_Column_Of_Dates_Becomes_A_Date
+        Handle h
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+        Date dDate
+
+        Send MakeBaseTable "DUFTT20" 5 True
+        // Name gets a date, written the way this program writes dates, and an empty value. (DateSet answers a
+        // DateTime on newer versions; its text has the time as well, so it goes through a Date first.)
+        Move (DateSet(2026, 1, 15)) to dDate
+        Get phTable to h
+        Open h
+        Lock
+            Clear h
+            Set_Field_Value h 1 to 1
+            Vfind h 1 EQ
+            Set_Field_Value h 3 to (String(dDate))
+            SaveRecord h
+            Clear h
+            Set_Field_Value h 1 to 2
+            Vfind h 1 EQ
+            Set_Field_Value h 3 to ""
+            SaveRecord h
+        Unlock
+        Close h
+
+        Get BaseColumns to aColumns
+        Get Col 3 "Name" DF_DATE 6 0 to aColumns[2]
+        Get BaseIndexes to aIndexes
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual (String(DF_DATE) + "|" + String(dDate)) (ColumnTypeAndFirstValue(Self, "Name")) "Name is a Date column now, with its date."
+        Send AssertIAreEqual 2 (RecordCount(Self)) "The table still has its two records."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_Text_Column_With_Other_Values_Keeps_Its_Type
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+
+        // Name holds "Anna" and "Bertil".
+        Send MakeBaseTable "DUFTT21" 5 True
+        Get BaseColumns to aColumns
+        Get Col 3 "Name" DF_DATE 6 0 to aColumns[2]
+        Get BaseIndexes to aIndexes
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 1 iErrors ("One error names the column." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "Name")) "Name keeps its type and its values."
+    End_Procedure
+
+    // A new index gets the direction and case of the description, also with the two compare switches off (the
+    // default). It used to come out ascending and case-sensitive.
+    { Published=True }
+    Procedure Test_A_New_Index_Gets_Uppercase_And_Descending
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors iCase iDirection
+        Handle h
+
+        Send MakeBaseTable "DUFTT22" 5 True
+        Get BaseColumns to aColumns
+        Get BaseIndexes to aIndexes
+        // Index 4: Name uppercase, Created descending, Id
+        Get Idx 4 3 "Name" 4 "Created" 1 "Id" to aIndexes[3]
+        Move DF_CASE_IGNORED to aIndexes[3].IndexSegmentArray[0].bUppercase
+        Move DF_DESCENDING   to aIndexes[3].IndexSegmentArray[1].bAscending
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Name,Created,Id" (IndexColumns(Self, 4)) "Index 4 is there."
+
+        Get phTable to h
+        Open h
+        Get_Attribute DF_INDEX_SEGMENT_CASE      of h 4 1 to iCase
+        Get_Attribute DF_INDEX_SEGMENT_DIRECTION of h 4 2 to iDirection
+        Close h
+        Send AssertIAreEqual DF_CASE_IGNORED iCase "Its Name segment is uppercase."
+        Send AssertIAreEqual DF_DESCENDING iDirection "Its Created segment is descending."
     End_Procedure
 
 End_Object

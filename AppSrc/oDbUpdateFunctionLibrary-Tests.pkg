@@ -147,4 +147,46 @@ Object oDbUpdateFunctionLibrary_Tests is a cTestFixture
         Send AssertIAreEqual 2 iSegment "A third segment in TO only."
     End_Procedure
 
+    // _UtilUpdateTAGFile adds a column name to a .tag file once, and gives its file channels back. It used to keep
+    // one for each call that found the name there already; after about ten calls none was left. And it never found
+    // a name there: it opened the file under its name in single quotes. The file name has a space on purpose.
+    { Published=True }
+    Procedure Test_UtilUpdateTAGFile_Gives_Its_Channels_Back
+        String sTemp sFile sLine sNames
+        Integer iCh iCall
+        Boolean bOK
+
+        Get_Environment "TEMP" to sTemp
+        Move (sTemp + "\DUF Unit Test.tag") to sFile
+        Get Seq_New_Channel to iCh
+        Direct_Output channel iCh sFile
+        Writeln channel iCh "ID"
+        Writeln channel iCh "NAME"
+        Close_Output channel iCh
+        Send Seq_Release_Channel iCh
+
+        For iCall from 1 to 30
+            Get _UtilUpdateTAGFile of ghoDbUpdateFunctionLibrary sFile "NAME" to bOK
+        Loop
+        Get _UtilUpdateTAGFile of ghoDbUpdateFunctionLibrary sFile "CITY" to bOK
+        Get _UtilUpdateTAGFile of ghoDbUpdateFunctionLibrary sFile "CITY" to bOK
+        Send Assert bOK "The last call answers True."
+
+        Get Seq_New_Channel to iCh
+        Send Assert (iCh <> DF_SEQ_CHANNEL_NOT_AVAILABLE) "After 32 calls a file channel is still free."
+        If (iCh <> DF_SEQ_CHANNEL_NOT_AVAILABLE) Begin
+            Direct_Input channel iCh sFile
+            While (not(SeqEof))
+                Readln channel iCh sLine
+                If (Trim(sLine) <> "") Begin
+                    Move (sNames + Trim(sLine) + ",") to sNames
+                End
+            Loop
+            Close_Input channel iCh
+            Send Seq_Release_Channel iCh
+        End
+        EraseFile sFile
+        Send AssertSAreEqual "ID,NAME,CITY," sNames "NAME stays once, CITY is added once."
+    End_Procedure
+
 End_Object

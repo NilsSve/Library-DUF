@@ -3588,13 +3588,19 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Case Break
             // New Table:
             Case (bTableExists = False)
+                // Each step only when the steps before it went well. (The result of the create used to be
+                // overwritten by the steps after it, which then ran on a table that was not made.)
                 Get ApiTableCreate      hTable APITableNameInfoFrom.sRootName APITableNameInfoFrom.sDisplayName APITableNameInfoFrom.sLogicalName bUseConnectionID bToANSI bRecnum aColumnsFrom to bOk
                 //LR 20191112 Begin: Make file a system file if bIsSystemFile = True
-                If (APITableNameInfoFrom.bIsSystemFile) Begin
+                If (bOk = True and APITableNameInfoFrom.bIsSystemFile) Begin
                     Get ApiTableChangeAttribute hTable DF_FILE_IS_SYSTEM_FILE True to bOK
-                End                                                                 
-                Get UtilIndexesUpdate   hTable bIsSQLTableFrom bIsSQLTableTo APITableFrom.aApiIndexes APITableTo.aApiIndexes bCompareIndexUppercase bCompareIndexAscending  to bOk
-                Get UtilRelationsUpdate hTable APITableFrom.aApiRelations APITableTo.aApiRelations to bOk
+                End
+                If (bOk = True) Begin
+                    Get UtilIndexesUpdate   hTable bIsSQLTableFrom bIsSQLTableTo APITableFrom.aApiIndexes APITableTo.aApiIndexes bCompareIndexUppercase bCompareIndexAscending  to bOk
+                End
+                If (bOk = True) Begin
+                    Get UtilRelationsUpdate hTable APITableFrom.aApiRelations APITableTo.aApiRelations to bOk
+                End
                 Case Break
 
             // Update table:
@@ -3636,6 +3642,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Get UtilIndexesCompare bIsSQLTableFrom bIsSQLTableTo aAPIIndexCompare bCompareIndexUppercase bCompareIndexAscending to bIsSame
                 If (bIsSame = False) Begin
                     Get UtilIndexesUpdate hTable bIsSQLTableFrom bIsSQLTableTo APITableFrom.aApiIndexes APITableTo.aApiIndexes bCompareIndexUppercase bCompareIndexAscending  to bOk
+                    If (bOk = False) Begin
+                        Case Break
+                    End
                 End
 
                 // Relations:
@@ -3666,9 +3675,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Else If (bIsSQLTableFrom = False and bIsSQLTableTo = True) Begin
                 Get SqlTableConvertToEmbedded hTable True to bOk
             End
-            
-            // Filelist Names:
-            Get _UtilTableCheckChangeFilelistNames APITableNameInfoFrom to bOk
+
+            // Filelist Names: only when the conversion went well (its result used to be overwritten here).
+            If (bOk = True) Begin
+                Get _UtilTableCheckChangeFilelistNames APITableNameInfoFrom to bOk
+            End
         End
         
         // Refresh .int file: 
@@ -4909,6 +4920,82 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return bDateType
     End_Function
 
+    // Can the values of a column of an embedded table become dates without being lost or changed? A value must
+    // be empty, or a date written the way this program writes dates: a text that reads back as the same text.
+    // Measured on DataFlex 26: the restructure made other texts empty ("hello", "01/15/2026") or into another
+    // date ("15.01.2026" became 2015-01-20, "2026-02-31" became 2026-03-03), without an error. A number column
+    // may hold zeros only. Returns the number of values that cannot become dates; sFirst gets the first of them.
+    Function UtilColumnValuesAreDates Handle hTable Integer iColumn Integer iType String ByRef sFirst Returns Integer
+        Integer iBad
+        String sValue
+        Number nValue
+        Date dValue
+        Boolean bFound bBad
+
+        Move 0 to iBad
+        Move "" to sFirst
+        Close hTable
+        Open hTable
+        Clear hTable
+        Repeat
+            Vfind hTable 0 GT
+            Move (Found) to bFound
+            If (bFound = True) Begin
+                Get_Field_Value hTable iColumn to sValue
+                Move (Trim(sValue)) to sValue
+                Move False to bBad
+                If (iType = DF_BCD) Begin
+                    Move sValue to nValue
+                    Move (nValue <> 0) to bBad
+                End
+                Else If (sValue <> "") Begin
+                    Move sValue to dValue
+                    Move (String(dValue) <> sValue) to bBad
+                End
+                If (bBad = True) Begin
+                    If (iBad = 0) Begin
+                        Move (Left(sValue, 30)) to sFirst
+                    End
+                    Increment iBad
+                End
+            End
+        Until (bFound = False)
+        Close hTable
+        Function_Return iBad
+    End_Function
+
+    // Step 6 of ApiColumnsUpdate, for an embedded table: a column that the description makes a Date and that
+    // holds something else now must hold dates only (UtilColumnValuesAreDates). Otherwise an error names the
+    // column and its first such value, and False is returned. Microsoft SQL refuses such a change by itself.
+    Function UtilColumnsToDateCheck Handle hTable String sDriverIDFrom Boolean bIsSQLTableFrom tAPIColumnCompare[] aAPIColumnCompare Returns Boolean
+        Integer iCount iTypeFrom iTypeTo iDbType iBad
+        String sFirst sTable
+        Date dToday
+        Boolean bOK
+
+        Get piDbType to iDbType
+        Move True to bOK
+        For iCount from 0 to (SizeOfArray(aAPIColumnCompare) - 1)
+            If (aAPIColumnCompare[iCount].bExistsFrom = True and aAPIColumnCompare[iCount].bExistsTo = True and Uppercase(aAPIColumnCompare[iCount].sFieldNameFrom) = Uppercase(aAPIColumnCompare[iCount].sFieldNameTo)) Begin
+                Move aAPIColumnCompare[iCount].iTypeFrom to iTypeFrom
+                If (bIsSQLTableFrom = True) Begin
+                    Get UtilSQLColumnTypeToDataFlexType sDriverIDFrom iDbType iTypeFrom aAPIColumnCompare[iCount].iLengthFrom to iTypeFrom
+                End
+                Move aAPIColumnCompare[iCount].iTypeTo to iTypeTo
+                If ((iTypeFrom = DF_DATE or iTypeFrom = DF_DATETIME) and iTypeTo <> DF_DATE and iTypeTo <> DF_DATETIME) Begin
+                    Get UtilColumnValuesAreDates hTable aAPIColumnCompare[iCount].iFieldNumberTo iTypeTo (&sFirst) to iBad
+                    If (iBad > 0) Begin
+                        Sysdate dToday
+                        Get_Attribute DF_FILE_LOGICAL_NAME of hTable to sTable
+                        Error DFERR_PROGRAM ("Table" * sTable + ": column" * aAPIColumnCompare[iCount].sFieldNameTo * "keeps its type and does not become a Date." * String(iBad) * "of its values are not dates written as" * String(dToday) * "is written; the first is '" + sFirst + "'. Make them dates, or empty them, in the update code before ApiTableUpdate.")
+                        Move False to bOK
+                    End
+                End
+            End
+        Loop
+        Function_Return bOK
+    End_Function
+
     Function ApiColumnsUpdate String sDriverIDFrom Handle hTable Boolean bIsSQLTableFrom tAPIColumn[] aColumnsFrom tAPIColumn[] aColumnsTo Boolean bCompareDate_DateTime Returns Boolean
         Integer iCount iColumns iColumn iTypeFrom iTypeTo iDataFlexType iIndex iLengthFrom iLengthTo iPrecisionFrom iPrecisionTo iOptionFrom iOptionTo iDbType
         Integer iCount2 iColumn2
@@ -5007,6 +5094,15 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get UtilColumnsCompare sDriverIDFrom sDriverIDTo bIsSQLTableFrom bIsSQLTableTo aAPIColumnCompare bCompareDate_DateTime to bIsSame
             If (bIsSame = True) Begin
                 Function_Return True
+            End
+        End
+
+        // 6) A column of an embedded table that becomes a Date must hold dates only: the restructure empties other
+        //    values, or makes them into other dates, without an error. Microsoft SQL refuses such a change itself.
+        If (bIsSQLTableTo = False) Begin
+            Get UtilColumnsToDateCheck hTable sDriverIDFrom bIsSQLTableFrom aAPIColumnCompare to bOK
+            If (bOK = False) Begin
+                Function_Return False
             End
         End
 
@@ -5466,12 +5562,17 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             For iCount from 0 to (iSegmentsFrom -1)
                 Move aIndexSegments[iCount].iFieldNumber to iFieldFrom
                 If (iFieldFrom <> -1 ) Begin
-            		Set_Attribute DF_INDEX_SEGMENT_FIELD     of hTable APIIndex.iIndexNumber (iCount +1) to iFieldFrom
-            		If (pbCompareIndexAscending(Self) = True) Begin
-            		    Set_Attribute DF_INDEX_SEGMENT_DIRECTION of hTable APIIndex.iIndexNumber (iCount +1) to aIndexSegments[iCount].bAscending
+                    Set_Attribute DF_INDEX_SEGMENT_FIELD     of hTable APIIndex.iIndexNumber (iCount +1) to iFieldFrom
+                    // The direction and case of the description: bAscending and bUppercase hold the values of
+                    // DF_INDEX_SEGMENT_DIRECTION and DF_INDEX_SEGMENT_CASE. On an embedded table they are always
+                    // written: the two compare switches say which differences make an index change, not what a new
+                    // index gets (it came out ascending and case-sensitive whatever the description said). On SQL as
+                    // before, only with the switch on.
+                    If (bIsSQLTable = False or pbCompareIndexAscending(Self) = True) Begin
+                        Set_Attribute DF_INDEX_SEGMENT_DIRECTION of hTable APIIndex.iIndexNumber (iCount +1) to aIndexSegments[iCount].bAscending
                     End
-            		If (pbCompareIndexUppercase(Self) = True) Begin
-            		    Set_Attribute DF_INDEX_SEGMENT_CASE      of hTable APIIndex.iIndexNumber (iCount +1) to aIndexSegments[iCount].bUppercase
+                    If (bIsSQLTable = False or pbCompareIndexUppercase(Self) = True) Begin
+                        Set_Attribute DF_INDEX_SEGMENT_CASE      of hTable APIIndex.iIndexNumber (iCount +1) to aIndexSegments[iCount].bUppercase
                     End
                 End
             Loop
@@ -7190,7 +7291,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     Function UtilColumnCompare String sDriverIDFrom String sDriverIDTo Boolean bIsSQLFrom Boolean bIsSQLTo tAPIColumnCompare APIColumnCompare Boolean bCompareDate_DataTime Returns Boolean
         Integer iFromType iToType iDbType
         tColumnType ColumnType
-        Boolean bIsDateTypeFrom bIsDateTypeTo
+        Boolean bIsDateTypeFrom bIsDateTypeTo bNativeTypes bBothDates
 
         If (APIColumnCompare.bCancelFrom = True or APIColumnCompare.bCancelTo = True) Begin
             Function_Return False
@@ -7229,25 +7330,23 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get UtilSQLColumnTypeToDataFlexType sDriverIDTo iDbType iToType APIColumnCompare.iLengthTo to iToType
         End
 
-        Get UtilColumnIsDateType iFromType bIsSQLFrom to bIsDateTypeFrom
-        Get UtilColumnIsDateType iToType   bIsSQLTo   to bIsDateTypeTo
+        // After the translation above both types are native SQL types only when both tables are SQL.
+        Move (bIsSQLFrom = True and bIsSQLTo = True) to bNativeTypes
+        Get UtilColumnIsDateType iFromType bNativeTypes to bIsDateTypeFrom
+        Get UtilColumnIsDateType iToType   bNativeTypes to bIsDateTypeTo
+        Move (bIsDateTypeFrom = True and bIsDateTypeTo = True) to bBothDates
 
-        // Make Date and DateTime comparison?
-        If (bCompareDate_DataTime = True) Begin
+        // The types are compared, except Date against DateTime and the like when bCompareDate_DataTime is False.
+        // (Only the description's side used to be tested: a text or number column that the description makes a
+        // Date compared as "same", and the change was never made.)
+        If (bCompareDate_DataTime = True or bBothDates = False) Begin
             If (iFromType <> iToType) Begin
                 Function_Return False
             End
         End
 
-        // This is when not checking for Date/DateTime differences but all other other field types...
-        If (bCompareDate_DataTime = False and bIsDateTypeFrom = False) Begin
-            If (iFromType <> iToType) Begin
-                Function_Return False
-            End
-        End
-
-        // Only if the field is not a Date type (any of them) we compare length & precision.
-        If (bIsDateTypeFrom = False) Begin
+        // Length and precision are compared unless both are date types (theirs are fixed).
+        If (bBothDates = False) Begin
             If (APIColumnCompare.iLengthFrom <> APIColumnCompare.iLengthTo) Begin
                 Function_Return False
             End
@@ -9447,8 +9546,13 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver        
         Get DbLogin of hoDriver SQLConnection to bOK
         Send Destroy of hoDriver
+        // A failed login used to be passed over: the function answered True, and the update went on to the
+        // tables, where it showed as "cannot open table" or not at all.
+        If (bOK = False) Begin
+            Error DFERR_PROGRAM ("The login to the database server failed for Connection ID:" * sConnectionID + ". The connection string was:" * SQLConnectionStringMasked(sConnectionString))
+        End
 
-        Function_Return (bExists = True)
+        Function_Return (bExists = True and bOK = True)
     End_Function
 
     // Scans to see if all tables can be opened exclusivly. I.e. that nobody else is running the application.
