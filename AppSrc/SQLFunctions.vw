@@ -21,7 +21,7 @@ Object oSQLFunctions_vw is a dbView
 
         Get pSQLConnection of ghoSQLConnectionHandler to SQLConnection
         Set Value of oSQLDatabase_fm to SQLConnection.sDatabase
-        Move (Replace(("PWD=" + SQLConnection.sPassword), SQLConnection.sConnectionString, "PWD=***")) to sValue
+        Move (SQLConnectionStringMasked(SQLConnection.sConnectionString)) to sValue
         Set Value of oSQLConnectionString_fm to sValue
     End_Procedure
 

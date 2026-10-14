@@ -1,0 +1,59 @@
+// oSQLConnectionStringMasked-Tests.pkg - SQLConnectionStringMasked, the connection string as DUF shows it in
+// error texts, log lines and forms: the value of every PWD and Password keyword replaced by ***.
+//
+// String tests only. No database, no driver connection and no file is touched.
+//
+// Only procedures carrying { Published=True } are run as tests.
+
+Use DFUnit\Fixturing\Fixture.pkg
+Use cDbUpdateDatabaseDriver.pkg
+
+Object oSQLConnectionStringMasked_Tests is a cTestFixture
+    Set psTestFixtureName to "SQLConnectionStringMasked - no password in a message"
+
+    { Published=True }
+    Procedure Test_The_Password_Is_Replaced
+        Send AssertSAreEqual "SERVER=MyServer;DATABASE=Orders;UID=sa;PWD=***" (SQLConnectionStringMasked("SERVER=MyServer;DATABASE=Orders;UID=sa;PWD=Secret1")) "The value of PWD is replaced; the rest stays as it was."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_Any_Case_And_Spaces_Are_Found
+        Send AssertSAreEqual "Server=MyServer; uid = sa ; Pwd =***; Database=Orders" (SQLConnectionStringMasked("Server=MyServer; uid = sa ; Pwd = Secret1 ; Database=Orders")) "Pwd in mixed case with spaces around it is found."
+        Send AssertSAreEqual "Host=MyServer;Password=***;Database=Orders" (SQLConnectionStringMasked("Host=MyServer;Password=Secret1;Database=Orders")) "The keyword Password is found as well."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_Password_In_Braces_May_Hold_A_Semicolon
+        Send AssertSAreEqual "SERVER=MyServer;PWD=***;DATABASE=Orders" (SQLConnectionStringMasked("SERVER=MyServer;PWD={Se;cr}}et1};DATABASE=Orders")) "The whole value in braces is replaced, with its semicolon and its doubled brace."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_String_Without_A_Password_Stays_As_It_Is
+        Send AssertSAreEqual "SERVER=MyServer;DATABASE=Orders;Trusted_Connection=Yes;" (SQLConnectionStringMasked("SERVER=MyServer;DATABASE=Orders;Trusted_Connection=Yes;")) "A trusted connection has no password to hide."
+        Send AssertSAreEqual "" (SQLConnectionStringMasked("")) "An empty string stays empty."
+        Send AssertSAreEqual "SERVER=MyServer;UID=sa;PWD=" (SQLConnectionStringMasked("SERVER=MyServer;UID=sa;PWD=")) "An empty password stays empty, so a message shows that none was given."
+        Send AssertSAreEqual "SERVER=Pwd;DATABASE=PASSWORD" (SQLConnectionStringMasked("SERVER=Pwd;DATABASE=PASSWORD")) "PWD as a value is not the keyword."
+        Send AssertSAreEqual "SERVER=a{b;PWD=***" (SQLConnectionStringMasked("SERVER=a{b;PWD=Secret1")) "A brace inside a value does not hide the parts after it."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_The_String_A_Driver_Builds_Shows_No_Password
+        tSQLConnection SQLConnection
+        Handle hoDriver
+        String sConnectionString sMasked
+
+        Move "MyServer" to SQLConnection.sServer
+        Move "Orders"   to SQLConnection.sDatabase
+        Move False      to SQLConnection.bTrusted
+        Move "sa"       to SQLConnection.sUserID
+        Move "Secret1"  to SQLConnection.sPassword
+        Get CreateDatabaseDriverObject MSSQLDRV_ID to hoDriver
+        Get ConstructConnectionString of hoDriver SQLConnection to sConnectionString
+        Send Destroy of hoDriver
+        Move (SQLConnectionStringMasked(sConnectionString)) to sMasked
+        Send Assert (sConnectionString contains "Secret1") "The driver puts the password into the connection string."
+        Send AssertFalse (sMasked contains "Secret1") ("The masked string does not show it: " + sMasked)
+        Send Assert (Uppercase(sMasked) contains "PWD=***") ("The masked string shows where it was: " + sMasked)
+    End_Procedure
+
+End_Object

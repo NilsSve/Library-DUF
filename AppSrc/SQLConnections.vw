@@ -201,7 +201,7 @@ Object oSQLConnections_vw is a dbView
                         If (Uppercase(Trim(sValue)) <> Uppercase(Trim(sOrgValue))) Begin
                             Set psDatabase of ghoSQLConnectionHandler to sValue
                             Get psConnectionString of ghoSQLConnectionHandler to sValue
-                            Set Value of oConnectionString_fm to sValue
+                            Set Value of oConnectionString_fm to (SQLConnectionStringMasked(sValue))
                         End
                     End_Procedure
 
@@ -324,7 +324,7 @@ Object oSQLConnections_vw is a dbView
 
                         Send Trap_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
                         If (LastErr <> CLIERR_LOGIN_UNSUCCESSFUL) Begin
-                            Move (Replace(("PWD=" + SQLConnection.sPassword), SQLConnection.sConnectionString, "PWD=***")) to sConnectionString
+                            Move (SQLConnectionStringMasked(SQLConnection.sConnectionString)) to sConnectionString
                             Set Value of oConnectionString_fm to sConnectionString
                             Send Info_Box "Login Successful!"
                         End

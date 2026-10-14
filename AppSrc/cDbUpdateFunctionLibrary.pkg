@@ -95,7 +95,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get SqlConnect of hoSQLManager sDriverID sConnectionString to hConnection
         Send Trap_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
         If (LastErr = CLIERR_LOGIN_UNSUCCESSFUL) Begin
-            Error DFERR_PROGRAM (CS_DUF_LoginToDbServerFailed + "\n" + sConnectionString)
+            Error DFERR_PROGRAM (CS_DUF_LoginToDbServerFailed + "\n" + SQLConnectionStringMasked(sConnectionString))
             Function_Return False
         End
 
@@ -408,7 +408,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get SqlConnect of hoSQLManager sDriverID sConnectionString to hConnection
         Send Trap_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
         If (LastErr = CLIERR_LOGIN_UNSUCCESSFUL) Begin
-            Error DFERR_PROGRAM ("Login failed to the database server. The following connect string was used:\n" + sConnectionString)
+            Error DFERR_PROGRAM ("Login failed to the database server. The following connect string was used:\n" + SQLConnectionStringMasked(sConnectionString))
             Function_Return False
         End
 
@@ -3386,8 +3386,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function ApiTableRename Handle hTable String sRootName String sDisplayName String sLogicalName Returns Boolean
-        String sPhysicalName sRootNameTo sLogicalNameTo sDataPath sDriverID sSchema sPhysicalNameTo
+        String sPhysicalName sRootNameTo sLogicalNameTo sDataPath sDriverID sSchema sPhysicalNameTo sFolder
         Boolean bOK bExists bOpened
+        Integer iSizeFrom iSizeTo
         tAPITableNameInfo APITableNameInfo
 
         Get_Attribute DF_FILE_OPENED of hTable to bOpened
@@ -3419,15 +3420,24 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get_Attribute DF_FILE_DRIVER of hTable to sDriverID
         Close hTable
         If (sDriverID = DATAFLEX_ID) Begin
-            Get vFilePathExists (sDataPath + sRootNameTo + ".dat") to bExists
-            If (bExists = True) Begin
-                If (Uppercase(sRootName) <> Uppercase(sRootNameTo)) Begin
-                    Copy_db (sDataPath + sRootNameTo) to (sDataPath + sRootName)
-                    // We need a short break here before attempting to delete the physical old files or Windows
-                    // might report "File in use..." and the deletion will fail.
-                    Sleep 2
-                    Get vDeleteFile (sDataPath + sRootNameTo + ".*") to bOK
+            // The folder that holds the table's files: the first folder of the data path, or a later one.
+            Get _UtilEmbeddedTableFolder sRootNameTo to sFolder
+            If (sFolder <> "" and Uppercase(sRootName) <> Uppercase(sRootNameTo)) Begin
+                Get vWin32_APIFileSize (sFolder + sRootNameTo + ".dat") to iSizeFrom
+                Copy_db (sFolder + sRootNameTo) to (sFolder + sRootName)
+                // The old files may only go when the copy is there: Copy_db raised no error, and the new .dat
+                // has the size of the old one (Copy_db copies the files as they are; a file of the new name that
+                // was there before is written over). A folder or a locked file in the way makes Copy_db raise an
+                // error. Then the table keeps its old name and its files, and the Filelist is not changed.
+                Get vWin32_APIFileSize (sFolder + sRootName + ".dat") to iSizeTo
+                If (Err = True or iSizeTo = 0 or iSizeTo <> iSizeFrom) Begin
+                    Error DFERR_PROGRAM ("Table" * sLogicalNameTo * "could not be copied to the new name" * sRootName + ". The table keeps its old name and its files.")
+                    Function_Return False
                 End
+                // We need a short break here before attempting to delete the physical old files or Windows
+                // might report "File in use..." and the deletion will fail.
+                Sleep 2
+                Get _UtilEmbeddedTableOldFilesRemove sFolder sRootNameTo sRootName to bOK
             End
         End
 

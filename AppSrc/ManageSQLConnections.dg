@@ -549,12 +549,22 @@ Object oSQLMaintainConnections_dg is a ModalPanel
             Set Size to 13 202
             Set Location to 191 83
             Set Label to "Additional Connect String Options"
-            Set piItem to 10
+            Set Visible_State to False
             Set peAnchors to anTopRight
             Set Label_Col_Offset to 0
             Set Label_Row_Offset to 1
             Set Label_Justification_Mode to JMode_Top
             Set Status_Help to "This text string value is added to the SQL connection string if needed. This is an addition to MS-SQL ODBC client software version 18 and up."
+
+            // Not in use: hidden, and it reads and writes nothing. tSQLConnection has no member for these options,
+            // and nothing adds them to the connection string; the Encryption list and the "Trust server certificate"
+            // checkbox write the options of client version 18. The field had piItem 10, the password: it showed the
+            // password in clear text and could write the old password back over a new one.
+            Procedure ReadConnectionData String[] asConnectionData
+            End_Procedure
+
+            Procedure WriteConnectionData String[] ByRef asConnectionData
+            End_Procedure
 
             Procedure DbTypeUpdate Integer iDbType String sDriverID
                 Set Enabled_State to (sDriverID = MSSQLDRV_ID)

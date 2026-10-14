@@ -23,5 +23,6 @@ Object oWorkspace_Tests is a cTestFixture
     Use oDbUpdateUserCount-Tests.pkg
     Use oDFAbout-Tests.pkg
     Use oSQLConnectionIniFile-Tests.pkg
+    Use oSQLConnectionStringMasked-Tests.pkg
 
 End_Object

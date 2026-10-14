@@ -22,6 +22,8 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
     Property String psOldDdSrcPath ""
     Property Handle phOldErrorObject 0
     Property String psTable ""
+    // The new root name of a test that renames its table
+    Property String psOtherTable ""
     Property Handle phTable 0
 
     // Stands in for the handler object as the error object of an update run.
@@ -97,10 +99,25 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Move False to Err
     End_Procedure
 
+    // The files of one embedded table in the test folder
+    Procedure EraseTableFiles String sFolder String sTable
+        Integer iKey
+
+        If (sTable <> "") Begin
+            EraseFile (sFolder + "\" + sTable + ".dat")
+            EraseFile (sFolder + "\" + sTable + ".hdr")
+            EraseFile (sFolder + "\" + sTable + ".tag")
+            EraseFile (sFolder + "\" + sTable + ".vld")
+            EraseFile (sFolder + "\" + sTable + ".fd")
+            For iKey from 1 to 15
+                EraseFile (sFolder + "\" + sTable + ".k" + String(iKey))
+            Loop
+        End
+    End_Procedure
+
     Procedure TearDown
         Handle hoWorkspace
         String sFolder sTable
-        Integer iKey
 
         Get phoWorkspace of ghoApplication to hoWorkspace
         Get psFolder to sFolder
@@ -113,21 +130,18 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
 
         // Only what the test made, in the folder the test made.
         If (sFolder <> "" and (Uppercase(sFolder) contains "DUFTABLETESTS")) Begin
-            Get psTable to sTable
+            Send EraseTableFiles sFolder (psTable(Self))
+            // A test that renames its table: the files of the new name, and a folder that stood in their way.
+            Get psOtherTable to sTable
             If (sTable <> "") Begin
-                EraseFile (sFolder + "\" + sTable + ".dat")
-                EraseFile (sFolder + "\" + sTable + ".hdr")
-                EraseFile (sFolder + "\" + sTable + ".tag")
-                EraseFile (sFolder + "\" + sTable + ".vld")
-                EraseFile (sFolder + "\" + sTable + ".fd")
-                For iKey from 1 to 15
-                    EraseFile (sFolder + "\" + sTable + ".k" + String(iKey))
-                Loop
+                Send EraseTableFiles sFolder sTable
+                Remove_Directory (sFolder + "\" + sTable + ".dat")
             End
             EraseFile (sFolder + "\Filelist.cfg")
             Remove_Directory sFolder
         End
         Set psFolder to ""
+        Set psOtherTable to ""
         Move False to Err
     End_Procedure
 
@@ -192,6 +206,40 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Get Idx 2 3 "Name" 1 "Id" -1 ""     to a[1]
         Get Idx 3 4 "Created" 1 "Id" -1 ""  to a[2]
         Function_Return a
+    End_Function
+
+    // One call of ApiTableRename that gives the table a new root, logical and display name, with the fixture's
+    // error object in place. Returns the number of errors that were raised, or -1 when the call returned False
+    // without one.
+    Function RenameTable String sName Returns Integer
+        Handle hoErrors
+        Boolean bOK
+        Integer iErrors
+
+        Set psOtherTable to sName
+        Move (oErrors(Self)) to hoErrors
+        Set piErrors of hoErrors to 0
+        Set psErrors of hoErrors to ""
+        Set phOldErrorObject to Error_Object_Id
+        Move hoErrors to Error_Object_Id
+        Move False to Err
+        Get ApiTableRename of ghoDbUpdateFunctionLibrary (phTable(Self)) sName sName sName to bOK
+        Close DF_ALL
+        Move (phOldErrorObject(Self)) to Error_Object_Id
+        Move False to Err
+        Get piErrors of hoErrors to iErrors
+        If (iErrors = 0 and bOK = False) Begin
+            Move -1 to iErrors
+        End
+        Function_Return iErrors
+    End_Function
+
+    // Is the file there? "Name.ext" in the test folder
+    Function FileThere String sFileName Returns Boolean
+        Boolean bExists
+
+        Get vFilePathExists (psFolder(Self) + "\" + sFileName) to bExists
+        Function_Return bExists
     End_Function
 
     // One call of ApiTableUpdate with the fixture's error object in place. Returns the number of errors
@@ -756,6 +804,61 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
         Send AssertSAreEqual "Id,Code,FullName,Created,Amount" (ColumnNames(Self)) "FullName stands where Name stood."
         Send AssertSAreEqual (String(DF_ASCII) + "|") (ColumnTypeAndFirstValue(Self, "FullName")) "The new column is empty."
+    End_Procedure
+
+    // ApiTableRename copies the files of an embedded table to the new root name, and only then removes the
+    // old ones: a copy that fails used to cost the table its data.
+    { Published=True }
+    Procedure Test_A_Renamed_Table_Keeps_Its_Records_Under_The_New_Name
+        Integer iErrors
+        String sRoot
+
+        Send MakeBaseTable "DUFTT17" 5 True
+        Get RenameTable "DUFTT17R" to iErrors
+        Send AssertIAreEqual 0 iErrors ("The rename runs without an error." + psErrors(oErrors(Self)))
+        Get_Attribute DF_FILE_ROOT_NAME of (phTable(Self)) to sRoot
+        Send AssertSAreEqual "DUFTT17R" (Uppercase(sRoot)) "The Filelist names the new root name."
+        Send Assert (FileThere(Self, "DUFTT17R.dat")) "The data file of the new name is there."
+        Send Assert (FileThere(Self, "DUFTT17R.k3")) "So are its index files."
+        Send AssertFalse (FileThere(Self, "DUFTT17.dat")) "The data file of the old name is gone."
+        Send AssertFalse (FileThere(Self, "DUFTT17.k1")) "So are the index files of the old name."
+        Send AssertIAreEqual 2 (RecordCount(Self)) "The table has its two records under the new name."
+        Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "Name")) "The first record is as it was."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_Rename_That_Cannot_Copy_Keeps_The_Table
+        Integer iErrors
+        String sRoot
+
+        Send MakeBaseTable "DUFTT18" 5 True
+        // A folder with the name of the new data file is in the way: Copy_db cannot write the copy.
+        Make_Directory (psFolder(Self) + "\DUFTT18R.dat")
+        Get RenameTable "DUFTT18R" to iErrors
+        Send Assert (iErrors > 0) "The rename raises an error."
+        Get_Attribute DF_FILE_ROOT_NAME of (phTable(Self)) to sRoot
+        Send AssertSAreEqual "DUFTT18" (Uppercase(sRoot)) "The Filelist keeps the old root name."
+        Send Assert (FileThere(Self, "DUFTT18.dat")) "The data file of the old name is still there."
+        Send Assert (FileThere(Self, "DUFTT18.k2")) "So are its index files."
+        Send AssertIAreEqual 2 (RecordCount(Self)) "The table still has its two records."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_A_Table_In_The_Second_Data_Folder_Is_Renamed_There
+        Integer iErrors
+        String sFolder sRoot
+
+        Send MakeBaseTable "DUFTT19" 5 True
+        // The table's folder is now the second folder of the data path. The first one holds no table.
+        Get psFolder to sFolder
+        Set psDataPath of (phoWorkspace(ghoApplication)) to (sFolder + "\Second;" + sFolder)
+        Get RenameTable "DUFTT19R" to iErrors
+        Send AssertIAreEqual 0 iErrors ("The rename runs without an error." + psErrors(oErrors(Self)))
+        Get_Attribute DF_FILE_ROOT_NAME of (phTable(Self)) to sRoot
+        Send AssertSAreEqual "DUFTT19R" (Uppercase(sRoot)) "The Filelist names the new root name."
+        Send Assert (FileThere(Self, "DUFTT19R.dat")) "The copy is made in the folder that holds the table."
+        Send AssertFalse (FileThere(Self, "DUFTT19.dat")) "The data file of the old name is gone."
+        Send AssertIAreEqual 2 (RecordCount(Self)) "The table has its two records under the new name."
     End_Procedure
 
 End_Object

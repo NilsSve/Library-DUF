@@ -1261,7 +1261,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         Get SqlConnect of hoSQLManager sDriverID sConnectionString to hoSQLConnect
         Send Trap_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
         If (LastErr = CLIERR_LOGIN_UNSUCCESSFUL) Begin
-            Error DFERR_PROGRAM ("Login failed to the database server. The following connect string was used:\n" + sConnectionString)
+            Error DFERR_PROGRAM ("Login failed to the database server. The following connect string was used:\n" + SQLConnectionStringMasked(sConnectionString))
             Function_Return aCollations
         End
 
@@ -2391,25 +2391,73 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return FilelistLogicalTables
     End_Function 
     
-    // Is the data file of an embedded table in the data path? The data path can name several folders, so each
-    // of them is looked at. (The whole path used to be taken for one folder name. With two folders no table
-    // was found, and a table that is not found is created.)
-    Function _UtilEmbeddedTableFileExists String sRootName Returns Boolean
+    // The folder of the data path that holds the data file of an embedded table, with a backslash at the end,
+    // or "" when none does. The data path can name several folders; they are looked at in their order.
+    Function _UtilEmbeddedTableFolder String sRootName Returns String
         String sDataPath sFolder
         Integer iPaths iPath
         Boolean bExists
 
-        Move False to bExists
         Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
         Get CountOfPaths of (phoWorkspace(ghoApplication)) sDataPath to iPaths
         For iPath from 1 to iPaths
-            If (bExists = False) Begin
-                Get PathAtIndex of (phoWorkspace(ghoApplication)) sDataPath iPath to sFolder
-                Get vFolderFormat sFolder to sFolder
-                Get vFilePathExists (sFolder + sRootName + ".dat") to bExists
+            Get PathAtIndex of (phoWorkspace(ghoApplication)) sDataPath iPath to sFolder
+            Get vFolderFormat sFolder to sFolder
+            Get vFilePathExists (sFolder + sRootName + ".dat") to bExists
+            If (bExists = True) Begin
+                Function_Return sFolder
             End
         Loop
-        Function_Return bExists
+        Function_Return ""
+    End_Function
+
+    // Is the data file of an embedded table in the data path? The data path can name several folders, so each
+    // of them is looked at. (The whole path used to be taken for one folder name. With two folders no table
+    // was found, and a table that is not found is created.)
+    Function _UtilEmbeddedTableFileExists String sRootName Returns Boolean
+        String sFolder
+
+        Get _UtilEmbeddedTableFolder sRootName to sFolder
+        Function_Return (sFolder <> "")
+    End_Function
+
+    // After an embedded table was copied to a new root name in sFolder: removes each file of the old name - the
+    // .dat, .hdr, .tag and .vld file and the index files .k1 to .k15 - whose copy under the new name is there.
+    // An old file without a copy, or one that cannot be removed, stays and is named in the log. Returns False
+    // when a file stays. (This used to remove "old name.*" without looking at what the copy had made.)
+    Function _UtilEmbeddedTableOldFilesRemove String sFolder String sRootNameFrom String sRootNameTo Returns Boolean
+        String[] asExtensions
+        String sLeft
+        Integer iCount iRetval
+        Boolean bExists
+
+        Move ".dat" to asExtensions[0]
+        Move ".hdr" to asExtensions[1]
+        Move ".tag" to asExtensions[2]
+        Move ".vld" to asExtensions[3]
+        For iCount from 1 to 15
+            Move (".k" + String(iCount)) to asExtensions[iCount + 3]
+        Loop
+
+        Move "" to sLeft
+        For iCount from 0 to (SizeOfArray(asExtensions) - 1)
+            Get vFilePathExists (sFolder + sRootNameFrom + asExtensions[iCount]) to bExists
+            If (bExists = True) Begin
+                Get vFilePathExists (sFolder + sRootNameTo + asExtensions[iCount]) to bExists
+                Move 1 to iRetval
+                If (bExists = True) Begin
+                    // vDeleteFile answers 0 when the file is gone.
+                    Get vDeleteFile (sFolder + sRootNameFrom + asExtensions[iCount]) to iRetval
+                End
+                If (iRetval <> 0) Begin
+                    Move (sLeft + " " + sRootNameFrom + asExtensions[iCount]) to sLeft
+                End
+            End
+        Loop
+        If (sLeft <> "") Begin
+            Send LogError ("Table" * sRootNameFrom * "was renamed to" * sRootNameTo + ". These files of the old name are left in" * sFolder + ":" + sLeft) False
+        End
+        Function_Return (sLeft = "")
     End_Function
 
     // Checks that the passed hTable number both exists in Filelist.cfg and

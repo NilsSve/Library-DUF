@@ -886,7 +886,7 @@ Class cSQLConnectionHandler is a cObject
         Get CreateDatabaseDriverObject sDriverID to hoDriver        
         Get DbLogin of hoDriver SQLConnection to bLoginSuccessful
         If (bLoginSuccessful = False and bShowError = True) Begin
-            Error DFERR_PROGRAM (CS_DUF_CannotLoginToServer * CS_DUF_ErrorText * String(sError) + "\nConnectionID = " * sConnectionID + "\nConnection String = " * sConnectionString)   
+            Error DFERR_PROGRAM (CS_DUF_CannotLoginToServer * CS_DUF_ErrorText * String(sError) + "\nConnectionID = " * sConnectionID + "\nConnection String = " * SQLConnectionStringMasked(sConnectionString))   
             If (bExitProgram = True) Begin
                 Send Exit_Application
             End

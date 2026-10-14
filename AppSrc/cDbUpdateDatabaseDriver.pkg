@@ -1,5 +1,75 @@
 Use cSQLConnectionIniFile.h.pkg
 
+// One part "Keyword=Value" of a connection string, with the value replaced by *** when the keyword is PWD or
+// Password. The case of the keyword and spaces around it do not count. An empty value stays empty, so that a
+// message still shows that no password was given.
+Function SQLConnectionStringPartMasked Global String sPart Returns String
+    Integer iEqual
+    String sKeyword sValue
+
+    Move (Pos("=", sPart)) to iEqual
+    If (iEqual = 0) Begin
+        Function_Return sPart
+    End
+    Move (Uppercase(Trim(Left(sPart, (iEqual - 1))))) to sKeyword
+    Move (Trim(Right(sPart, (Length(sPart) - iEqual)))) to sValue
+    If ((sKeyword = "PWD" or sKeyword = "PASSWORD") and sValue <> "") Begin
+        Function_Return (Left(sPart, iEqual) + "***")
+    End
+    Function_Return sPart
+End_Function
+
+// The connection string as an error text, a log line or a form may show it: the value of every PWD and Password
+// keyword is replaced by ***. A value in braces, PWD={...}, may hold a semicolon; "}}" inside the braces is a
+// brace of the value.
+Function SQLConnectionStringMasked Global String sConnectionString Returns String
+    String sResult sPart sChar
+    Integer iLength iPos
+    Boolean bInBraces bValueStart
+
+    Move (Length(sConnectionString)) to iLength
+    Move "" to sResult
+    Move "" to sPart
+    Move False to bInBraces
+    // True from the "=" of a part up to the first character of its value that is not a space
+    Move False to bValueStart
+    Move 1 to iPos
+    While (iPos <= iLength)
+        Move (Mid(sConnectionString, 1, iPos)) to sChar
+        If (bInBraces = True) Begin
+            Move (sPart + sChar) to sPart
+            If (sChar = "}") Begin
+                If (Mid(sConnectionString, 1, (iPos + 1)) = "}") Begin
+                    Move (sPart + "}") to sPart
+                    Increment iPos
+                End
+                Else Begin
+                    Move False to bInBraces
+                End
+            End
+        End
+        Else If (sChar = ";") Begin
+            Move (sResult + SQLConnectionStringPartMasked(sPart) + ";") to sResult
+            Move "" to sPart
+            Move False to bValueStart
+        End
+        Else Begin
+            If (sChar = "{" and bValueStart = True) Begin
+                Move True to bInBraces
+            End
+            If (sChar = "=" and not(sPart contains "=")) Begin
+                Move True to bValueStart
+            End
+            Else If (sChar <> " ") Begin
+                Move False to bValueStart
+            End
+            Move (sPart + sChar) to sPart
+        End
+        Increment iPos
+    Loop
+    Function_Return (sResult + SQLConnectionStringPartMasked(sPart))
+End_Function
+
 // Important: See the 'CreateDatabaseDriverObject' message at the bottom of this package,
 //            on how to create one of these classes.
 Class cDbUpdateGenericDatabaseDriver is a cObject
