@@ -133,8 +133,9 @@ Class cSQLConnectionHandler is a cObject
 
         Set Private.pSQLConnection to SQLConnection
 
-        // When starting a program we might not have a connection id yet:
-        If (SQLConnection.sDriverID = DATAFLEX_ID) Begin
+        // When starting a program we might not have a connection id yet. No driver id is the DataFlex driver, as
+        // psDriverID says: no login either.
+        If (SQLConnection.sDriverID = DATAFLEX_ID or SQLConnection.sDriverID = "") Begin
 //        If (SQLConnection.sConnectionID = "" or SQLConnection.sDriverID = DATAFLEX_ID) Begin
             Procedure_Return
         End
@@ -233,15 +234,16 @@ Class cSQLConnectionHandler is a cObject
     Function SQLLogin tSQLConnection SQLConnection Returns Boolean
         Boolean bOK
         String sConnectionString
-        Handle hoErrorObj hoDriver hoIniFile
+        Handle hoDriver hoIniFile
         Integer iDriverID
 
         Move False to bOK
         Get phoSQLConnectionIniFile to hoIniFile
         Get ConstructConnectionString SQLConnection to sConnectionString
         Get DriverIndex SQLConnection.sDriverID to iDriverID
+        // No driver, no login. (This moved hoErrorObj - never set - to Error_Object_Id: the program lost its error
+        // object, and the next error showed DataFlex's own box.)
         If (iDriverID = 0) Begin
-            Move hoErrorObj to Error_Object_Id
             Function_Return False
         End
 
@@ -294,10 +296,11 @@ Class cSQLConnectionHandler is a cObject
         tSQLConnection SQLConnection
         Get pSQLConnection to SQLConnection
         Move sValue        to SQLConnection.sDriverID
-        Set pSQLConnection to SQLConnection
+        // The string for the new driver goes into the struct before it is stored. (It was built after, and lost.)
         If (sValue <> DATAFLEX_ID) Begin
             Get ConstructConnectionString SQLConnection to SQLConnection.sConnectionString
         End
+        Set pSQLConnection to SQLConnection
     End_Procedure
 
     Function psDriverID Returns String
@@ -440,7 +443,8 @@ Class cSQLConnectionHandler is a cObject
     Procedure Set pbSilentLogin Boolean bValue
         tSQLConnection SQLConnection
         Get Private.pSQLConnection to SQLConnection
-        Move bValue to SQLConnection.bTrusted
+        // (This wrote the trusted-connection flag, so a login with a user and a password became a Windows login.)
+        Move bValue to SQLConnection.bSilentLogin
         Set Private.pSQLConnection to SQLConnection
     End_Procedure
 
@@ -788,7 +792,7 @@ Class cSQLConnectionHandler is a cObject
             Function_Return SQLConnectionEmpty
         End
 
-        Send CreateSQLConnection SQLConnection False 
+        // Set pSQLConnection logs in.
         Set pSQLConnection to SQLConnection
         Get AutoSetConnectionID to iRetval
 
@@ -875,21 +879,24 @@ Class cSQLConnectionHandler is a cObject
     End_Function
 
     // *** Main Connection Message ***
+    // Logs in with the passed connection, through the DUF driver object of its driver. (It worked on locals that
+    // were never filled: the driver id was empty, so no driver object was made and the login went to object 0.)
     Procedure CreateSQLConnection tSQLConnection SQLConnection Boolean bShowError
-        Boolean bExitProgram eEncryptionOption bTrustedCertificate 
-        Boolean bTrusted bSilent bLoginSuccessful
+        Boolean bLoginSuccessful
         Handle hoDriver
-        String sUserID sPassword sConnectionString sError
-        String  sDriverID sConnectionID sServer sDatabase 
+        String sConnectionString
 
         Get ConstructConnectionString SQLConnection to sConnectionString
-        Get CreateDatabaseDriverObject sDriverID to hoDriver        
+        Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver
+        If (hoDriver = 0) Begin
+            If (bShowError = True) Begin
+                Error DFERR_PROGRAM (CS_DUF_CannotLoginToServer + "\nDriver = " * SQLConnection.sDriverID)
+            End
+            Procedure_Return
+        End
         Get DbLogin of hoDriver SQLConnection to bLoginSuccessful
         If (bLoginSuccessful = False and bShowError = True) Begin
-            Error DFERR_PROGRAM (CS_DUF_CannotLoginToServer * CS_DUF_ErrorText * String(sError) + "\nConnectionID = " * sConnectionID + "\nConnection String = " * SQLConnectionStringMasked(sConnectionString))   
-            If (bExitProgram = True) Begin
-                Send Exit_Application
-            End
+            Error DFERR_PROGRAM (CS_DUF_CannotLoginToServer + "\nConnectionID = " * SQLConnection.sConnectionID + "\nConnection String = " * SQLConnectionStringMasked(sConnectionString))
         End
         Send Destroy of hoDriver
     End_Procedure
@@ -1006,30 +1013,27 @@ Class cSQLConnectionHandler is a cObject
         Function_Return SQLConnection
     End_Function
 
+    // The number of a driver, which is loaded first when it is not loaded yet; 0 when it cannot be loaded. (After a
+    // load this answered one past the last driver or -1, and its callers test for 0.)
     Function DriverIndex String sDriverID Returns Integer
         String  sCurrentDriver
-        Integer iNumberOfDrivers iDriver iCount
+        Integer iNumberOfDrivers iCount iTry
 
-        Move 0 to iDriver
-        Move 0 to iCount
-        Get_Attribute DF_NUMBER_DRIVERS to iNumberOfDrivers
-        For iCount from 1 to iNumberOfDrivers
-            Get_Attribute DF_DRIVER_NAME of iCount to sCurrentDriver
-            If ( Uppercase(sCurrentDriver) = Uppercase(sDriverID) ) Begin
-                Function_Return iCount
+        For iTry from 1 to 2
+            Get_Attribute DF_NUMBER_DRIVERS to iNumberOfDrivers
+            For iCount from 1 to iNumberOfDrivers
+                Get_Attribute DF_DRIVER_NAME of iCount to sCurrentDriver
+                If (Uppercase(sCurrentDriver) = Uppercase(sDriverID)) Begin
+                    Function_Return iCount
+                End
+            Loop
+            If (iTry = 1) Begin
+                Move 0 to LastErr
+                Load_Driver sDriverID
+                Move False to Err
             End
         Loop
-
-        // If driver not previously loaded; attempt to do so now.
-        If (iDriver = 0) Begin
-            Move 0 to LastErr
-            Load_Driver sDriverID
-            // If driver could not be loaded.
-            If (LastErr = DFERR_CANT_LOAD_DLL) Begin
-                Move -1 to iCount
-            End
-        End
-        Function_Return iCount
+        Function_Return 0
     End_Function
 
     // This will update connection settings of the cCLIHandler object with that passed struct values.

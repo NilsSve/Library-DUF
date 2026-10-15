@@ -486,9 +486,11 @@ Class cSQLConnectionIniFile is a cIniFile
             If (SQLConnectionsArray[iCount].sDriverID = MSSQLDRV_ID) Begin
                 Get CreateDatabaseDriverObject MSSQLDRV_ID to hoDriver
                 Get SQLClientVersionInteger of hoDriver MSSQLDRV_ID to SQLConnectionsArray[iCount].iClientVersion
+                // The option as its word, as it is read. (Its number was written, and read back as unknown.)
+                Get EncryptOptionToText of hoDriver SQLConnectionsArray[iCount].eEncryptOption to sValue
                 Send Destroy of hoDriver
                 Set IniFileValue (CS_SQLIniSectionName + String(iCount + 1)) CS_SQLIniClientVersion     to SQLConnectionsArray[iCount].iClientVersion
-                Set IniFileValue (CS_SQLIniSectionName + String(iCount + 1)) CS_SQLIniEncrypt           to SQLConnectionsArray[iCount].eEncryptOption
+                Set IniFileValue (CS_SQLIniSectionName + String(iCount + 1)) CS_SQLIniEncrypt           to sValue
                 Set IniFileValue (CS_SQLIniSectionName + String(iCount + 1)) CS_SQLIniTrustServerCertificate to (If(SQLConnectionsArray[iCount].bTrustedCertificate = 1, "Yes", "No"))
             End
             Get ConstructShortConnectionString SQLConnectionsArray[iCount] to SQLConnectionsArray[iCount].sConnectionString

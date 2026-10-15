@@ -200,5 +200,69 @@ Object oDbUpdateFunctionLibrary_Tests is a cTestFixture
         Send AssertFalse (_UtilRootNameIsDriverTable(ghoDbUpdateFunctionLibrary, "C:\Data\Customer")) "A drive in front is a folder."
         Send AssertFalse (_UtilRootNameIsDriverTable(ghoDbUpdateFunctionLibrary, "..\Data\Customer")) "So is a relative folder."
     End_Procedure
+    // An "=" inside a value is part of the value: a password such as ab=cd. (The first "=" of every value was
+    // taken out, so such a password no longer matched.)
+    { Published=True }
+    Procedure Test_ParseKeyWord_Keeps_An_Equals_Sign_In_A_Value
+        String sValue
+        Get ParseKeyWord of ghoDbUpdateFunctionLibrary "SERVER=x;UID=u;PWD=ab=cd;DATABASE=d" "PWD=" to sValue
+        Send AssertSAreEqual "ab=cd" sValue "The password with its equals sign."
+        Get ParseKeyWord of ghoDbUpdateFunctionLibrary "SERVER=x;DFConnectionId=MyId" (Uppercase(CS_SQLConnectionIDText)) to sValue
+        Send AssertSAreEqual "MyId" sValue "A keyword passed without its equals sign."
+    End_Procedure
 
+    // A keyword is found at the start of the string or after a ";" only: "DSN=" is not the end of "FILEDSN=".
+    { Published=True }
+    Procedure Test_ParseKeyWord_Finds_A_Keyword_At_Its_Start_Only
+        String sValue
+        Get ParseKeyWord of ghoDbUpdateFunctionLibrary "FILEDSN=c:\x\a.dsn;DSN=Sales;UID=u" "DSN=" to sValue
+        Send AssertSAreEqual "Sales" sValue "DSN, not the end of FILEDSN."
+        Get ParseKeyWord of ghoDbUpdateFunctionLibrary "SERVER=x; DATABASE=Orders" "DATABASE=" to sValue
+        Send AssertSAreEqual "Orders" sValue "A blank after the semicolon."
+        Get ParseKeyWord of ghoDbUpdateFunctionLibrary "SERVER=x;DATABASE=Orders" "NODATABASE=" to sValue
+        Send AssertSAreEqual "" sValue "A keyword that is not there."
+        Get ParseKeyWord of ghoDbUpdateFunctionLibrary "DFConnectionId=MyId, SERVER=host;DATABASE=Orders" "SERVER=" to sValue
+        Send AssertSAreEqual "host" sValue "A keyword after a comma."
+    End_Procedure
+
+    // Set pbSilentLogin sets the silent-login flag. (It wrote the trusted-connection flag, so a connection with a
+    // user and a password became a Windows login.)
+    { Published=True }
+    Procedure Test_pbSilentLogin_Is_A_Setting_Of_Its_Own
+        Boolean bSilent bTrusted bSilentAfter bTrustedAfter
+
+        Get pbSilentLogin of ghoSQLConnectionHandler to bSilent
+        Get pbTrusted     of ghoSQLConnectionHandler to bTrusted
+        Set pbSilentLogin of ghoSQLConnectionHandler to (not(bSilent))
+        Get pbSilentLogin of ghoSQLConnectionHandler to bSilentAfter
+        Get pbTrusted     of ghoSQLConnectionHandler to bTrustedAfter
+        Set pbSilentLogin of ghoSQLConnectionHandler to bSilent
+        Send Assert (bSilentAfter = (not(bSilent))) "The silent-login flag is set."
+        Send Assert (bTrustedAfter = bTrusted) "The trusted-connection flag is left as it was."
+    End_Procedure
+
+    // Stands in for the program's error object while a driver that does not exist is loaded.
+    Object oNoErrors is a cObject
+        Property Integer piErrors 0
+        Procedure Error_Report Integer iErr Integer iLine String sMsg
+            Set piErrors to (piErrors(Self) + 1)
+        End_Procedure
+    End_Object
+
+    // DriverIndex of the connection handler is 0 for a driver that cannot be loaded, as its callers test. (It
+    // answered -1 or one past the last driver.)
+    { Published=True }
+    Procedure Test_DriverIndex_Is_0_For_A_Driver_That_Cannot_Be_Loaded
+        Integer iDriver iNoDriver
+        Handle hoOld
+
+        Get DriverIndex of ghoSQLConnectionHandler DATAFLEX_ID to iDriver
+        Move Error_Object_Id to hoOld
+        Move (oNoErrors(Self)) to Error_Object_Id
+        Get DriverIndex of ghoSQLConnectionHandler "DUFNOSUCHDRV" to iNoDriver
+        Move hoOld to Error_Object_Id
+        Move False to Err
+        Send Assert (iDriver > 0) "The DataFlex driver has a number."
+        Send AssertIAreEqual 0 iNoDriver "A driver that cannot be loaded: 0."
+    End_Procedure
 End_Object

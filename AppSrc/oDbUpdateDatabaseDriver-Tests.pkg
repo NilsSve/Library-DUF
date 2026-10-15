@@ -33,5 +33,55 @@ Object oDbUpdateDatabaseDriver_Tests is a cTestFixture
         Send Assert (sConnectionString contains "=Sales User") ("The user name keeps its space: " + SQLConnectionStringMasked(sConnectionString))
         Send Assert (sConnectionString contains "=Secret with spaces") "The password keeps its spaces."
     End_Procedure
+    // The driver object of the DataFlex database is made. (The Case branch had no Case Break and ran into Case Else,
+    // which answers 0.)
+    { Published=True }
+    Procedure Test_The_DataFlex_Driver_Object_Is_Made
+        Handle hoDriver
+        Get CreateDatabaseDriverObject DATAFLEX_ID to hoDriver
+        Send Assert (hoDriver <> 0) "A driver object for DATAFLEX."
+        If (hoDriver <> 0) Begin
+            Send Destroy of hoDriver
+        End
+    End_Procedure
 
+    // The Encrypt option is read in any case, and as the number an older save wrote into the ini file.
+    { Published=True }
+    Procedure Test_EncryptOptionFromText_Takes_Any_Case_And_The_Old_Numbers
+        Handle hoDriver
+        Get CreateDatabaseDriverObject MSSQLDRV_ID to hoDriver
+        Send AssertIAreEqual eMandatory (EncryptOptionFromText(hoDriver, "Mandatory")) "The word."
+        Send AssertIAreEqual eMandatory (EncryptOptionFromText(hoDriver, "mandatory")) "In small letters."
+        Send AssertIAreEqual eStrict (EncryptOptionFromText(hoDriver, "STRICT")) "In capitals."
+        Send AssertIAreEqual eMandatory (EncryptOptionFromText(hoDriver, "1")) "The number an older save wrote."
+        Send AssertIAreEqual -1 (EncryptOptionFromText(hoDriver, "")) "Nothing: unknown."
+        Send Destroy of hoDriver
+    End_Procedure
+
+    // The silent-login flag stands after the last ";" - ", 1" - and a port in SERVER=host,1433 is no flag.
+    { Published=True }
+    Procedure Test_The_Silent_Login_Flag_Is_Read_After_The_Last_Semicolon
+        Handle hoDriver
+
+        Get CreateDatabaseDriverObject MSSQLDRV_ID to hoDriver
+        Send AssertFalse (SilentLoginFlag(hoDriver, "SERVER=host,1433;DATABASE=db;Trusted_Connection=yes")) "A port is no silent-login flag."
+        Send Assert (SilentLoginFlag(hoDriver, "SERVER=host;DATABASE=db;Trusted_Connection=yes;, 1")) "The flag after the last semicolon."
+        Send Assert (SilentLoginFlag(hoDriver, "SERVER=host;DATABASE=db;,1")) "Without a blank."
+        Send AssertFalse (SilentLoginFlag(hoDriver, "SERVER=host;DATABASE=db;, 0")) "Silent login off."
+        Send Destroy of hoDriver
+    End_Procedure
+
+    // A data source name gets "DSN=" in front of it unless it has it: also a name that merely contains "DSN".
+    // A file data source (.dsn) gets "FILEDSN=".
+    { Published=True }
+    Procedure Test_A_Data_Source_Name_Gets_Its_Keyword
+        Handle hoDriver
+        Get CreateDatabaseDriverObject ODBC_DRV_ID to hoDriver
+        Send AssertSAreEqual "DSN=Sales" (DSNLoginServer(hoDriver, "Sales")) "A plain name."
+        Send AssertSAreEqual "DSN=SalesDSN" (DSNLoginServer(hoDriver, "SalesDSN")) "A name with DSN in it."
+        Send AssertSAreEqual "DSN=Sales" (DSNLoginServer(hoDriver, "DSN=Sales")) "It is there already."
+        Send AssertSAreEqual "FILEDSN=c:\x\sales.dsn" (DSNLoginServer(hoDriver, "c:\x\sales.dsn")) "A file data source."
+        Send AssertSAreEqual "FILEDSN=c:\x\sales.dsn" (DSNLoginServer(hoDriver, "FILEDSN=c:\x\sales.dsn")) "It is there already."
+        Send Destroy of hoDriver
+    End_Procedure
 End_Object

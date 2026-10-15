@@ -61,7 +61,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         String sCreateDatabaseKeyWord sSelectFromWhereName sCollation sCollateKeyWord
         Handle hConnection hStmt hoSQLManager
         Integer iFetchResult iDbType
-        Boolean bOK bExists
+        Boolean bOK bExists bClosed
 
         Get piDbType to iDbType
         If (iDbType <> EN_DbTypeMSSQL and iDbType <> EN_DbTypeDB2 and iDbType <> EN_DbTypeMySQL and iDbType <> EN_DbTypePostgre) Begin
@@ -103,7 +103,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get SqlOpen of hConnection to hStmt
 
         If (hStmt = 0) Begin
-            Send SqlDisconnect of hoSQLManager
+            Send SqlDisconnect of hConnection
             Error DFERR_PROGRAM CS_DUF_ConnectError
             Function_Return False
         End
@@ -121,6 +121,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Get SqlFetch of hStmt to iFetchResult
                 Send SqlClose of hStmt
                 Send SqlDisconnect of hConnection
+                Move True to bClosed
                 // If database already exists we're out of here!
                 // Note that we return True as this is not an error.
                 If (iFetchResult > 0) Begin
@@ -157,6 +158,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Case Else
                 Error DFERR_PROGRAM "Unsupported database type"
         Case End
+        // The other branches leave the statement and the connection open.
+        If (bClosed = False) Begin
+            Send SqlClose of hStmt
+            Send SqlDisconnect of hConnection
+        End
 
         If (Err = False) Begin
             Send LogError ("The Database:" * String(sDatabase) * "was created successfully for driver:" * String(sDriverID)) False
@@ -400,27 +406,12 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get psDriverID to sDriverID
         Get piDbType   to iDbType
 
-        Get phoSQLManager to hoSQLManager
         Get psConnectionID     to sConnectionID
         Get psConnectionString to sConnectionString
         Move 0 to LastErr
 
-        Send Ignore_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
-        Get SqlConnect of hoSQLManager sDriverID sConnectionString to hConnection
-        Send Trap_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
-        If (LastErr = CLIERR_LOGIN_UNSUCCESSFUL) Begin
-            Error DFERR_PROGRAM ("Login failed to the database server. The following connect string was used:\n" + SQLConnectionStringMasked(sConnectionString))
-            Function_Return False
-        End
-
-        Get SqlOpen of hConnection to hStmt
-
-        If (hStmt = 0) Begin
-            Send SqlDisconnect of hoSQLManager
-            Error DFERR_PROGRAM CS_DUF_ConnectError
-            Function_Return False
-        End
-
+        // (A connection and a statement were opened here, never used and never closed - a server connection left
+        // behind on the database that is then put into single-user mode. The queries below make their own.)
         // Check if collation already exists
         Get SqlDatabaseCollationQuery sDatabase False to sSQLCollationCheck
         // If the current collate is the same as the new; do nothing.

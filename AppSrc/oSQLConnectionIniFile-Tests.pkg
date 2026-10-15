@@ -213,5 +213,29 @@ Object oSQLConnectionIniFile_Tests is a cTestFixture
         Send Destroy of ho
         Send AssertSAreEqual "" sKey "A file that is not there gives no key."
     End_Procedure
+    // The Encrypt option of an MS SQL connection comes back from the ini file as it was saved. (It was written as
+    // a number and read as a word, so after one save it was unknown, and the connection string got "Encrypt=;".)
+    { Published=True }
+    Procedure Test_The_Encrypt_Option_Comes_Back
+        Handle ho
+        tSQLConnection[] aWritten aRead
+        Boolean bOK
 
+        Move True              to aWritten[0].bEnabled
+        Move "DUFTestConn"     to aWritten[0].sConnectionID
+        Move MSSQLDRV_ID       to aWritten[0].sDriverID
+        Move "MyServer"        to aWritten[0].sServer
+        Move "MyDatabase"      to aWritten[0].sDatabase
+        Move True              to aWritten[0].bTrusted
+        Move eMandatory        to aWritten[0].eEncryptOption
+        Get IniFileIn "A" to ho
+        Get WriteIniFileConnections of ho aWritten to bOK
+        Get ReadIniFileConnections of ho to aRead
+        EraseFile (TestWorkspace(Self, "A") + "Programs\" + psIniFileName(ho))
+        Send Destroy of ho
+        Send AssertIAreEqual 1 (SizeOfArray(aRead)) "The connection is read back."
+        If (SizeOfArray(aRead) = 1) Begin
+            Send AssertIAreEqual eMandatory aRead[0].eEncryptOption "Its Encrypt option is Mandatory again."
+        End
+    End_Procedure
 End_Object

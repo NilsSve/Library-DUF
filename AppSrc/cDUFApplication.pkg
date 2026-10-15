@@ -152,7 +152,7 @@ Class cDUFApplication is a cRDCApplication
         // Note: We delete all cache files (*.cch) before attempting to open any
         // tables as a precausion, in case a table has been changed at the SQL back-end,
         // and then the .cch file will be out-of-sync with the SQL table.
-        Get vDeleteFile (sDataPath + "*.cch") to iRetval
+        Get vDeleteFile (sDataPath + "\*.cch") to iRetval
 
         If (ghoDbUpdateFunctionLibrary <> 0) Begin
             // As we might be needed to show a login dialog, we need to temporarily
@@ -168,7 +168,9 @@ Class cDUFApplication is a cRDCApplication
         Send Cursor_Ready of Cursor_Control
         // Try to make a database connection by reading DUF's SQLConnections.ini file
         Move CS_SQLIniFileName to sSQLConnectionsIniName
-        Get vFilePathExists (sHome + "Programs\" + sSQLConnectionsIniName) to bExists
+        // The Programs folder of the chosen workspace. (sPath was never set: the ini file was looked for in "\".)
+        Move (sHome + "Programs\") to sPath
+        Get vFilePathExists (sPath + sSQLConnectionsIniName) to bExists
         If (bExists = True) Begin
             Set pbDFConnId    of ghoSQLConnectionHandler to False
             Set psIniFilePath of ghoSQLConnectionHandler to sPath

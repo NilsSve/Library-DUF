@@ -1436,12 +1436,23 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
         Function_Return bIgnoreDriverUcaseSupport 
     End_Function
 
+    // The connection handler takes one tSQLConnection. (Its eight values were passed to a procedure that takes two.)
     Procedure CreateSQLConnection String sDriverID String sConnectionID String sServer String sDatabase Boolean bTrusted String sUserID String sPassword Boolean bSilent
+        tSQLConnection SQLConnection
+
         If (ghoSQLConnectionHandler = 0) Begin
             Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
             Procedure_Return
         End
-        Send CreateSQLConnection of ghoSQLConnectionHandler sDriverID sConnectionID sServer sDatabase bTrusted sUserID sPassword bSilent
+        Move sDriverID     to SQLConnection.sDriverID
+        Move sConnectionID to SQLConnection.sConnectionID
+        Move sServer       to SQLConnection.sServer
+        Move sDatabase     to SQLConnection.sDatabase
+        Move bTrusted      to SQLConnection.bTrusted
+        Move sUserID       to SQLConnection.sUserID
+        Move sPassword     to SQLConnection.sPassword
+        Move bSilent       to SQLConnection.bSilentLogin
+        Send CreateSQLConnection of ghoSQLConnectionHandler SQLConnection True
     End_Procedure
 
     Function RedirectConnection String sOldConnection String sNewConnection Returns Integer
@@ -1451,7 +1462,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
             Function_Return 2
         End
 
-        Get RedirectConnection of ghoSQLConnectionHandler to iRetval
+        Get RedirectConnection of ghoSQLConnectionHandler sOldConnection sNewConnection to iRetval
         Function_Return iRetval
     End_Function
 

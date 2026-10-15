@@ -118,7 +118,10 @@ Class cDbUpdateGenericDatabaseDriver is a cObject
             Get SQLClientVersionInteger MSSQLDRV_ID to iClientVersion
             If (iClientVersion >= 18) Begin                
                 Get EncryptOptionToText SQLConnection.eEncryptOption to sOptions
-                Move (CS_SQLIniEncrypt + "=" + sOptions + ";") to sOptions
+                // An option that is not known is left to the driver. (It became "Encrypt=;".)
+                If (sOptions <> "") Begin
+                    Move (CS_SQLIniEncrypt + "=" + sOptions + ";") to sOptions
+                End
                 If (SQLConnection.sServer = "" and SQLConnection.eEncryptOption = 0) Begin
                     Append sOptions (CS_SQLIniTrustServerCertificate + "=yes")
                 End 
@@ -192,23 +195,12 @@ Class cDbUpdateGenericDatabaseDriver is a cObject
                 Case Break
 
             Case (sDriverID = DATAFLEX_ID)    // Dummy stub.
-                Break
+                Case Break
         Case End
 
         Get ParseKeyWord sConnectionString (Uppercase(CS_SQLConnectionIDText))  to sConnectionID
 
-        // bSilent?
-        Move (Pos(",0", sConnectionString))                                     to iPos
-        If (iPos = 0) Begin
-            Move (Pos(",1", sConnectionString))                                 to iPos
-        End
-        If (iPos = 0) Begin
-            Move "0"                                                            to sValue
-        End
-        Else Begin
-            Move (Mid(sConnectionString, 1, (iPos +1)))                         to sValue
-        End
-        Move (If(sValue = 1, True, False))                                      to bSilent
+        Get SilentLoginFlag sConnectionString                                   to bSilent
 
         Move (Trim(sDriverID))                                                  to SQLConnection.sDriverID
         Move (Trim(sConnectionID))                                              to SQLConnection.sConnectionID
@@ -288,19 +280,56 @@ Class cDbUpdateGenericDatabaseDriver is a cObject
         Function_Return sEncryptionWord
     End_Function
 
+    // The option for its word, in any case, or for its number - an older save wrote the number into the ini file.
+    // -1 when it is not known.
     Function EncryptOptionFromText String sEncryptOption Returns Integer
-        Integer eOption
-
-        If (sEncryptOption = CS_SQLIniEncryptOptional) Begin
+        Move (Uppercase(Trim(sEncryptOption))) to sEncryptOption
+        If (sEncryptOption = Uppercase(CS_SQLIniEncryptOptional) or sEncryptOption = String(eOptional)) Begin
             Function_Return eOptional
         End
-        If (sEncryptOption = CS_SQLIniEncryptMandatory) Begin
+        If (sEncryptOption = Uppercase(CS_SQLIniEncryptMandatory) or sEncryptOption = String(eMandatory)) Begin
             Function_Return eMandatory
         End
-        Else If (sEncryptOption = CS_SQLIniEncryptStrictShort or sEncryptOption = CS_SQLIniEncryptStrictLong) Begin
+        If (sEncryptOption = Uppercase(CS_SQLIniEncryptStrictShort) or sEncryptOption = Uppercase(CS_SQLIniEncryptStrictLong) or sEncryptOption = String(eStrict)) Begin
             Function_Return eStrict
         End
         Function_Return -1 // Unknown
+    End_Function
+
+    // The silent-login flag of a driver connection string: ", 1" after its last ";" ("SERVER=x;DATABASE=y;, 1").
+    // (Any ",0" or ",1" in the string was taken for it - a port such as SERVER=host,1433 too - and ", 1" with a
+    // blank was not.)
+    Function SilentLoginFlag String sConnectionString Returns Boolean
+        Integer iPos iLast
+        String sTail
+
+        Move 0 to iLast
+        For iPos from 1 to (Length(sConnectionString))
+            If (Mid(sConnectionString, 1, iPos) = ";") Begin
+                Move iPos to iLast
+            End
+        Loop
+        Move (Trim(Right(sConnectionString, (Length(sConnectionString) - iLast)))) to sTail
+        If (Left(sTail, 1) <> ",") Begin
+            Function_Return False
+        End
+        Function_Return (Trim(Right(sTail, (Length(sTail) - 1))) = "1")
+    End_Function
+
+    // The server of an ODBC or DB2 login: a data source name with "DSN=" in front, a file data source (.dsn) with
+    // "FILEDSN=" - unless the name starts with it already. (A name that merely contained "DSN", such as SalesDSN,
+    // was taken for one that had it.)
+    Function DSNLoginServer String sServer Returns String
+        String sUpper
+
+        Move (Uppercase(Trim(sServer))) to sUpper
+        If (Left(sUpper, Length(CS_SQLIniDSNKeyword) + 1) = (CS_SQLIniDSNKeyword + "=") or Left(sUpper, Length(CS_SQLIniFileDSNKeyword) + 1) = (CS_SQLIniFileDSNKeyword + "=")) Begin
+            Function_Return sServer
+        End
+        If (Right(sUpper, 4) = ("." + CS_SQLIniDSNKeyword)) Begin
+            Function_Return (CS_SQLIniFileDSNKeyword + "=" + sServer)
+        End
+        Function_Return (CS_SQLIniDSNKeyword + "=" + sServer)
     End_Function
 
     // ToDo: NOT FINISHED!
@@ -441,12 +470,7 @@ Class cDbUpdateODBCDriver is a cDbUpdateGenericDatabaseDriver
         End
         Move 0 to LastErr  // Do NOT use the Err flag, it will be set true by the login command although it is successful.
         If (SQLConnection.bTrusted = False) Begin
-            If (Uppercase(SQLConnection.sServer) contains ("." + String(CS_SQLIniDSNKeyword))) Begin
-                Move (CS_SQLIniFileDSNKeyword + "=" + SQLConnection.sServer) to SQLConnection.sServer
-            End
-            Else If (not(Uppercase(SQLConnection.sServer) contains CS_SQLIniDSNKeyword)) Begin
-                Move (CS_SQLIniDSNKeyword + "=" + SQLConnection.sServer) to SQLConnection.sServer
-            End
+            Get DSNLoginServer SQLConnection.sServer to SQLConnection.sServer
             Login SQLConnection.sServer SQLConnection.sUserID SQLConnection.sPassword SQLConnection.sDriverID
         End
         Else Begin
@@ -465,9 +489,7 @@ Class cDbUpdateDB2Driver is a cDbUpdateGenericDatabaseDriver
 
         Move False to Err
         Get psDriverID to sDriverID
-        If (not(Uppercase(SQLConnection.sServer) contains CS_SQLIniDSNKeyword)) Begin
-            Move (CS_SQLIniDSNKeyword + "=" + SQLConnection.sServer) to SQLConnection.sServer
-        End
+        Get DSNLoginServer SQLConnection.sServer to SQLConnection.sServer
         Login SQLConnection.sServer SQLConnection.sUserID SQLConnection.sPassword sDriverID
 
         Move (not(Err)) to bLoginSuccessful
@@ -520,6 +542,8 @@ Function CreateDatabaseDriverObject Global String sDriverID Returns Handle
             Move (RefClass(cDbUpdateDataFlexDriver)) to hcDriverClass
             Move "oDbUpdateDataFlexDriver" to sObjectName
             Move DATAFLEX_ID to sDriverID
+            // (Without it the branch ran into Case Else, and no DataFlex driver object was made.)
+            Case Break
         Case Else
         Function_Return 0
     Case End

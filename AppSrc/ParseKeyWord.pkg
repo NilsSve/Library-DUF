@@ -2,31 +2,61 @@
     Define CS_SQLConnectionIDText       for "DFConnectionId"
 #ENDIF
 
+// The value of a keyword in a connection string: ParseKeyWord "SERVER=x;PWD=ab=cd" "PWD=" is "ab=cd". The keyword
+// counts at the start of the string or after a ";" or "," (blanks may stand between) - "DSN=" is not the end of
+// "FILEDSN=". A keyword passed without its "=" (CS_SQLConnectionIDText, CS_SQLIniEncrypt) gets the "=" taken off
+// the value. The value ends at the next ";" - at the next "," for the connection id - and the silent-login flag
+// of a driver string (", 0" or ", 1" at the very end) is no part of it. (The keyword was found anywhere, the first
+// "=" of every value was taken out, and a last value with a comma lost a character.)
 Function ParseKeyWord String sConnect String sKeyWord Returns String
-    Integer iStart iEnd
-    String sRetval
+    Integer iStart iEnd iPos iComma
+    String sRetval sUpper sKey sFlag
 
     Move (Trim(sConnect)) to sConnect
-    Move (Pos(Uppercase(sKeyWord), Uppercase(sConnect)))  to iStart
+    While (sConnect contains "; ")
+        Move (Replaces("; ", sConnect, ";")) to sConnect
+    Loop
+    While (sConnect contains ", ")
+        Move (Replaces(", ", sConnect, ",")) to sConnect
+    Loop
+    Move (Uppercase(sKeyWord)) to sKey
+    // One ";" in front, so that the first keyword is found as the others are.
+    Move (Uppercase(";" + sConnect)) to sUpper
+    Move (Pos((";" + sKey), sUpper)) to iStart
+    Move (Pos(("," + sKey), sUpper)) to iComma
+    If (iComma <> 0 and (iStart = 0 or iComma < iStart)) Begin
+        Move iComma to iStart
+    End
     If (iStart = 0) Begin
         Function_Return ""
     End
-    Move (Left(sConnect, (iStart -1 + Length(sKeyWord)))) to sRetval
-    Move (Replace(sRetval, sConnect, "")) to sRetval
-    If (sKeyWord = Uppercase(CS_SQLConnectionIDText)) Begin
-        Move (Pos(",", sRetval))          to iEnd
+    Move (Right(sConnect, (Length(sConnect) - (iStart - 1) - Length(sKey)))) to sRetval
+
+    If (sKey = Uppercase(CS_SQLConnectionIDText)) Begin
+        Move (Pos(",", sRetval)) to iEnd
     End
     Else Begin
-        Move (Pos(";", sRetval))          to iEnd
+        Move (Pos(";", sRetval)) to iEnd
     End
+    // The last part: a comma followed by 0 or 1 only is the silent-login flag.
     If (iEnd = 0 and (sRetval contains ",")) Begin
-        Move (Pos(",", sRetval))          to iEnd
-        Decrement iEnd
+        For iPos from 1 to (Length(sRetval))
+            If (Mid(sRetval, 1, iPos) = ",") Begin
+                Move iPos to iEnd
+            End
+        Loop
+        Move (Trim(Right(sRetval, (Length(sRetval) - iEnd)))) to sFlag
+        If (sFlag <> "0" and sFlag <> "1") Begin
+            Move 0 to iEnd
+        End
     End
     If (iEnd <> 0) Begin
-        Move (Left(sRetval, (iEnd -1)))   to sRetval
+        Move (Left(sRetval, (iEnd - 1))) to sRetval
     End
-    Move (Replace("=", sRetval, ""))      to sRetval
+    Move (Trim(sRetval)) to sRetval
+    If (Right(sKey, 1) <> "=" and Left(sRetval, 1) = "=") Begin
+        Move (Right(sRetval, (Length(sRetval) - 1))) to sRetval
+    End
 
     Function_Return (Trim(sRetval))
 End_Function

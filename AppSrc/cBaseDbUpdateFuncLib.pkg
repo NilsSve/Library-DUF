@@ -1270,7 +1270,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         Get SqlOpen of hoSQLConnect to hStmt
 
         If (hStmt = 0) Begin
-            Send SqlDisconnect of hoSQLManager
+            Send SqlDisconnect of hoSQLConnect
             Error DFERR_PROGRAM CS_DUF_ConnectError
             Function_Return aCollations
         End
@@ -1875,6 +1875,12 @@ Class cBaseDbUpdateFuncLib is a cObject
         If (SQLConnection.sConnectionString = "") Begin
             Function_Return asSQLTables
         End
+        // The list is made once. (The cache was looked at after the login error was switched off, and that was
+        // not switched on again: failed logins stayed silent for the rest of the program.)
+        Get pasSQLDataTables to asSQLTables
+        If (SizeOfArray(asSQLTables) <> 0) Begin
+            Function_Return asSQLTables
+        End
 
         Move SQLConnection.sSchema      to sDefSchema
         Move (Uppercase(sDefSchema))    to sDefSchema
@@ -1897,11 +1903,6 @@ Class cBaseDbUpdateFuncLib is a cObject
 //                End
 //            End
 //        End
-
-        Get pasSQLDataTables to asSQLTables
-        If (SizeOfArray(asSQLTables) <> 0) Begin
-            Function_Return asSQLTables
-        End
 
         Get EnumerateTables of hoSQLHandler sConnectionString to iSize
         Move False to Err
