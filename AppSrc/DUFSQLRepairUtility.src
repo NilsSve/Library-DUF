@@ -19,18 +19,14 @@ Object oApplication is a cDUFApplication
     Property Handle phoFilelistFixerView
     Property String psFilelistFrom
     
-    #IF (!@ > 182)
     Object oConnection is a cConnection
         Use LoginEncryption.pkg
         Use DatabaseLoginDialog.dg
     End_Object  
-    #ENDIF
 
     Procedure OnCreate
-        Integer eOpened iRetval
-        Handle hoCmdLine hoIniFile
-        String sArgument sPath sWsFile sFileList
-        Boolean bExists
+        Handle hoCmdLine
+        String sArgument
 
         // cDUFApplication takes a .sws argument - what the Studio passes for "Add to Studio". (It was never asked.)
         Forward Send OnCreate
@@ -162,8 +158,6 @@ Object oMain is a Panel
             End_Object
 
             Object oCompareToolItem is a cCJMenuItem
-//                Set peControlStyle to xtpButtonIconAndCaption
-//                Set psCaption to "&Connection" 
                 Set psToolTip to "Show SQL Settings dialog"
                 Set psImage to "SQLSettings.ico"
                 Set piShortCutKey to xtpKey_Alt VK_S
@@ -237,7 +231,7 @@ Object oMain is a Panel
 
             Object oKoFi_MenuItem is a cCJMenuItem
                 Set psToolTip to "Coffee time!"
-                Set psDescription to "Bye me a coffee, to support me"
+                Set psDescription to "Buy me a coffee, to support me"
                 Set psImage to "Ko-fi.ico"
                 Set pbControlBeginGroup to True
                 Procedure OnExecute Variant vCommandBarControl
@@ -342,7 +336,7 @@ End_Object
 //  - If you get a compile error: "Can't include resource ..\HELP\ABOUT.RTF",
 //    you need to create a "About.rtf" file in the Help folder.
 //    Note that it can be empty, but it needs to exist for the About dialog.
-//    Or you can remark line 1302 in DfAbout.pkg = "Define ShouldEmbeddAboutHelpFile for 0"
+//    Or you can remark the line "Define ShouldEmbeddAboutHelpFile for 0" in DfAbout.pkg
 //  - If you get a compile error: "Can't include resource FilelistBackupFile.cfg",
 //    you need to copy the Filelist.cfg in the Data folder to "FilelistBackupFile.cfg".
 Start_UI

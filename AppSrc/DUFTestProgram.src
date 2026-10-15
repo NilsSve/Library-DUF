@@ -1,6 +1,4 @@
-#IF (!@ > 190)
-    CompilerLevelWarning All On
-#ENDIF
+CompilerLevelWarning All On
 Use DFAllEnt.pkg
 Use cCJStandardCommandBarSystem.pkg
 Use cCJCommandBarSystem.pkg 
@@ -63,67 +61,21 @@ Object oMain is a Panel
 
     Object oCommandBarSystem is a cCJCommandBarSystem
         Set pbTimerUpdate to True
-        #IF (!@ >= 190)
-            Set pbAutoResizeIcons to True
-            Set pbTabbedWorkspaces to True // Switch on for DF 19 to see the new tabbed-view look.
-            #IF (!@ > 240)
-                Set peVisualTheme to xtpThemeNativeWindows11 
-            #ELSE
-                Set peVisualTheme to xtpThemeOffice2016Word
-            #ENDIF
-            Set pbLargeIcons to True
+        Set pbAutoResizeIcons to True
+        Set pbTabbedWorkspaces to True // Switch on for DF 19 to see the new tabbed-view look.
+        #IF (!@ > 240)
+            Set peVisualTheme to xtpThemeNativeWindows11 
+        #ELSE
+            Set peVisualTheme to xtpThemeOffice2016Word
         #ENDIF
+        Set pbLargeIcons to True
 
         Procedure OnCreateCommandBars
             Handle hoOptions
             Forward Send OnCreateCommandBars
-            #IF (!@ < 190)
-                Send DisplayTabWorkspace
-            #ELSE
-                Get OptionsObject to hoOptions
-                Send ComSetIconSize of hoOptions False 32 32  // Set icon size for Toolbar buttons.
-            #ENDIF     
-        End_Procedure
-
-    #IF (!@ < 190)
-        Procedure DisplayTabWorkspace
-            Variant vTab vPaintManager
-            Handle hoTab hoPaintManager  hoOptions
-
-            If (not(IsComObjectCreated(Self))) Begin
-                Procedure_Return
-            End
-
             Get OptionsObject to hoOptions
-
-            // Create the tab workspace object. It will get created for the Client_Area so
-            // each view will be displayd on a separate tab-page (instead of the standard VDF MDI-interface)
-            Get Create (RefClass(cCJTabWorkspace)) to hoTab
-            Get ComShowTabWorkspace True to vTab
-            // Connect the CodeJock side to the DataFlex proxy object.
-            Set pvComObject  of hoTab to vTab
-
-            Set ComFlags of hoTab to xtpWorkspaceShowCloseTab
-            Send ComEnableGroups of hoTab
-
-            // Create a paint manager object that is needed to set some
-            // of the tab-workspace properties.
-            Get Create (RefClass(cCJTabPaintManager)) to hoPaintManager
-            Get ComPaintManager of hoTab          to vPaintManager
-            Set pvComObject     of hoPaintManager to vPaintManager
-            // This will truncate the middle part of long items
-            Set ComDrawTextPathEllipsis of hoPaintManager to True
-            Set ComLayout               of hoPaintManager to xtpTabLayoutMultiRow
-
-            Get Create (RefClass(cCJPaintManager)) to hoPaintManager
-            Get ComPaintManager of hoPaintManager  to vPaintManager
-            Set pvComObject     of hoPaintManager  to vPaintManager
-            Set ComAutoResizeIcons of hoPaintManager to True
-            Send Destroy of hoPaintManager
-            Send ComRecalcLayout
-            Send Destroy of hoTab
+            Send ComSetIconSize of hoOptions False 32 32  // Set icon size for Toolbar buttons.
         End_Procedure
-    #ENDIF
 
     Procedure OnCreateTabbedWorkspace Handle hoTabWorkspace Handle hoTabPaintManager
         Set ComShowIcons of hoTabPaintManager to True
@@ -330,7 +282,7 @@ Object oMain is a Panel
 
             Object oKoFi_MenuItem is a cCJMenuItem
                 Set psToolTip to "Coffee time!"
-                Set psDescription to "Bye me a coffee, to support me"
+                Set psDescription to "Buy me a coffee, to support me"
                 Set psImage to "Ko-fi.ico"
                 Set pbControlBeginGroup to True
                 Procedure OnExecute Variant vCommandBarControl
@@ -356,7 +308,7 @@ Object oMain is a Panel
 
                 Procedure OnExecute Variant vCommandBarControl
                     Forward Send OnExecute vCommandBarControl
-                    Set psHelpFile of ghoApplication to "DataFlex.chm"
+                    Set psHelpFile of ghoApplication to "Developer5.chm"
                     Send ShowProgramHelp
                 End_Procedure
 
@@ -364,7 +316,7 @@ Object oMain is a Panel
                     Set psCaption to "Local HTML Help"
                     Set psImage to "ActionHelp.ico"
                     Procedure OnExecute Variant vCommandBarControl
-                        Set psHelpFile of ghoApplication to "DataFlex.chm"
+                        Set psHelpFile of ghoApplication to "Developer5.chm"
                         Send ShowProgramHelp
                     End_Procedure
                 End_Object
@@ -373,7 +325,7 @@ Object oMain is a Panel
                     Set psCaption to "Internet Online HTML Help"
                     Set psImage to "ActionHelp.ico"
                     Procedure OnExecute Variant vCommandBarControl
-                        Send vShellExecute "open" "http://www.rdctools.com/HTMLHelp/Developer5.htm" "" ""
+                        Send vShellExecute "open" "http://www.rdctools.com/HTMLHelpDUF/Developer5.htm" "" ""
                     End_Procedure
 
                 End_Object
@@ -386,21 +338,6 @@ Object oMain is a Panel
                 Set pbControlBeginGroup to True
             End_Object
         End_Object
-
-//        Object oSpacerBar is a cCJToolbar
-//            Set pbDockNextTo to False
-//            Set pbShowExpandButton to False
-//            Set pbGripper to False
-//            Set peStretched to stStretch
-//            Set pbCustomizable to False
-//            Set pbCloseable to False
-//            Set pbEnableDocking to False
-//            Set pbHideWrap to True
-//
-//            Object oFiller is a cCJMenuItem
-//            End_Object
-//
-//        End_Object
 
         Object oStatusBar is a cCJStatusBar
 
@@ -419,8 +356,6 @@ Object oMain is a Panel
 
     Object oClientArea is a ClientArea
 
-//        Use Dd_debug.dg // This Provides access to dd debugger by pressing ctrl+d within any view. Good for debugging
-
         Use StdAbout.pkg
         Use DatabaseSelection.dg
         Use SQLDatabaseBackup.dg
@@ -433,8 +368,8 @@ Object oMain is a Panel
             Send DoAbout "" "" "" "Author: Nils Svedmyr" "TestTools.bmp" "E-mail: mailto:support@rdctools.com" "Web-site: www.rdctools.com" ("This tool was created with DataFlex" * String(C_DFVersion) * "from Data Access Worldwide. Please visit http://www.dataaccess.com for a free personal copy of DataFlex.")
         End_Procedure
 
-        On_Key Key_Ctrl+Key_Tab           Send Switch_Prior_View
-        On_Key Key_Ctrl+Key_Shift+Key_Tab Send Switch_Next_View
+        On_Key Key_Ctrl+Key_Tab           Send Switch_Next_View
+        On_Key Key_Ctrl+Key_Shift+Key_Tab Send Switch_Prior_View
         On_Key Key_Ctrl+Key_W             Send Close_Panel
     End_Object
 
@@ -451,7 +386,7 @@ End_Object
 //  - If you get a compile error: "Can't include resource ..\HELP\ABOUT.RTF",
 //    you need to create a "About.rtf" file in the Help folder.
 //    Note that it can be empty, but it needs to exist for the About dialog.
-//    Or you can remark line 1302 in DfAbout.pkg = "Define ShouldEmbeddAboutHelpFile for 0"
+//    Or you can remark the line "Define ShouldEmbeddAboutHelpFile for 0" in DfAbout.pkg
 //  - If you get a compile error: "Can't include resource FilelistBackupFile.cfg",
 //    you need to copy the Filelist.cfg in the Data folder to "FilelistBackupFile.cfg".
 Start_UI

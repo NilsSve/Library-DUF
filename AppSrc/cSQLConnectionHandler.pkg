@@ -182,8 +182,6 @@ Class cSQLConnectionHandler is a cObject
             Set_Attribute DF_DRIVER_IGNORE_UCASE_SUPPORT of iDriverID to (Private.pbIgnoreDriverUcaseSupport(Self))
         End
         
-        // ToDo: Testing!
-
         // Driver default values for various data types:
         Get_Attribute DF_DRIVER_DEFAULT_DEFAULT_ASCII of iDriverID      to sAttributeValue
         Set psDriverDefaultValueASCII                                   to sAttributeValue

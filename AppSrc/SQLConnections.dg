@@ -15,11 +15,6 @@ Object oSQLConnections is a ModalPanel
 
     Property tSQLConnection[] psTheData
 
-//    If (ghoDbUpdateFunctionLibrary = 0) Begin
-//        Object oDbUpateFunctionLibrary is a cDbUpdateFunctionLibrary
-//        End_Object
-//    End
-
     Object oSelListSQLConnections is a cCJGridPromptList
         Set Size to 90 377
         Set Location to 6 6
@@ -63,7 +58,7 @@ Object oSQLConnections is a ModalPanel
         Procedure Activating
             tDataSourceRow[] MyData
             Handle hoDataSource
-            Integer iCount iSize iPos
+            Integer iCount iSize
             String sDriverID sConnectionID sValue
             tSQLConnection[] sTheData
 

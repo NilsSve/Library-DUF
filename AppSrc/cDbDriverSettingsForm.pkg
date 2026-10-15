@@ -10,9 +10,7 @@
 //    2014-03-17  Module header created
 // The code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 // without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-// This is free software; you can redistribute it and/or modify it under the terms of the
-// GNU Lesser General Public License - see the "GNU Lesser General Public License.txt"
-// in the help folder for more details.
+// This is free software under the MIT License - see the LICENSE file of the repository.
 //
 //****************************************************************************
 Use Windows.pkg
@@ -76,12 +74,7 @@ Class cDbDriverSettingsForm is a Form
             // The result of the attribute, for the caller: reading the .int comment below clears Err. (So the
             // caller's test of Err never saw an attribute the driver does not support.)
             Move Err to bAttributeErr
-            If (sValue = "0") Begin
-                Move "0 (False)" to sValue
-            End
-            If (sValue = "1") Begin
-                Move "1 (True)"  to sValue
-            End
+            // The value as the driver gives it. (Every 0 and 1 got "(False)" / "(True)", counts and timeouts too.)
             Set Value to sValue
 
             Move (Replace("DF_DRIVER_", Uppercase(sLabel), "")) to sLabel
@@ -141,9 +134,7 @@ Class cDbDriverSettingsForm is a Form
         Loop
         Send Seq_Close_Channel iCh
 
-#IF (!@ > 190)
 CompilerWarnings Off
-#ENDIF
         // Replaces all double spaces with a single space character.
         // The Replaces function doesn't quite work for this.
         Repeat
@@ -152,9 +143,7 @@ CompilerWarnings Off
         
         Function_Return sRetval
     End_Function
-#IF (!@ > 190)
 CompilerWarnings On
-#ENDIF
 
     Function Propercase String sText Returns String 
         String[] sDelimiters

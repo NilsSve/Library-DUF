@@ -10,9 +10,6 @@ Object oSQLDatabaseBackup_dg is a ModalPanel
     Set Border_Style To Border_Thick
 
     Property Boolean pbOK False
-    Property String  psDatabase
-    Property String  psPath
-    Property String  psBackupName
 
     Object oDatabase_fm is a Form
         Set Size to 13 204
@@ -27,7 +24,6 @@ Object oSQLDatabaseBackup_dg is a ModalPanel
             String sValue
             Get psDatabase of ghoDbUpdateFunctionLibrary to sValue
             Set Value to sValue
-            Set psDatabase to sValue
             Forward Send Page iPageObject
         End_Procedure
 
@@ -51,12 +47,6 @@ Object oSQLDatabaseBackup_dg is a ModalPanel
             Move (sValue + "_" + String(DateGetYear(dtNow)) + Right("0" + String(DateGetMonth(dtNow)), 2) + Right("0" + String(DateGetDay(dtNow)), 2) + "_" + Right("0" + String(DateGetHour(dtNow)), 2) + Right("0" + String(DateGetMinute(dtNow)), 2)) to sValue
             Set Value to sValue
             Forward Send Page iPageObject
-        End_Procedure
-
-        Procedure OnChange
-            String sValue
-            Get Value to sValue
-            Set psBackupName to sValue
         End_Procedure
 
     End_Object
@@ -116,12 +106,6 @@ Object oSQLDatabaseBackup_dg is a ModalPanel
             End
         End_Procedure
 
-        Procedure OnChange
-            String sValue
-            Get Value to sValue
-            Set psPath to sValue
-        End_Procedure
-
     End_Object
 
     Object oOK_Btn is a Button
@@ -144,44 +128,6 @@ Object oSQLDatabaseBackup_dg is a ModalPanel
         Procedure OnClick
             Set pbOK to False
             Send Close_Panel
-        End_Procedure
-
-    End_Object
-
-    Object oButton1 is a Button
-        Set Size to 14 96
-        Set Location to 80 32
-        Set Label to "Enum table types"
-        Set Visible_State to False
-        
-        Procedure OnClick
-            String sDriverID
-            tSQLConnection SQLConnection
-            Get pSQLConnection of ghoDbUpdateFunctionLibrary to SQLConnection
-            Send ShowAllTablesAndColumns SQLConnection.sDriverID SQLConnection.sConnectionString
-        End_Procedure
-
-        Procedure ShowAllTablesAndColumns String sDriver String sLogin
-            Handle hoCLIHandler
-            Integer iNumTables iTableCount
-
-            Get Create U_cCLIHandler to hoCLIhandler
-            If (hoCLIHandler > 0) Begin
-                Set psDriverID of hoCLIHandler to sDriver
-                Get EnumerateTables of hoCLIHandler sLogin to iNumTables
-                For iTableCount from 1 to iNumTables
-                    Show (TableName(hoCLIHandler, iTableCount)) "; "
-                    Show (SchemaName(hoCLIHandler, iTableCount)) "; "
-                    Show (TableType(hoCLIHandler, iTableCount)) "; "
-                    Showln (TableComment(hoCLIHandler, iTableCount))
-//                    Get EnumerateColumns of hoCLIHandler sLogin (TableName(hoCLIHandler, iTableCount)) to iNumColumns
-//                    For iColumnCount from 1 to iNumColumns
-//                        Showln " " (ColumnName(hoCLIHandler, iColumnCount))
-//                    Loop
-                    Showln
-                Loop
-                Send Destroy of hoCLIHandler
-            End
         End_Procedure
 
     End_Object

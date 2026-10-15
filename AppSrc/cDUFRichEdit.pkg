@@ -38,7 +38,12 @@ Class cDUFRichEdit is a cRDCRichEditor
         Move (Pos(":", sLine)) to iPos 
         If (iPos <> 0) Begin
             Move (Mid(sLine, Length(sLine), iPos +1)) to sLine
-            Move (Pos(" ", sLine)) to iPos
+        End
+        // The name ends at the first blank, when there is one. (A line without one gave an empty name; a line without
+        // a colon kept its " (25)".)
+        Move (Trim(sLine)) to sLine
+        Move (Pos(" ", sLine)) to iPos
+        If (iPos <> 0) Begin
             Move (Left(sLine, iPos -1)) to sLine
         End
         If (not(sLine contains ".")) Begin

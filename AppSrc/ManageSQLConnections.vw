@@ -233,7 +233,7 @@ Object oSQLMaintainConnection is a dbView
                     
                     Get psIniFilePath of ghoSQLConnectionHandler to sPath
                     Get psIniFileName of ghoSQLConnectionHandler to sIniFileName
-                    Get vSelectSaveFile ".int" "Please enter a file name to save to" sPath sIniFileName to sFileName
+                    Get vSelectSaveFile "Ini files (*.ini)|*.ini" "Please enter a file name to save to" sPath sIniFileName to sFileName
                     If (sFileName <> "") Begin
                         Get ParseFolderName sFileName to sPath
                         Get ParseFileName   sFileName to sIniFileName
@@ -288,9 +288,7 @@ Object oSQLMaintainConnection is a dbView
             Get pTheData to TheData1
             Get phoDataSource to hoDataSource
             Get DataSource    of hoDataSource to TheData2
-            #IF (!@ > 180)
-                Move (not(IsSameArray(TheData1, TheData2))) to bShouldSave
-            #ENDIF
+            Move (not(IsSameArray(TheData1, TheData2))) to bShouldSave
 
             Function_Return bShouldSave
         End_Function
@@ -307,11 +305,12 @@ Object oSQLMaintainConnection is a dbView
             Function_Return (iSize > 0)
         End_Function
 
+        // Sent on every idle event (the toolbar's IsEnabled): it leaves the status row alone. (Its first statement
+        // blanked it, so a message was gone at once.)
         Procedure ChangeHeaderText
             Handle[] hoPanels
             String sFileName
 
-            Send ChangeStatusRowText ""
             Get IniFileName to sFileName
             // Not sure why, but if the oStatusPane1 was set to "Set piID to sbpIDIdlePane",
             // it wasn't always updated when this message was send. So instead change the
@@ -415,7 +414,6 @@ Object oSQLMaintainConnection is a dbView
             
             Move SQLConnection.eEncryptOption       to TheRow.sValue[piColumnId(oEncrypt_Col(Self))]
             Move SQLConnection.bTrustedCertificate  to TheRow.sValue[piColumnId(obTrustedCertificate_Col(Self))]
-//            Move SQLConnection.bDisabled            to TheRow.sValue[piColumnId(oDisabled_Col(Self))]
 
             Function_Return TheRow
         End_Function
@@ -446,7 +444,6 @@ Object oSQLMaintainConnection is a dbView
             Move TheRow.sValue[piColumnId(oSilentLogin_Col(Self))]          to SQLConnection.bSilentLogin
             Move TheRow.sValue[piColumnId(oEncrypt_Col(Self))]              to SQLConnection.eEncryptOption
             Move TheRow.sValue[piColumnId(obTrustedCertificate_Col(Self))]  to SQLConnection.bTrustedCertificate
-//            Move TheRow.sValue[piColumnId(oDisabled_Col(Self))]             to SQLConnection.bDisabled
 
             Function_Return SQLConnection
         End_Function
@@ -469,7 +466,7 @@ Object oSQLMaintainConnection is a dbView
         Function CurrentRowData Returns tDataSourceRow
             tDataSourceRow[] TheData
             tDataSourceRow TheRow
-            Handle ho hoDataSource
+            Handle hoDataSource
             Integer iRow
 
             Get phoDataSource  to hoDataSource
@@ -654,10 +651,6 @@ Object oSQLMaintainConnection is a dbView
             // testing to disable all connections, or if e.g. customer's connections has been tested,
             // that no longer are available locally.
             Get IsOneItemActive to bIsOneActive
-//            If (bIsOneActive = False) Begin
-//                Send Info_Box "Sorry, you need to set one connection as active before changes can be saved."
-//                Procedure_Return
-//            End
             If (bIsOneActive = False) Begin
                 Get YesNo_Box "Warning, no connection has been set to 'Enabled'. That means that the Database Framework will not read any information from here when initialized.\n\nAre you sure you want to continue to save without any connection Enabled?" to iRetval
                 If (iRetval = MBR_No) Begin
@@ -682,6 +675,8 @@ Object oSQLMaintainConnection is a dbView
             Get WriteIniFileConnections of ho SQLConnectionArray to bOK
             If (bOK = False) Begin
                 Send ChangeStatusRowText "Sorry, an error occured while saving the file and changes were not saved."
+                // A box as well: the row text could be gone before it was read.
+                Send Stop_Box "Sorry, an error occured while saving the file and changes were not saved."
                 Procedure_Return
             End
 

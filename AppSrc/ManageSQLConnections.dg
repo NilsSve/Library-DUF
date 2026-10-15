@@ -90,7 +90,6 @@ Object oSQLMaintainConnections_dg is a ModalPanel
         Object oODBC_rgp is a RadioGroup
             Set Location to 38 24
             Set Size to 32 173
-//            Set psToolTip to "Only available if the ODBC_DRV has been selected. Depending on the radio button that is selected the 'Server/DSN' selection list shows different values."
             Set peAnchors to anTopLeftRight
             Set Label to "ODBC Source Type"
 
@@ -240,10 +239,13 @@ Object oSQLMaintainConnections_dg is a ModalPanel
                 // The selection list will show the ODBC DataSource name + a comma (,) + a description.
                 // We need to remove those parts from the comma and to the end of string.
                 If (sDriverID = ODBC_DRV_ID) Begin
+                    // Only when there is a comma. (A name without one, or a cancelled list, emptied the field.)
                     Get Value to sValue
                     Move (Pos(",", sValue)) to iPos
-                    Move (Left(sValue, (iPos - 1))) to sValue
-                    Set Value to sValue
+                    If (iPos <> 0) Begin
+                        Move (Left(sValue, (iPos - 1))) to sValue
+                        Set Value to sValue
+                    End
                 End
             End_Procedure
 
@@ -300,7 +302,6 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
             Procedure DbTypeUpdate Integer iDbType String sDriverID
                 String sLabel
-                Handle ho
 
                 Case Begin
                     Case (iDbType = EN_dbTypeDB2)
@@ -512,7 +513,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
                 If (iDriverID = 0) Begin
                     Set TextColor of oLoginInfo_tb to clRed
                     Set Value of oLoginInfo_tb to CS_LoginFailed
-                    Send Info_Box ("The driver" * sDriverID * "could not be loaded. Is the driver installed? And equally imporant; Is the corresponding database server or client software installed?")
+                    Send Info_Box ("The driver" * sDriverID * "could not be loaded. Is the driver installed? And equally important; Is the corresponding database server or client software installed?")
                     // The program's error object and the cursor come back. (The button stayed the error object.)
                     Move hoErrorObj to Error_Object_Id
                     Send Cursor_Ready of Cursor_Control
@@ -681,7 +682,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
             Set peAnchors to anTopRight
         
             Procedure OnClick                                                              
-                String sConnectionString sError sDriverID sLoginText sDatabaseName
+                String sConnectionString sError sDriverID sDatabaseName
                 
                 Get LoginString (&sError) to sConnectionString
                 If (sError <> "") Begin
@@ -991,26 +992,6 @@ Object oSQLMaintainConnections_dg is a ModalPanel
         End_Object
 
 // This used to work, but it seems that the Ssms.exe is no longer part of Windows "global pathing (in DOS)".
-//        Object oStartSQLManager_btn is a cRDCButton
-//            Set Size to 13 78
-//            Set Location to 22 210
-//            Set Label to "SQL Manager"
-//            Set pbAutoEnable to True  
-//            Set psImage to "SSMS.ico" 
-//            Set psToolTip to "Start Microsoft SQL Server Management Studio"
-//            Set peAnchors to anTopRight
-//        
-//            Procedure OnClick
-//                Runprogram Shell Background "Ssms.exe"    
-//            End_Procedure  
-//            
-//            Function IsEnabled Returns Boolean
-//                String sDbType
-//                Get Value of oDbType_cf to sDbType
-//                Function_Return (sDbType = CS_dbTypeMSSQL)
-//            End_Function
-//        
-//        End_Object
 
         Object oDriverID_cf is a cSQLComboForm
             Set Size to 13 115
@@ -1075,7 +1056,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
             Set peAnchors to anTopRight
 
             Procedure OnClick
-                String sDriver sPath 
+                String sDriver
                 
                 Get Value of oDriverID_cf to sDriver
                 Send PopupDriverSettings sDriver 
@@ -1159,9 +1140,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
         // to be able to compare properly.
         Move "" to asConnectionData2[7]
 
-        #IF (!@ > 180)
-            Move (IsSameArray(asConnectionData, asConnectionData2)) to bState
-        #ENDIF
+        Move (IsSameArray(asConnectionData, asConnectionData2)) to bState
         Function_Return (bState = False)
     End_Function
 
@@ -1232,8 +1211,6 @@ Object oSQLMaintainConnections_dg is a ModalPanel
         Move SQLConnection.bTrustedCertificate  to TheRow.sValue[17] 
         // The unmasked password:
         Move SQLConnection.sPassword            to TheRow.sValue[18]
-//        Move SQLConnection.bDisabled            to TheRow.sValue[17]
-//        Move SQLConnection.iDriverIndex         to TheRow.sValue[18]
 
         Function_Return TheRow
     End_Function
@@ -1259,7 +1236,6 @@ Object oSQLMaintainConnections_dg is a ModalPanel
                 If (iRetval = MBR_Yes) Begin
                     Set psUncryptedPw to SQLConnection.sPassword
                     Move "" to SQLConnection.sPassword 
-//                    Set Enabled_State of oCheckLogin_btn to False
                 End
                 Else Begin
                     // The dialog does not open. (Stop_UI was sent from here, a conversion function.)

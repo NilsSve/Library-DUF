@@ -97,7 +97,7 @@ Object oSQLFunctions_vw is a dbView
                             Send Info_Box "The backup of the database was successful!"
                         End
                         Else Begin
-                            Send Info_Box "The database was not backup up"
+                            Send Info_Box "The database was not backed up"
                         End
                     End_Procedure
 
@@ -190,7 +190,8 @@ Object oSQLFunctions_vw is a dbView
                         For iCount from 0 to iSize
                             Send Combo_Add_Item sColumnsArray[iCount]
                         Loop
-                        If (iSize > 1) Begin
+                        // Two columns or more (iSize is the count minus one).
+                        If (iSize > 0) Begin
                             Set Current_Item to 1
                         End
                     End_Procedure
@@ -335,7 +336,8 @@ Object oSQLFunctions_vw is a dbView
                         For iCount from 0 to iSize
                             Send Combo_Add_Item ColumnTypeArray[iCount].sSQLType
                         Loop
-                        If (iSize > 0) Begin
+                        // One type or more (iSize is the count minus one).
+                        If (iSize >= 0) Begin
                             Set Value to ColumnTypeArray[0].sSQLType
                         End
                     End_Procedure
@@ -431,22 +433,7 @@ Object oSQLFunctions_vw is a dbView
 
                 End_Object
 
-//                Object oTest_btn is a cRDCButtonDPI
-//                    Set Size to 13 92
-//                    Set Location to 177 298
-//                    Set Label to "Test SQL script button"
-//
-//                    Procedure OnClick
-//                        Boolean bOK
-//                        String sTableName sColumnName
-//
-//                        Get Value of oSQLTableName_cf      to sTableName
-//                        Get Value of oSQLAddColumnName_fm  to sColumnName
 ////                        Get SqlUtilDefaultConstraintsMSSQL of ghoDbUpdateFunctionLibrary sTableName sColumnName to bOK
-//
-//                    End_Procedure
-//
-//                End_Object
 
                 Object oSQLLength_sf is a SpinForm
                     Set Label to "Length:"
@@ -514,7 +501,8 @@ Object oSQLFunctions_vw is a dbView
                         For iCount from 0 to iSize
                             Showln "Tablename.FieldName = " SQLRelationArray[iCount].sFileName "." SQLRelationArray[iCount].sFieldName " Number: " SQLRelationArray[iCount].iFileNumber "." SQLRelationArray[iCount].iFieldNumber
                         Loop
-                        If (iSize < 1) Begin
+                        // iSize is the count minus one here. (With exactly one key it said none was found.)
+                        If (iSize < 0) Begin
                             Send Info_Box ("No SQL Foreign keys found for table:" * sTableName)
                         End
 

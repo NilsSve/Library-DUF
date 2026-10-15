@@ -1,6 +1,4 @@
-#IF (!@ > 190)
-    CompilerLevelWarning All On
-#ENDIF
+CompilerLevelWarning All On
 Use DFAllEnt.pkg
 Use cCJStandardCommandBarSystem.pkg
 Use cCJCommandBarSystem.pkg                      
@@ -46,7 +44,7 @@ Object oApplication is a cDUFApplication
     Procedure OnCreate
         Integer eOpened
         Handle hoCmdLine
-        String sArgument sPath sFileName sWsFile
+        String sArgument sPath sWsFile
         Integer iRetval
         Boolean bExists
 
@@ -92,18 +90,11 @@ Object oApplication is a cDUFApplication
         End
     End_Procedure  
     
-//    #IFDEF cConnection
     Object oConnection is a cConnection
         Use LoginEncryption.pkg
         Use DatabaseLoginDialog.dg
     End_Object
-//    #ENDIF
 
-End_Object
-
-Use cDbUpdateFunctionLibrary.pkg
-// Needs to be after the cSQLConnectionHandler Object
-Object oDbUpdateFunctionLibrary is a cDbUpdateFunctionLibrary
 End_Object
 
 Use cSQLConnectionHandler.pkg
@@ -144,6 +135,12 @@ Object oSQLConnectionHandler is a cSQLConnectionHandler
     End_Procedure
 End_Object
 
+Use cDbUpdateFunctionLibrary.pkg
+// After the cSQLConnectionHandler object: the library makes a handler of its own when there is none yet. (It
+// stood before it, against this comment, and the connection was set up twice at start.)
+Object oDbUpdateFunctionLibrary is a cDbUpdateFunctionLibrary
+End_Object
+
 Use cRDCTooltipController.pkg
 Object oToolTipController is a cRDCTooltipController
 End_Object
@@ -161,10 +158,8 @@ Object oMain is a Panel
     Object oCommandBarSystem is a cCJCommandBarSystem
         Set pbTimerUpdate to True
         Set pbShowTextBelowIcons to True
-        #IF (!@ > 182)
-            Set pbAutoResizeIcons to True
-            Set pbLargeIcons to True
-        #ENDIF
+        Set pbAutoResizeIcons to True
+        Set pbLargeIcons to True
 
         Procedure OnCreateCommandBars
             Handle hoOptions
@@ -320,7 +315,7 @@ Object oMain is a Panel
                         
                         Get psIniFilePath of ghoSQLConnectionHandler to sPath
                         Get psIniFileName of ghoSQLConnectionHandler to sIniFileName
-                        Get vSelectSaveFile ".int" "Please enter a file name to save to" sPath sIniFileName to sFileName
+                        Get vSelectSaveFile "Ini files (*.ini)|*.ini" "Please enter a file name to save to" sPath sIniFileName to sFileName
                         If (sFileName <> "") Begin
                             Get ParseFolderName sFileName to sPath
                             Get ParseFileName   sFileName to sIniFileName
@@ -409,7 +404,7 @@ Object oMain is a Panel
             
             Object oKoFi_MenuItem is a cCJMenuItem
                 Set psToolTip to "Coffee time!"
-                Set psDescription to "Bye me a coffee, to support me"
+                Set psDescription to "Buy me a coffee, to support me"
                 Set psImage to "Ko-fi.ico"
                 Set pbControlBeginGroup to True
                 Procedure OnExecute Variant vCommandBarControl
@@ -519,7 +514,7 @@ Send CheckIfConnectionExists
 //  - If you get a compile error: "Can't include resource ..\HELP\ABOUT.RTF",
 //    you need to create a "About.rtf" file in the Help folder.
 //    Note that it can be empty, but it needs to exist for the About dialog.
-//    Or you can remark line 1302 in DfAbout.pkg = "Define ShouldEmbeddAboutHelpFile for 0"
+//    Or you can remark the line "Define ShouldEmbeddAboutHelpFile for 0" in DfAbout.pkg
 //  - If you get a compile error: "Can't include resource FilelistBackupFile.cfg",
 //    you need to copy the Filelist.cfg in the Data folder to "FilelistBackupFile.cfg".
 Start_UI

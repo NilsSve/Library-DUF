@@ -14,7 +14,7 @@ Use LanguageText.pkg
     Define CS_DUF_DuplicateConnectionIDPre  for "Cannot register connection ID"
     Define CS_DUF_DuplicateConnectionIDPost for "This ID already exists."
     // *** cSQLConnectionsHandler.pkg Class Language Constants ***
-    Define CS_DUF_SetupErrorcConnection     for "Cannot login to the database server as the cConnection hasn't been setup properly. Can't continue. Program will now exit."
+    Define CS_DUF_CannotLogincConnection    for "Cannot login to the database server as the cConnection hasn't been setup properly. Can't continue. Program will now exit."
     Define CS_DUF_CannotLoginToServer       for "Could not login to the database server. Can't continue. Program will now exit."
     Define CS_DUF_ErrorText                 for "\n\nError Text:"
     // *** cDbUpdateFunctionLibrary.pkg Class Language Constants ***
@@ -155,7 +155,7 @@ Use LanguageText.pkg
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("Die Datenbank muss aktualisiert werden." + "\n\nNB! Die Datenbank darf wÑhrend dieses Prozesses nicht in Benutzung sein. Stellen Sie sicher, dass niemand das Programm benutzt, bevor Sie unten 'Ja' klicken.\n\n" + "Jetzt starten?")
     Define CS_DUF_HeaderUpdateText          for "Wichtig!"
-    Define CS_DUF_DatabaseInUseText         for "Andere Benutzer benutzen das Programm/die Datenbank. Zumindest eine Tabelle konnte nicht EXCLUSIV geîffnet werden. Bitte schliessen Sie alle anderen Programme, die die Datenbank benutzen und versuchen Sie es erneut. Das Programm wir jetzt beendet."
+    Define CS_DUF_DatabaseInUseText         for "Andere Benutzer benutzen das Programm/die Datenbank. Zumindest eine Tabelle konnte nicht EXCLUSIV geîffnet werden. Bitte schliessen Sie alle anderen Programme, die die Datenbank benutzen und versuchen Sie es erneut. Das Programm wird jetzt beendet."
     Define CS_DUF_WorkingHeaderText         for "Arbeite!"
     Define CS_DUF_WorkingUpdateText         for "Die Datenbank wird aktualisiert. Bitte warten..."
     Define CS_DUF_DatabaseUpdatedText       for "Fertig! Die Datenbank ist aktualisiert."
@@ -230,7 +230,7 @@ Use LanguageText.pkg
     Define CS_DUF_UpdateVersion             for "Atualizando banco de dados"
     Define CS_DUF_UpdateFromVersion         for "da vers∆o"
     Define CS_DUF_UpdateToVersion           for "para a vers∆o:"
-    Define CS_DUF_DbUpdateTableMissing      for "N∆o foi possiel abrir a tabela 'DbVersion' que Ç utilizada durante o processo de atualizaá∆o do banco de dados.! Imposs°vel continuar!"
+    Define CS_DUF_DbUpdateTableMissing      for "N∆o foi poss°vel abrir a tabela 'DbVersion' que Ç utilizada durante o processo de atualizaá∆o do banco de dados.! Imposs°vel continuar!"
     // *** cDbUpdateHandler.h.pkg Class Language Constants ***
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("O banco de dados precisa ser atualizado." + "\n\nAtená∆o! O banco de dados n∆o pode ser utilizado enquanto essa tarefa Ç executada. Certifique-se de que ninguÇm mais esteja utilizando a aplicaá∆o antes de clicar em 'Sim' abaixo.\n\n" + "Iniciar a atualizaá∆o agora?")
@@ -357,7 +357,7 @@ Use LanguageText.pkg
     Define CS_DUF_HeaderUpdateText          for "Importante!"
     Define CS_DUF_DatabaseInUseText         for "Hay otros utilizando la aplicaci¢n / base de datos o por lo menos una tabla. No se pudo abrir exclusivamente. Cierre todas las dem†s aplicaciones que utilizan la base de datos y vuelva a intentarlo. La aplicaci¢n se cerrar† ahora."
     Define CS_DUF_WorkingHeaderText         for "Trabajando!"
-    Define CS_DUF_WorkingUpdateText         for "a base de datos se esta actualizando. Por favor espere..."
+    Define CS_DUF_WorkingUpdateText         for "La base de datos se esta actualizando. Por favor espere..."
     Define CS_DUF_DatabaseUpdatedText       for "Listo! La base de datos fue actualizada."
     Define CS_DUF_DatabaseCheckedText       for "Listo! Se verific¢ la base de datos y no fue necesario actualizar."
     Define CS_DUF_DbUpdatedErrorText        for "Uno o m†s errores ocurrieron mientras se actualizaba la base de datos. Por favor verifique el archivo de registro.\n\nEl programa ser† cerrado ahora."

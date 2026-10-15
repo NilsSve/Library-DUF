@@ -36,10 +36,8 @@ Object oSQLConnections_vw is a dbView
                     Set Prompt_Object to (oSQLConnections(Self))
 
                     Procedure Prompt
-                        String[] sTheData
                         String sCurrentVal sNewVal
                         Handle hoIniFile ho
-                        Integer iSize iCount
                         tSQLConnection[] SQLConnectionArray
 
                         Get phoSQLConnectionIniFile of ghoSQLConnectionHandler to hoIniFile
@@ -310,7 +308,7 @@ Object oSQLConnections_vw is a dbView
                         Get Value of oPassword_fm        to SQLConnection.sPassword
                         Get DriverIndex of ghoSQLConnectionHandler SQLConnection.sDriverID to iDriverID
                         If (iDriverID = 0) Begin
-                            Send Info_Box ("The driver" * SQLConnection.sDriverID * "could not be loaded. Is the driver installed? And equally imporant; Is the corresponding database server or client software installed?")
+                            Send Info_Box ("The driver" * SQLConnection.sDriverID * "could not be loaded. Is the driver installed? And equally important; Is the corresponding database server or client software installed?")
                             Procedure_Return
                         End
                         Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver

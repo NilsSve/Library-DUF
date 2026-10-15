@@ -183,7 +183,6 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
         { Visibility=Private }
         Property tDbVersionInfo[] paDbVersionInfoArray
 
-        
         { Visibility=Private }
         Property Boolean Private.pbDbVersionCheckDone False
 
@@ -634,15 +633,6 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
         End
         
         Move True to bResult        
-        
-        // Note: Include_Resource is a compiler directive!
-        // It will embedd the Filelist.cfg from the developers machine
-        // into the executable. Thus the file _must_ be named "Filelist.cfg", or you
-        // need to change the next code line.         
-        //
-        // There is a pickle with the Filelist.cfg as it is "busy" as it is open in the Studio,
-        // when we get here and then the compiler can't embedd it!        
-        // ToDo: Change compiler directives in Project properties (?)
         
         Get psFileList of (phoWorkspace(ghoApplication)) to sFileListName
         // The folder of Filelist.cfg: a backup copy is made there, or a missing Filelist.cfg is made from it.
@@ -1585,7 +1575,6 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
         Function_Return iValue
     End_Function
 
-
     { Category="Error Handling" MethodType=Property InitialValue=True }
     Procedure Set pbCheckDataFlexUserCount Boolean bState
         Set pbCheckDataFlexUserCount of (phoUserCountSystem(Self)) to bState
@@ -1692,7 +1681,6 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
         Function_Return nVersion
     End_Function
          
-    
     { MethodType=Property Category="DbVersion Table" InitialValue=-1 }
     Procedure Set piDbVersionFileNumber Integer iFileNumber
         Set Private.piDbVersionFileNumber to iFileNumber

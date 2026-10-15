@@ -30,7 +30,6 @@ Object oStatusPanelExample is a ModalPanel
 
         Procedure OnClick
             Integer x y z iCnt
-            Boolean bStopIt
             Set Enabled_State to False
             Set Enabled_State of oExit_Btn to False
             //

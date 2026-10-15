@@ -18,45 +18,6 @@ Object oCreateDatabase_dg is a cRDCModalPanel
     Property String psCollation 
     Property String psDatabaseName 
 
-//    Object oCollate_cf is a cRDCComboForm
-//        Set Size to 13 216
-//        Set Location to 42 63
-//        Set Label to "Use Collation:"  
-//        Set psToolTip to "Select/Enter the collation to use when creating the database. If none is specified the default SQL server collation above will be used. Note: Collations starting with 'SQL_' is obsolete and should not be used."
-//        // This must be set to False; else the filling takes for ever.
-//        Set pbAutoListWidth to False
-//        
-//        Procedure Combo_Fill_List
-//            String[] asCollations   
-//            Integer iCount iSize      
-//            String sDriverID sCollation
-//            
-//            Get psDriverID to sDriverID      
-//            
-//            // The _SqlEnumerateDatabaseCollations function is *at current* for MSSQLDRV_ID only.
-//            If (sDriverID = MSSQLDRV_ID) Begin
-//                Send Cursor_Wait of Cursor_Control
-//                Get _SqlEnumerateDatabaseCollations of ghoDbUpdateFunctionLibrary sDriverID to asCollations
-//                Move (SizeOfArray(asCollations)) to iSize
-//                Decrement iSize
-//                For iCount from 0 to iSize
-//                    Send Combo_Add_Item asCollations[iCount]
-//                Loop
-//                
-//                Get psCollation of ghoDbUpdateFunctionLibrary to sCollation
-//                Set Value to sCollation
-//                Send Cursor_Ready of Cursor_Control
-//            End
-//        End_Procedure
-//    
-//        Procedure OnChange
-//            String sValue
-//            Get Value to sValue
-//            Set psCollation to sValue
-//        End_Procedure
-//     
-//    End_Object
-
     Object oInfo_tb is a TextBox
         Set Auto_Size_State to False
         Set Size to 8 50
@@ -154,15 +115,6 @@ Object oCreateDatabase_dg is a cRDCModalPanel
             Procedure WriteWorkspaceIniFile
             End_Procedure             
             
-//            Procedure Prompt      
-//                If (ghoSuggestionTimer=0) Begin
-//                    Send CreateSuggestionTimer
-//                End
-//                Send ActivateSuggestionList
-//                Send FindSuggestions
-//                Set Visible_State of ghoSuggestionList to True
-//            End_Procedure 
-            
             Procedure OnEnterObject
                 Set pbUseWorkspaceIniFile to True
                 Forward Send OnEnterObject
@@ -174,7 +126,6 @@ Object oCreateDatabase_dg is a cRDCModalPanel
             End_Procedure
         
             On_Key kCancel Send KeyAction of oCancel_Btn   
-//            On_Key kPrompt Send Prompt
         End_Object   
         
         Object oDatabaseName_fm is a cRDCForm

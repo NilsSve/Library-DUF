@@ -342,10 +342,14 @@ Object oUtilFunctions_vw is a dbView
                             Procedure_Return
                         End
 
-                        Get vDeleteFile (sDataPath + "\*.cch") to iRetval
-                        If (iRetval <> 0) Begin
-                            Send Info_Box "Could not delete .cch files!"
-                            Procedure_Return
+                        // Only when there is a cache file: a delete that finds nothing to delete is no error.
+                        Get vFilePathExists (sDataPath + "\*.cch") to bExists
+                        If (bExists = True) Begin
+                            Get vDeleteFile (sDataPath + "\*.cch") to iRetval
+                            If (iRetval <> 0) Begin
+                                Send Info_Box "Could not delete .cch files!"
+                                Procedure_Return
+                            End
                         End
 
                         Send Initialize_StatusPanel of ghoStatusPanel "The Database Update Framework" "Changing Connection ID's in .int files" ""
@@ -372,15 +376,6 @@ Object oUtilFunctions_vw is a dbView
                 Set Location to 171 12
                 Set Label to "Remove Database Identifications from Filelist.cfg"
                 Set peAnchors to anTopLeftRight
-//                Set TextColor to clGreen
-//
-//                Procedure Page Integer iPage
-//                    Integer ia iz
-//                    Forward Send Page iPage
-//                    Move 0 to iz
-//                    Move (AddressOf(iz)) to ia
-//                    Move (SetWindowTheme(Window_Handle(Self),ia,ia)) to iPage
-//                End_Procedure
 
                 Object oFilelistPath_fm is a Form
                     Set Size to 13 299
@@ -401,7 +396,7 @@ Object oUtilFunctions_vw is a dbView
                         Get Value to sFileName
                         Get ParseFolderName sFileName to sPath
                         Move "Filelist.cfg files (*.cfg)|*.cfg" to sFileMask
-                        Get vSelect_File sFileMask "Please select a Filelist.cft file" sPath to sRetval
+                        Get vSelect_File sFileMask "Please select a Filelist.cfg file" sPath to sRetval
                         If (sRetval <> "") Begin
                             Set Value to sRetval
                             Set_Attribute DF_FILELIST_NAME to sRetval
@@ -482,7 +477,7 @@ Object oUtilFunctions_vw is a dbView
             Object oOutput_grp is a Group
                 Set Size to 47 402
                 Set Location to 234 12
-                Set Label to "Print sekected Filelist.cfg as a Text file"
+                Set Label to "Print selected Filelist.cfg as a Text file"
                 Set peAnchors to anTopLeftRight
 
                 Object oOutput_rg is a RadioGroup
@@ -578,7 +573,7 @@ Object oUtilFunctions_vw is a dbView
                     End_Function
 
                     Procedure OnClick
-                        String sFileList sRootName sLogicalName sDisplayName sPath sOutputName sTable sExt
+                        String sFileList sRootName sLogicalName sDisplayName sPath sOutputName sTable sExt sOrgFileList
                         Integer iCh iCount iSize
                         Handle hTable
                         tFilelistDUF[] FilelistDUFArray FilelistDUFSorted
@@ -601,6 +596,9 @@ Object oUtilFunctions_vw is a dbView
                             Procedure_Return
                         End
 
+                        // The selected Filelist is walked, not the one in use; the one in use comes back below.
+                        Get_Attribute DF_FILELIST_NAME to sOrgFileList
+                        Set_Attribute DF_FILELIST_NAME to sFileList
                         Move 0 to hTable
                         Writeln channel iCh sFileList
                         Writeln channel iCh "[Table No:]            [LogicalName:]        [RootName:]                             [DisplayName:]"
@@ -618,6 +616,7 @@ Object oUtilFunctions_vw is a dbView
                                 Increment iCount
                             End
                         Until (hTable = 0)
+                        Set_Attribute DF_FILELIST_NAME to sOrgFileList
 
                         Move (SortArray(FilelistDUFArray, Self, (RefFunc(CompareSortFilelist)))) to FilelistDUFSorted
                         Move (SizeOfArray(FilelistDUFSorted)) to iSize
@@ -634,16 +633,18 @@ Object oUtilFunctions_vw is a dbView
                             Get PadLeft (String(sRootName))    (46 - Length(sLogicalName)) to sRootName
                             Get PadLeft (String(sDisplayName)) (72 - Length(sRootName))    to sDisplayName
 
+                            // In the order of the header. (The root name came first.)
 #IF (!@ > 191)
-                            Writeln channel iCh sTable (Utf8ToAnsi(sRootName)) (Utf8ToAnsi(sLogicalName)) (Utf8ToAnsi(sDisplayName))
+                            Writeln channel iCh sTable (Utf8ToAnsi(sLogicalName)) (Utf8ToAnsi(sRootName)) (Utf8ToAnsi(sDisplayName))
 #ELSE
-                            Writeln channel iCh sTable (ToANSI(sRootName)) (ToANSI(sLogicalName)) (ToANSI(sDisplayName))
+                            Writeln channel iCh sTable (ToANSI(sLogicalName)) (ToANSI(sRootName)) (ToANSI(sDisplayName))
 #ENDIF
                         Loop
 
                         Writeln channel iCh "==================================================================================================="
                         Writeln channel iCh "Total Number of Tables in Filelist.cfg: " (iSize + 1)
-                        Close_Output
+                        // The channel is released too. (A bare Close_Output kept it: after nine prints none was left.)
+                        Send Seq_Close_Channel iCh
 
                         Send vShellExecute "open" sOutputName "" sPath
                     End_Procedure
@@ -678,7 +679,7 @@ Object oUtilFunctions_vw is a dbView
         If (bLast = True) Begin
             Get ParseFileName sFilename to sTest
             If (Uppercase(sTest) <> "FILELIST.CFG") Begin
-                Send Info_Box "Sorry, only Filist.cfg files can be dropped here..."
+                Send Info_Box "Sorry, only Filelist.cfg files can be dropped here..."
                 Procedure_Return
             End
             Set Value of oFilelistPath_fm to sFilename

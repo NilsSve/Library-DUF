@@ -24,7 +24,6 @@
 // Important! The conversion from DateTime to Date or datetime2 will also convert all dummy zero Date values from 1753-01-01 to 0001-01-01.
 // This is important to realize. The conversion will actually change the data in the database (done by the driver)
 
-
 // DF_DATABASE_DEFAULT_MAP_DF_TO_SQL_TYPE_SCHEMA
 // Determines for all DataFlex data types, which SQL native types will be used when creating new columns.
 // Set_Attribute DF_DATABASE_DEFAULT_MAP_DF_TO_SQL_TYPE_SCHEMA of {driverNumber} {databaseHandle} ;
@@ -79,11 +78,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get psConnectionID     to sConnectionID
         Get psConnectionString to sConnectionString
         Move 0 to LastErr
-
-        If (sDriverID = ODBC_DRV_ID) Begin
-            // If an ODBC data source (DSN) we cannot pass the UID & PWD; so strip them from the connection string.
-            // ToDo: 2018-08-11 I think this is wrong and the uid & pw should be there.
-        End
 
         Send Ignore_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
         Get SqlConnect of hoSQLManager sDriverID sConnectionString to hConnection
@@ -474,7 +468,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Function_Return (Err = False)
     End_Function
-
 
     // * Dummy function for the Studio's Code Explorer *
     Function SQL_TABLE_FUNCTIONS Returns Boolean
@@ -1552,8 +1545,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             End
         Loop
 
-         // ToDo: Not sure at all we want to do this automatically:
-        
         Function_Return asFileChanges
     End_Function
 
@@ -1745,7 +1736,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Set Action_Text of ghoStatusPanel to ""
         Function_Return (Err = False)
     End_Function
-
 
     // Will create an SQL table with the passed sTableName & sColumnName as Numeric 4.2 to keep
     // the DbUpdateVersion database revision in.
@@ -2255,7 +2245,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return asReturnArray
     End_Function
 
-    
     // *** Database API Functions: ***
     // Instead of using Sql Scripts (ESQL), we can opt to use the DataFlex Database API's to
     // make changes/updates to the database.
@@ -2336,11 +2325,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move (sRootName + ".int")                    to sPhysicalName
         Get_Attribute DF_FILE_LOGICAL_NAME of hTable to sLogicalName
         Get_Attribute DF_FILE_DISPLAY_NAME of hTable to sDisplayName
-
-        // The Studio no longer adds the schema to the DISPLAY_NAME, so commented out.
-        //
-        // We don't want to change the display name if it starts with an ampersand ("@"),
-        // because then the table should not be visible to users.
 
         If (bIsAlias = False) Begin
             Get OpenTableExclusive hTable to bOpened
@@ -3145,8 +3129,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         String sDEFName sDataPath
         Boolean bExists
 
-        // Do nothing if MSSQL Driver.
-
         Get psDataPathFirstPart to sDataPath
         Get vFilePathExists (sDataPath + sFileName + ".dat") to bExists
         If (bExists = True) Begin
@@ -3418,8 +3400,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get vRenameFile (sDataPath + sPhysicalName)            (sDataPath + sRootName + ".int") to iRetval
             Get vRenameFile (sDataPath + sPhysicalNameTo + ".tag") (sDataPath + sRootName + ".tag") to iRetval
             Move (sDriverID + ":" + sRootName) to sRootName
-
-            // The Studio no longer adds the schema to the DISPLAY_NAME, so commented out.
         End
 
         Set_Attribute DF_FILE_ROOT_NAME     of hTable to sRootName
@@ -5625,9 +5605,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Structure_Start hTable sDriverID
             For iCount from 0 to iSize
-                // We can't delete if this is a primary key index:
-                    Move APIIndex[iCount].iIndexNumber to iIndex
-                    Delete_Index hTable iIndex
+                Move APIIndex[iCount].iIndexNumber to iIndex
+                Delete_Index hTable iIndex
             Loop
             Set Action_Text of ghoStatusPanel to "Restructures table..."
         Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
@@ -7165,7 +7144,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return sSortString
     End_Function
 
-    
     // * Dummy function for the Studio's Code Explorer *
     Function API_COLUMN_UTILITY_FUNCTIONS Returns Boolean
         Function_Return False

@@ -361,7 +361,7 @@ Object oAnalysisApplication is a cApplication
         Number nBufSizeSave nBufSizeTotal nBufSizeSaveWS nBufSizeTotalWS
         Integer iIndex iTypeCount
         Boolean bIsAlias bErrorOpenFile
-        String sTableName sLogicalName sColName sLine sType sTypeChange sDriver sCurrentType
+        String sTableName sLogicalName sColName sLine sDriver sCurrentType
         tTableMemoryUseData[] TableMemoryUseData
         tSqlVarTypes[] varTypes
         
@@ -419,8 +419,9 @@ Object oAnalysisApplication is a cApplication
                 // check for types that could have high memory use
                 For iIndex from 0 to (iTypeCount-1)
                     If (iType = varTypes[iIndex].iType) Begin
+                        // The name for both lines. (The second used the name an earlier column left.)
+                        Get_Attribute DF_FIELD_NAME of hTable i to sColName
                         If (iColLen <= 8000) Begin
-                            Get_Attribute DF_FIELD_NAME of hTable i to sColName
                             Move (nBufSizeSave + iColNativeLen - iColLen) to nBufSizeSave
                             
                             Move ("    Column '" + sColName + "' " + varTypes[iIndex].sTypeName + ", length used = " + ;

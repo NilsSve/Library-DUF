@@ -340,7 +340,6 @@ Object oTableDUFCodeGenerator is a cRDCDbView
                 Integer iLogical iRowNo iSelected iPos
                 tDataSourceRow[] TheData
                 Handle hoDataSource
-                Number nVersionNumber
 
                 Get Value of oFilelistPath_fm to sFileListName
                 Get vFilePathExists sFileListName to bExists
@@ -391,7 +390,6 @@ Object oTableDUFCodeGenerator is a cRDCDbView
 
             // Returns a string array with the selected items.
             Function SelectedItems Returns tGeneratorRow[]
-                Integer[] SelRows
                 Integer i iItems iSize iCheckbox_Col iFilelistNo_Col iLogical_Col iRoot_Col iDisplay_Col iIsAlias_Col
                 String sFileName
                 String[] sFilesArray
@@ -615,6 +613,8 @@ Object oTableDUFCodeGenerator is a cRDCDbView
             Set peAnchors to anBottomLeft
             Set Label_Justification_Mode to JMode_Right
             Set Label_Col_Offset to 2
+            // A point for the whole program, on purpose: the version numbers are read and written as code, which
+            // needs a point whatever the decimal separator of Windows is.
             Set_Attribute DF_DECIMAL_SEPARATOR to (Ascii('.'))
             Set Form_Datatype to 2
             Set Value to 1.0
@@ -622,14 +622,9 @@ Object oTableDUFCodeGenerator is a cRDCDbView
             Procedure OnChange
                 String sSourceFile
                 Number nVersionNumber 
-                Integer iDecimalSeparator                     
                 
                 Set_Attribute DF_DECIMAL_SEPARATOR to (Ascii('.'))
                 Get Value to nVersionNumber
-//                If (nVersionNumber < 1) Begin
-//                    Move 1 to nVersionNumber   
-//                    Set Value to nVersionNumber     
-//                End
                 Set pnSourcePackageVersion to nVersionNumber
                 Get GenerateSourceFileName of oFilelist_grd  to sSourceFile
                 Set Value of oSourceName_fm to sSourceFile
@@ -850,7 +845,6 @@ Object oTableDUFCodeGenerator is a cRDCDbView
     Procedure StartGenerateCode
         String sSourceFile
         Boolean bUseConnectionID bANSI bRecnum bCompareIndexUppercase bCompareIndexAscending
-        Handle hTable
         Integer iErrors
         Number nVersionNumber
         tGeneratorRow[] TheData
@@ -893,9 +887,22 @@ Object oTableDUFCodeGenerator is a cRDCDbView
         End
     End_Procedure
 
+    // A text as a literal of the generated code: in double quotes; with a double quote in it, in single quotes; with
+    // both kinds, pieced together with Character(34) for each double quote. (A name or default value with a double
+    // quote gave code that did not compile.)
+    Function GeneratedLiteral String sValue Returns String
+        If (not(sValue contains '"')) Begin
+            Function_Return ('"' + sValue + '"')
+        End
+        If (not(sValue contains "'")) Begin
+            Function_Return ("'" + sValue + "'")
+        End
+        Function_Return ('("' + Replaces('"', sValue, '" + Character(34) + "') + '")')
+    End_Function
+
     Function GenerateDUFSourceCode String sSourceFile tGeneratorRow[] TheData Number nVersionNumber Boolean bUseConnectionID Boolean bANSI Boolean bRecnum tAPITableBooleans CompareTableBooleans Returns Integer
         Boolean bApiTableUpdateAuto bCompare_DateTime bCompareIndexAscending bCompareIndexUppercase bCompareFilelistUppercase
-        Integer iCh iColumn iLength iPrecision iOptions iCount iSize iTable iTables
+        Integer iCh iLength iPrecision iOptions iCount iSize iTable iTables
         Integer iIndex iIndexes iSegment iNumSegments iType iErrors iStatus
         Boolean bOpened bOK bDawSqlDriver bIsAlias bSqlDriver bSkipTable
         String sRootName sLogicalName sDisplayName sTableName sFieldName sDataType sDriverID
@@ -1036,10 +1043,10 @@ Object oTableDUFCodeGenerator is a cRDCDbView
                     If (iSize >= 0) Begin
                         Writeln channel iCh ("        // Logical Table Name:" * '"' + APITableNameInfo.sLogicalName + '"' * "Filelist.cfg Number:" * String(APITableNameInfo.iTableNumber))
                         Writeln channel iCh ("        Move" * String(APITableNameInfo.iTableNumber)                    * "to APITableNameInfo.iTableNumber")
-                        Writeln channel iCh ("        Move" * '"' + String(APITableNameInfo.sRootName)    + '"'        * "to APITableNameInfo.sRootName")
-                        Writeln channel iCh ("        Move" * '"' + String(APITableNameInfo.sLogicalName) + '"'        * "to APITableNameInfo.sLogicalName")
-                        Writeln channel iCh ("        Move" * '"' + String(APITableNameInfo.sDisplayName) + '"'        * "to APITableNameInfo.sDisplayName")
-                        Writeln channel iCh ("        Move" * '"' + String(sDriverID)                     + '"'        * "to APITableNameInfo.sDriverID")
+                        Writeln channel iCh ("        Move" * GeneratedLiteral(Self, APITableNameInfo.sRootName)        * "to APITableNameInfo.sRootName")
+                        Writeln channel iCh ("        Move" * GeneratedLiteral(Self, APITableNameInfo.sLogicalName)        * "to APITableNameInfo.sLogicalName")
+                        Writeln channel iCh ("        Move" * GeneratedLiteral(Self, APITableNameInfo.sDisplayName)        * "to APITableNameInfo.sDisplayName")
+                        Writeln channel iCh ("        Move" * GeneratedLiteral(Self, sDriverID)        * "to APITableNameInfo.sDriverID")
                         Writeln channel iCh ("        Move" * String(If(APITableNameInfo.bIsAlias,      "True", "False")) * "to APITableNameInfo.bIsAlias")
                         Writeln channel iCh ("        Move" * String(If(APITableNameInfo.bIsSQL,        "True", "False")) * "to APITableNameInfo.bIsSQL")
                         Writeln channel iCh ("        Move" * String(If(APITableNameInfo.bIsSystemFile, "True", "False")) * "to APITableNameInfo.bIsSystemFile")
@@ -1049,11 +1056,11 @@ Object oTableDUFCodeGenerator is a cRDCDbView
     
                     For iCount from 0 to iSize
                         Writeln channel iCh ("        Move" *       String(APIColumns[iCount].iFieldNumber)       * "to APIColumns[iCount].iFieldNumber")
-                        Writeln channel iCh ("        Move" * '"' + String(APIColumns[iCount].sFieldName)   + '"' * "to APIColumns[iCount].sFieldName")
+                        Writeln channel iCh ("        Move" * GeneratedLiteral(Self, APIColumns[iCount].sFieldName) * "to APIColumns[iCount].sFieldName")
                         Writeln channel iCh ("        Move" *       String(APIColumns[iCount].iType)              * "to APIColumns[iCount].iType")
                         Writeln channel iCh ("        Move" * String(If(APIColumns[iCount].bIsSQLType, "True", "False")) * "to APIColumns[iCount].bIsSQLType")
                         Writeln channel iCh ("        Move" * String(If(APIColumns[iCount].bAllowNULL, "True", "False")) * "to APIColumns[iCount].bAllowNULL")
-                        Writeln channel iCh ("        Move" * '"' + String(APIColumns[iCount].sDefaultValue) + '"'       * "to APIColumns[iCount].sDefaultValue")
+                        Writeln channel iCh ("        Move" * GeneratedLiteral(Self, APIColumns[iCount].sDefaultValue)       * "to APIColumns[iCount].sDefaultValue")
                         If (APIColumns[iCount].iFieldNumber = 0 and APIColumns[iCount].iLength = 0) Begin
                             Writeln channel iCh ("        ERROR! This field has a length = 0! It must be corrected before running this code")
                             Increment iErrors
@@ -1063,7 +1070,7 @@ Object oTableDUFCodeGenerator is a cRDCDbView
                             Move (Replace("identity",sDataType, "")) to sDataType
                             Move (Trim(sDataType)) to sDataType
                         End
-                        Writeln channel iCh ("        Move" * '"' + sDataType                               + '"' * "to APIColumns[iCount].sType")
+                        Writeln channel iCh ("        Move" * GeneratedLiteral(Self, sDataType) * "to APIColumns[iCount].sType")
                         Writeln channel iCh ("        Move" *       String(APIColumns[iCount].iLength)            * "to APIColumns[iCount].iLength")
                         Writeln channel iCh ("        Move" *       String(APIColumns[iCount].iPrecision)         * "to APIColumns[iCount].iPrecision")
                         Writeln channel iCh ("        Move" *       String(APIColumns[iCount].iOptions)           * "to APIColumns[iCount].iOptions")
@@ -1102,14 +1109,14 @@ Object oTableDUFCodeGenerator is a cRDCDbView
                         Writeln channel     iCh ("        Move" *       If((APIIndexes[iIndex].bIsSQLClustered),  "True", "False") * "to APIIndexes[iCount].bIsSQLClustered")
                         Writeln channel     iCh ("        Move" *       If((APIIndexes[iIndex].bIsSQLPrimaryKey), "True", "False") * "to APIIndexes[iCount].bIsSQLPrimaryKey")
                         If (APIIndexes[iIndex].sSQLIndexName <> "") Begin
-                            Writeln channel iCh ("        Move" * '"' + String(APIIndexes[iIndex].sSQLIndexName) + '"' * "to APIIndexes[iCount].sSQLIndexName")
+                            Writeln channel iCh ("        Move" * GeneratedLiteral(Self, APIIndexes[iIndex].sSQLIndexName) * "to APIIndexes[iCount].sSQLIndexName")
                         End
 
                         Move (SizeOfArray(APIIndexes[iIndex].IndexSegmentArray)) to iNumSegments
                         Decrement iNumSegments
                         For iSegment from 0 to iNumSegments
                             Writeln channel iCh ("        Move" *       String(APIIndexes[iIndex].IndexSegmentArray[iSegment].iFieldNumber)              * "to APIIndexes[iCount].IndexSegmentArray[iSegment].iFieldNumber")
-                            Writeln channel iCh ("        Move" * '"' + String(APIIndexes[iIndex].IndexSegmentArray[iSegment].sFieldName)          + '"' * "to APIIndexes[iCount].IndexSegmentArray[iSegment].sFieldName")
+                            Writeln channel iCh ("        Move" * GeneratedLiteral(Self, APIIndexes[iIndex].IndexSegmentArray[iSegment].sFieldName) * "to APIIndexes[iCount].IndexSegmentArray[iSegment].sFieldName")
                             Writeln channel iCh ("        Move" *       If((APIIndexes[iIndex].IndexSegmentArray[iSegment].bUppercase), "True", "False") * "to APIIndexes[iCount].IndexSegmentArray[iSegment].bUppercase")
                             Writeln channel iCh ("        Move" *       If((APIIndexes[iIndex].IndexSegmentArray[iSegment].bAscending), "True", "False") * "to APIIndexes[iCount].IndexSegmentArray[iSegment].bAscending")
                             If (iSegment < iNumSegments) Begin
@@ -1174,14 +1181,14 @@ Object oTableDUFCodeGenerator is a cRDCDbView
                     Writeln channel iCh ("        // Alias Table properties:")
                     Writeln channel iCh ("        Move" * String(hTable) * "to hTable")
                     If (bSqlDriver = True and not(APITableNameInfo.sRootName contains sDriverID)) Begin
-                        Writeln channel iCh ("        Set_Attribute DF_FILE_ROOT_NAME    of hTable to" * '"' + sDriverID + ":" + APITableNameInfo.sRootName    + '"')
+                        Writeln channel iCh ("        Set_Attribute DF_FILE_ROOT_NAME    of hTable to" * GeneratedLiteral(Self, sDriverID + ":" + APITableNameInfo.sRootName))
                     End
                     Else Begin
-                        Writeln channel iCh ("        Set_Attribute DF_FILE_ROOT_NAME    of hTable to" * '"' + APITableNameInfo.sRootName    + '"')
+                        Writeln channel iCh ("        Set_Attribute DF_FILE_ROOT_NAME    of hTable to" * GeneratedLiteral(Self, APITableNameInfo.sRootName))
                     End
 
-                    Writeln channel iCh ("        Set_Attribute DF_FILE_LOGICAL_NAME of hTable to" * '"' + APITableNameInfo.sLogicalName + '"')
-                    Writeln channel iCh ("        Set_Attribute DF_FILE_DISPLAY_NAME of hTable to" * '"' + APITableNameInfo.sDisplayName + '"')
+                    Writeln channel iCh ("        Set_Attribute DF_FILE_LOGICAL_NAME of hTable to" * GeneratedLiteral(Self, APITableNameInfo.sLogicalName))
+                    Writeln channel iCh ("        Set_Attribute DF_FILE_DISPLAY_NAME of hTable to" * GeneratedLiteral(Self, APITableNameInfo.sDisplayName))
                     Writeln channel iCh
                 End
             End
@@ -1238,7 +1245,6 @@ Object oTableDUFCodeGenerator is a cRDCDbView
         tSQLConnection Connection
         tDataSourceRow[] EmptyData
         Handle hoGrid hoDataSource
-        Integer[] iDifferencesEmpty
         
         Move DATAFLEX_ID to Connection.sDriverID
         Set pSQLConnection of ghoSQLConnectionHandler to Connection
@@ -1309,7 +1315,7 @@ Object oTableDUFCodeGenerator is a cRDCDbView
         If (bLast = True) Begin
             Get ParseFileName sFilename to sTest
             If (Uppercase(sTest) <> "FILELIST.CFG") Begin
-                Send Info_Box "Sorry, only Filist.cfg files can be dropped here..."
+                Send Info_Box "Sorry, only Filelist.cfg files can be dropped here..."
                 Procedure_Return
             End
             Set Value of oFilelistPath_fm to sFilename
@@ -1320,9 +1326,6 @@ Object oTableDUFCodeGenerator is a cRDCDbView
     Procedure Request_Cancel
     End_Procedure
     
-//    On_Key Key_Ctrl+Key_A  Send KeyAction of oSelectAll_btn
-//    On_Key Key_Ctrl+Key_N  Send KeyAction of oDeSelectAll_btn
-//    On_Key Key_Ctrl+Key_I  Send KeyAction of oInvertSelection_btn
     On_Key Key_Ctrl+Key_G  Send KeyAction of oGenerateCode_btn
     On_Key Key_Ctrl+Key_O  Send KeyAction of oOpenAppSrcFolder_btn
     On_Key kClear          Send Request_Clear

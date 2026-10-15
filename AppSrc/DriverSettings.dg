@@ -150,9 +150,10 @@ Object oDriverSettings_dg is a cRDCModalPanel
             End
         End_Procedure   
         
+        // The configuration file it opens. (The driver DLL field was tested.)
         Function IsEnabled Returns Boolean
             String sFileName
-            Get Value of oDriverFileName_cf to sFileName
+            Get Value of oDriverIniFile_fm to sFileName
             Function_Return (sFileName <> "")
         End_Function
 
@@ -170,7 +171,6 @@ Object oDriverSettings_dg is a cRDCModalPanel
         Procedure OnClick
             Handle hoCLI
             String sDriver sPath sFileName
-            Integer iRetval
 
             Get psDriverID to sDriver
             Get Create (RefClass(cCLIHandler)) to hoCLI
@@ -181,15 +181,15 @@ Object oDriverSettings_dg is a cRDCModalPanel
                 Procedure_Return
             End
 
-            Get psHome of (phoWorkspace(ghoApplication)) to sPath
+            // In the TEMP folder, and the file stays there. (It was written to the workspace folder and deleted one
+            // second after it was handed to the viewer.)
+            Get_Environment "TEMP" to sPath
             Get vFolderFormat sPath to sPath
             Move (sDriver + "dump.txt") to sFileName
             Send DumpStatus of hoCLI (sPath + sFileName)
             Send Destroy of hoCLI
 
             Send vShellExecute "open" sFileName "" sPath
-            Sleep 1
-            Get vDeleteFile (sPath + sFileName) to iRetval
         End_Procedure
 
         Function IsEnabled Returns Boolean

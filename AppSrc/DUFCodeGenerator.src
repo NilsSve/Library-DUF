@@ -1,6 +1,4 @@
-#IF (!@ > 190)
-    CompilerLevelWarning All On
-#ENDIF
+CompilerLevelWarning All On
 
 Use DFAllEnt.pkg
 Use cCJStandardCommandBarSystem.pkg
@@ -19,7 +17,7 @@ Define CS_PropertiesKeyWord     for "Properties"
 Define CS_ThemeKeyWord          for "Theme"
 
 #IF (!@ < 201)
-     "Nope, that won't work. You need at least DataFlex 21.0 to compile/run this program."
+     "Nope, that won't work. You need at least DataFlex 20.1 to compile/run this program."
 #ENDIF
 
 Use cDUFApplication.pkg
@@ -30,12 +28,10 @@ Object oApplication is a cDUFApplication
     Property Handle phoTableDUFCodeGenerator_vw 0
     Property Integer[] piaDifferences
 
-    #IF (!@ > 182)
     Object oConnection is a cConnection
         Use LoginEncryption.pkg
         Use DatabaseLoginDialog.dg
     End_Object
-    #ENDIF
 End_Object
 
 // cDbUpdateHandler main object including cDbUpdateVersion child objects.
@@ -48,7 +44,6 @@ End_Object
 
 Use oEditContextMenu.pkg
 Use oDEOEditContextMenu17.pkg
-Use CaptureWindow.pkg
 
 Object oMain is a Panel
     Set Label to (psProduct(ghoApplication))
@@ -60,10 +55,8 @@ Object oMain is a Panel
     Object oCommandBarSystem is a cCJCommandBarSystem
         Set pbTimerUpdate to True
         Set pbLargeIcons to True
-        #IF (!@ > 182)
-            Set pbAutoResizeIcons to True
-            Set pbTabbedWorkspaces to True
-        #ENDIF
+        Set pbAutoResizeIcons to True
+        Set pbTabbedWorkspaces to True
 
         Procedure OnCreateCommandBars
             Integer eTheme
@@ -105,9 +98,6 @@ Object oMain is a Panel
             Get ComPaintManager of hoTab          to vPaintManager
             Set pvComObject     of hoPaintManager to vPaintManager
 
-            // Sets the tab-pages to display on the left side, instead of at the top:
-//            Set ComPosition     of hoPaintManager to xtpTabPositionLeft
-
             // This will truncate the middle part of long items
             Set ComDrawTextPathEllipsis of hoPaintManager to True
             Set ComLayout               of hoPaintManager to xtpTabLayoutMultiRow
@@ -129,20 +119,11 @@ Object oMain is a Panel
             Send Destroy of hoTab
         End_Procedure
 
-        #IF (!@ > 182)
-            Procedure OnCreateTabbedWorkspace Handle hoTabWorkspace Handle hoTabPaintManager
-                // This will truncate the middle part of long text items
-                Set ComDrawTextPathEllipsis of hoTabPaintManager to True
-                Set ComFlags of hoTabWorkspace to xtpWorkspaceHideAll //xtpWorkspaceHideClose //xtpWorkspaceShowCloseTab
-            End_Procedure
-        #ENDIF
-
-//        Object oActions_Toolbar is a cCJToolbar
-//            Set pbCloseable to False
-//            Set pbCustomizable to False
-//            Set pbShowExpandButton to False
-//            Set psTitle to "Actions"
-//        End_Object
+        Procedure OnCreateTabbedWorkspace Handle hoTabWorkspace Handle hoTabPaintManager
+            // This will truncate the middle part of long text items
+            Set ComDrawTextPathEllipsis of hoTabPaintManager to True
+            Set ComFlags of hoTabWorkspace to xtpWorkspaceHideAll //xtpWorkspaceHideClose //xtpWorkspaceShowCloseTab
+        End_Procedure
 
         // This is needed to get the "Key_Shift+Key_Tab" key combination to activate
         // the previous tab workspace view.
@@ -195,11 +176,6 @@ Object oMain is a Panel
                 Set psImage to "ActionPaste.ico"
             End_Object
 
-//            Object oDeleteEditToolbarItem is a cCJDeleteEditMenuItem
-//                Set psImage to "ActionDelete.ico"
-//                Set pbControlBeginGroup to True
-//            End_Object
-
             Object oPromptToolItem is a cCJPromptMenuItem
                 Set psImage to "ActionPrompt.ico"
                 Set pbControlBeginGroup to True
@@ -251,8 +227,6 @@ Object oMain is a Panel
             End_Object
 
             Object oCompareToolItem is a cCJMenuItem
-//                Set peControlStyle to xtpButtonIconAndCaption
-//                Set psCaption to "&Connection" 
                 Set psToolTip to "Show SQL Settings dialog"
                 Set psImage to "SQLSettings.ico"
                 Set piShortCutKey to xtpKey_Alt VK_S
@@ -312,212 +286,6 @@ Object oMain is a Panel
                 
             End_Object
 
-//            Object oCaptureViewMenuItem is a cCJMenuItem
-//                Set psCaption to "E&ditor Settings"
-//                Set psToolTip to "Editor"
-//                Set psDescription to "Editor Settings (Alt+D)"
-//
-//                Set psCaption to "Take shapshot"
-//                Set psToolTip to "Take shapshot"
-//                Set psDescription to "Take a snapshot image of the current view/panel. (F10)"
-//                Set psImage to "Camera.ico"
-//                
-//                Procedure OnExecute Variant vCommandBarControl
-//                    Send TakeSnapshot False
-//                End_Procedure
-//
-//                Function IsEnabled Returns Boolean
-//                    Function_Return
-//                End_Function   
-//            End_Object
-
-//            #IF (!@ > 182)
-//
-//            Use DatabaseSelection.pkg
-//    
-//            Object oThemeItem is a cCJMenuItem
-//                Set peControlType to xtpControlComboBox
-//                Set psToolTip to "Theme"
-//                Set psCaption to "Theme:"
-//                Set psDescription to "Select a theme from the drop down list"
-//                Set pbControlBeginGroup to True
-//                Set pbVisible to False
-//
-//                Procedure OnCreateControl Handle hoObj
-//                    Integer iItem eTheme
-//                    Set ComWidth of hoObj to 250
-//                    Send FillComboList hoObj
-//                    Get peVisualTheme to eTheme
-//                    Get FindDataItem hoObj eTheme to iItem
-//                    Set ComListIndex of hoObj to (If(iItem, iItem, 1))
-//                End_Procedure
-//
-//                Function FindDataItem Handle hoCombo Integer eVal Returns Integer
-//                    Integer iCount i eTheme
-//                    Get ComListCount of hoCombo to iCount
-//                    For i from 1 to iCount
-//                        Get ComItemData of hoCombo i to eTheme
-//                        If (eTheme = eVal) Begin
-//                            Send SetTheTheme eTheme
-//                            Function_Return i
-//                        End
-//                    Loop
-//                    Function_Return 0
-//                End_Function
-//
-//                Procedure AddTheme Handle hoCombo String sText Integer eTheme
-//                    Integer iCount
-//                    Get ComListCount of hoCombo to iCount
-//                    Increment iCount
-//                    Send ComAddItem  of hoCombo sText iCount
-//                    Set ComItemData  of hoCombo iCount to  eTheme
-//                End_Procedure
-//
-//                Procedure FillComboList Handle hoCombo
-//                    Send ComClear     of hoCombo
-//
-//                    #IF (!@ > 190)
-//                    Send AddTheme hoCombo "xtpThemeOffice2016Access" xtpThemeOffice2016Access
-//                    Send AddTheme hoCombo "xtpThemeOffice2016Excel" xtpThemeOffice2016Excel
-//                    Send AddTheme hoCombo "xtpThemeOffice2016OneNote" xtpThemeOffice2016OneNote
-//                    Send AddTheme hoCombo "xtpThemeOffice2016Outlook" xtpThemeOffice2016Outlook
-//                    Send AddTheme hoCombo "xtpThemeOffice2016PowerPoint" xtpThemeOffice2016PowerPoint
-//                    Send AddTheme hoCombo "xtpThemeOffice2016Publisher" xtpThemeOffice2016OneNote
-//                    Send AddTheme hoCombo "xtpThemeOffice2016Word" xtpThemeOffice2016Word
-//                    #ENDIF
-//
-//                    Send AddTheme hoCombo "xtpThemeOffice2013Word" xtpThemeOffice2013Word
-//                    Send AddTheme hoCombo "xtpThemeOffice2013Outlook" xtpThemeOffice2013Outlook
-//                    Send AddTheme hoCombo "xtpThemeOffice2013Excel" xtpThemeOffice2013Excel
-//                    Send AddTheme hoCombo "xtpThemeOffice2013PowerPoint" xtpThemeOffice2013PowerPoint
-//                    Send AddTheme hoCombo "xtpThemeOffice2013Publisher" xtpThemeOffice2013Publisher
-//                    Send AddTheme hoCombo "xtpThemeOffice2013OneNote" xtpThemeOffice2013OneNote
-//                    Send AddTheme hoCombo "xtpThemeOffice2013Access" xtpThemeOffice2013Access
-//                    Send AddTheme hoCombo "xtpThemeOffice2003" xtpThemeOffice2003
-//                    Send AddTheme hoCombo "xtpThemeOffice2000" xtpThemeOffice2000
-//                    Send AddTheme hoCombo "xtpThemeOfficeXP" xtpThemeOfficeXP
-//
-//                    Send AddTheme hoCombo "xtpThemeOffice2010Blue" xtpThemeOffice2010Blue
-//                    Send AddTheme hoCombo "xtpThemeOffice2010Black" xtpThemeOffice2010Black
-//                    Send AddTheme hoCombo "xtpThemeOffice2010Silver" xtpThemeOffice2010Silver
-//
-//                    Send AddTheme hoCombo "xtpThemeOffice2007Aqua" xtpThemeOffice2007Aqua
-//                    Send AddTheme hoCombo "xtpThemeOffice2007Black" xtpThemeOffice2007Black
-//                    Send AddTheme hoCombo "xtpThemeOffice2007Blue" xtpThemeOffice2007Blue
-//                    Send AddTheme hoCombo "xtpThemeOffice2007Silver" xtpThemeOffice2007Silver
-//
-//                    Send AddTheme hoCombo "xtpThemeVisualStudio2015Blue" xtpThemeVisualStudio2015Blue
-//                    Send AddTheme hoCombo "xtpThemeVisualStudio2015Light" xtpThemeVisualStudio2015Light
-//                    Send AddTheme hoCombo "xtpThemeVisualStudio2015Dark" xtpThemeVisualStudio2015Dark
-//
-//                    Send AddTheme hoCombo "xtpThemeVisualStudio2012Light" xtpThemeVisualStudio2012Light
-//                    Send AddTheme hoCombo "xtpThemeVisualStudio2012Dark" xtpThemeVisualStudio2012Dark
-//
-//                    Send AddTheme hoCombo "xtpThemeVisualStudio2008" xtpThemeVisualStudio2008
-//                    Send AddTheme hoCombo "xtpThemeVisualStudio6" xtpThemeVisualStudio6
-//
-//                    Send AddTheme hoCombo "xtpThemeWindows7" xtpThemeWindows7
-//
-//                    Send AddTheme hoCombo "xtpThemeWhidbey" xtpThemeWhidbey
-//
-//                    Send AddTheme hoCombo "xtpThemeNativeWinXP" xtpThemeNativeWinXP
-//                End_Procedure
-//
-//                Function CurrentTheme Handle vCommandBarControl Returns Integer
-//                    Handle hMessage hoCombo
-//                    Integer iIndex
-//                    // create and bind  proxy control
-//                    Get CreateProxyControl vCommandBarControl to hoCombo
-//                    // get the current selection
-//                    Get ComListIndex of hoCombo to iIndex
-//                    // note the index selections are 1 based
-//                    If (iIndex > 0) Begin
-//                        // get the ItemData for the selected item and send that message
-//                        Get ComItemData of hoCombo iIndex to hMessage
-//                        Function_Return hMessage
-//                    End
-//                    // dispose of the proxy control
-//                    Send Destroy of hoCombo 
-//                    Function_Return 0
-//                End_Function
-//
-//                Procedure OnExecute Variant vCommandBarControl
-//                    Integer eTheme
-//                    Integer iColor
-//                    Get CurrentTheme vCommandBarControl to eTheme
-//                    Set peVisualTheme of ghoCommandBars to eTheme
-//                    Send ComRecalcLayout of ghoCommandBars
-//                    Send WriteDword of ghoApplication CS_PropertiesKeyWord CS_ThemeKeyWord eTheme
-//                    Get ComGetSpecialColor of ghoCommandBars XPCOLOR_TOOLBAR_FACE to iColor
-//                    Broadcast Recursive Set Color of (Client_Id(phoMainPanel(ghoApplication))) to iColor
-//                End_Procedure
-//
-//                Procedure SetTheTheme Integer eTheme
-//                    Integer iColor
-//                    Set peVisualTheme of ghoCommandBars to eTheme
-//                    Send ComRecalcLayout of ghoCommandBars
-//                    Get ComGetSpecialColor of ghoCommandBars XPCOLOR_TOOLBAR_FACE to iColor
-//                    Broadcast Recursive Set Color of (Client_Id(phoMainPanel(ghoApplication))) to iColor
-//                End_Procedure
-//
-//                Function ConvertSystemColor Integer iColor Returns Integer
-//                    Integer iSysColor
-//                    If (iColor = clDefault or iColor = clNone) Begin    // If default color then use -1
-//                        Move clNone to iColor
-//                    End
-//                    Else If (iColor < 0) Begin    // If it is a system color (<0) then convert this into an RGB value
-//                        Move (iColor iand |CI$7FFFFFFF) to iSysColor    // extract the system color constant
-//                        Move (GetSysColor(iSysColor)) to iColor
-//                    End
-//                    Function_Return iColor
-//                End_Function
-//
-//                Procedure OnCreateAction
-//                    Integer eTheme
-//                    Forward Send OnCreateAction
-//                    Get peVisualTheme of ghoCommandBars to eTheme
-//                    Get ReadDword of ghoApplication CS_PropertiesKeyWord CS_ThemeKeyWord eTheme to eTheme
-//                    Set peVisualTheme to eTheme
-//                End_Procedure
-//
-//            End_Object
-//            #ENDIF
-
-//            Object oColorSelection_TextItem is a cCJMenuItem
-//                Set peControlType to xtpControlLabel
-//                Set pbControlBeginGroup to True
-//                Set psCaption to "Hotspot Color:"
-//            End_Object
-//
-//            Object oColorSelection_Item is a cCJMenuItem
-//                Set psImage to "ColorSelectorBlack.ico"
-//
-//                Object oColorDialog is a ColorDialog
-//                    Function SelectColor Returns Integer
-//                        Integer iRgbColor
-//                        Boolean bColorSelected
-//
-//                        Move -1 to iRgbColor
-//                        Get Show_Dialog to bColorSelected
-//                        If (bColorSelected) Begin
-//                            Get SelectedColor to iRgbColor
-//                        End
-//
-//                        Function_Return iRgbColor
-//                    End_Function
-//                End_Object
-//
-//                Procedure OnExecute Variant vCommandBarControl
-//                    Integer iColor
-//                    Forward Send OnExecute vCommandBarControl
-//                    Get SelectColor of oColorDialog to iColor
-//                    If (iColor <> -1) Begin
-//                        Broadcast Recursive Set piHeaderHotspotColor of (Client_Id(phoMainPanel(ghoApplication))) to iColor
-//                    End
-//                End_Procedure
-//
-//            End_Object
-
             Object oAbout_MenuItem is a cCJMenuItem
                 Set psCaption to "About"
                 Set psToolTip to "About Info"
@@ -532,7 +300,7 @@ Object oMain is a Panel
 
             Object oKoFi_MenuItem is a cCJMenuItem
                 Set psToolTip to "Coffee time!"
-                Set psDescription to "Bye me a coffee, to support me"
+                Set psDescription to "Buy me a coffee, to support me"
                 Set psImage to "Ko-fi.ico"
                 Set pbControlBeginGroup to True
                 Procedure OnExecute Variant vCommandBarControl
@@ -625,7 +393,6 @@ Object oMain is a Panel
         Use CompareDatabases.vw
 
         Use StdAbout.pkg
-        Use CompareDatabases.rv
         Procedure Activate_About
             Send DoAbout "" "" "" "Author: Nils Svedmyr" "DUFUpdateCodeGenerator64x64.bmp" "E-mail: mailto:support@rdctools.com" "Web-site: www.rdctools.com" ("This tool was created with DataFlex" * String(C_DFVersion) * "from Data Access Worldwide. Please visit http://www.dataaccess.com for a free personal copy of DataFlex.")
         End_Procedure
@@ -662,7 +429,7 @@ Send Execute of (oCodeGenerator_MenuItem(ghoCommandBars))
 //  - If you get a compile error: "Can't include resource ..\HELP\ABOUT.RTF",
 //    you need to create a "About.rtf" file in the Help folder.
 //    Note that it can be empty, but it needs to exist for the About dialog.
-//    Or you can remark line 1302 in DfAbout.pkg = "Define ShouldEmbeddAboutHelpFile for 0"
+//    Or you can remark the line "Define ShouldEmbeddAboutHelpFile for 0" in DfAbout.pkg
 //  - If you get a compile error: "Can't include resource FilelistBackupFile.cfg",
 //    you need to copy the Filelist.cfg in the Data folder to "FilelistBackupFile.cfg".
 Start_UI

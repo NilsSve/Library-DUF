@@ -38,7 +38,6 @@ Activate_View Acivate_oFileListFixerView for oFileListFixerView
 Object oFilelistFixerView is a cRDCDbView 
     Set Location to 2 1
     Set Size to 452 691
-//    Set piMinSize to 464 691
     Set pbAutoActivate to True
 
     Set phoFilelistFixerView of ghoApplication to Self
@@ -80,7 +79,6 @@ Object oFilelistFixerView is a cRDCDbView
         Procedure OnChange
             String sFileList sPath sHome sChar
             Boolean bExists bCfgFile bOK
-            Integer iPos
             Handle hoLocalError_Object_Id hoOrgError_Object_Id
             
             // The local handler is put back at the end in any case. (It was set only when the Filelist existed: an
@@ -90,9 +88,6 @@ Object oFilelistFixerView is a cRDCDbView
             Get vFilePathExists sFileList to bExists
             Move (Lowercase(sFileList) contains ".cfg") to bCfgFile
             If (bExists = True and bCfgFile = True) Begin
-                // A little trick to show the filelist.cfg in the form before we start filling the control.
-//                Send PumpMsgQueue of Desktop
-                
                 // We need to reroute the error_info_object to the original one, before
                 // changing filelist paths, as that involves a new login if SQL.
                 // So we temporarily re-initialize the original error handler, and
@@ -170,9 +165,9 @@ Object oFilelistFixerView is a cRDCDbView
         Set pbAutoEnable to True
         
         Procedure OnClick
-            String sDataPath sConnectionID sText
+            String sDataPath sConnectionID
             String[] asFileChanges
-            Boolean bExists bActive bOK
+            Boolean bActive
             Integer iRetval iSize iCount 
             Handle ho
 
@@ -195,7 +190,7 @@ Object oFilelistFixerView is a cRDCDbView
             Get Active_State of ghoStatusPanel to bActive
             If (bActive = False) Begin
                 Send StopStatusPanel
-                Send Info_Box "Process interupted..."
+                Send Info_Box "Process interrupted..."
                 Procedure_Return
             End
 
@@ -274,7 +269,7 @@ Object oFilelistFixerView is a cRDCDbView
             End_Procedure
             
             Procedure UpdateConnIdData
-                String sDFConnidFile sText sDatapath sServer sDatabase
+                String sDFConnidFile sDatapath sServer sDatabase
                 Boolean bExists
                 tConnection[] Connections
                 
@@ -360,7 +355,7 @@ Object oFilelistFixerView is a cRDCDbView
             End_Procedure
             
             Procedure UpdateDriverIniFile
-                String sFileName sPath sDriver sExt
+                String sFileName sPath sDriver
                 Boolean bExists
                 Integer iPos
                 
@@ -488,12 +483,6 @@ Object oFilelistFixerView is a cRDCDbView
             Set Location to 135 76
             Set pbAutoEnable to True 
             Set Label to "MS-SQL collating:"
-            
-            Procedure Page Integer iPageObject
-                String sDatabase
-                Forward Send Page iPageObject
-                Get psDatabase of ghoDUF to sDatabase
-            End_Procedure 
             
             Procedure UpdateCollatingSequence String sDatabase
                 String sCollatingSequence
@@ -791,7 +780,7 @@ Object oFilelistFixerView is a cRDCDbView
         Object oOpenErrorTables_edt is a cDUFRichEdit
             Set Size to 79 125
             Set Location to 29 327
-            Set Label to "Open eable errors"
+            Set Label to "Open table errors"
             Set peAnchors to anTopBottom
             Set psExtension to ".int"
         End_Object
@@ -952,7 +941,7 @@ Object oFilelistFixerView is a cRDCDbView
                     Procedure_Return
                 End
                 If (iCounter <> 0) Begin
-                    Send Info_Box ("Ready!" * String(iCounter) * "RootName entries in Filelist.cfg that pointed to SQL tables that doesn't exist in the SQL database, were adjusted.\n\nTop tip: If tables were added to the ''Open Table Errors', check the list 'Int table Errors' (top right) for a match. The odds are high that there is something wrong with the .int file.")
+                    Send Info_Box ("Ready!" * String(iCounter) * "RootName entries in Filelist.cfg that pointed to SQL tables that doesn't exist in the SQL database, were adjusted.\n\nTop tip: If tables were added to the ''Open Table Errors', check the list 'RootName *.int' for a match. The odds are high that there is something wrong with the .int file.")
                 End
                 Else Begin
                     Send Info_Box "Ready! No problems found."    
@@ -995,14 +984,19 @@ Object oFilelistFixerView is a cRDCDbView
                 
                 If (iOpenErrors <> 0 and iCounter = 0) Begin 
                     Send RefreshData
-                    Send Info_Box ("Ready! No Errors were fixed. NOTE:" * String(iOpenErrors) * "Open errors still exists and needs your attention. Please use the button 'Recreate Open table Errors *.int files'!)")
+                    Send Info_Box ("Ready! No Errors were fixed. NOTE:" * String(iOpenErrors) * "Open errors still exists and needs your attention. Please use the button '5. Recreate *.int files for Open table errors'.")
                 End
                 Else If (iOpenErrors <> 0 and iCounter <> 0) Begin
                     Send RefreshData
                     Send Info_Box ("Ready!" * String(iCounter) * "RootName entries were changed. See: Log file!")
                 End
+                // Every error fixed is no "no problems". (It said so.)
+                Else If (iCounter <> 0) Begin
+                    Send RefreshData
+                    Send Info_Box ("Ready!" * String(iCounter) * "RootName entries were changed; no open errors are left. See: Log file!")
+                End
                 Else Begin
-                    Send Info_Box "Ready! No problems found"
+                    Send Info_Box "Ready! No problems found."
                 End
             End_Procedure
                           
@@ -1070,44 +1064,6 @@ Object oFilelistFixerView is a cRDCDbView
         Set Label to "More Database Actions:"
         Set peAnchors to anBottomLeftRight
 
-//        Object oRefreshAllIntFiles_btn is a cRDCButton
-//            Set Size to 32 61
-//            Set Location to 12 9
-//            Set Label to "Refresh All *.int files"
-//            Set peAnchors to anTopRight
-//            Set MultiLineState to True
-//            Set psToolTip to "This will refresh all .int files."
-//            Set psImage to "RefreshIntFiles.ico"
-//            Set piImageSize to 24
-//            Set pbAutoEnable to True
-//            
-//            Procedure OnClick
-//                Integer iRetval iCounter
-//                
-//                Get YesNo_Box "This will refresh all .int files.\n\nContinue?" to iRetval
-//                If (iRetval <> MBR_Yes) Begin
-//                    Procedure_Return    
-//                End  
-//                
-//                Get RefreshAllIntFiles to iCounter
-//                If (iCounter <> 0) Begin
-//                    Send Info_Box ("Ready! Refresh of:" * String(iCounter) * ".int files done.")
-//                End
-//                Else Begin
-//                    Send Info_Box "Ready! No .int files to refresh."
-//                End
-//            End_Procedure
-//            
-//            Function IsEnabled Returns Boolean
-//                Boolean bExists
-//                String sFileName
-//                Get psConnIdFile to sFileName
-//                File_Exist sFileName bExists
-//                Function_Return bExists
-//            End_Function
-//
-//        End_Object
-
         Object oExtract_Relationships_cb is a cRDCCheckBox
             Set Size to 10 50
             Set Location to 16 6
@@ -1148,7 +1104,7 @@ Object oFilelistFixerView is a cRDCDbView
             Set Size to 12 147
             Set Location to 45 5
             Set Label to "Why remove uppercased columns?"
-            Set psToolTip to "Help on selecting the Right SQL Collation and removing ppercased columns"
+            Set psToolTip to "Help on selecting the Right SQL Collation and removing uppercased columns"
             Set peAnchors to anNone
             Set psImage to "ActionHelp.ico"
         
@@ -1171,12 +1127,12 @@ Object oFilelistFixerView is a cRDCDbView
             Procedure OnClick
                 Integer iRetval iCounter
                 Boolean bExtractRelations bRemoveUCol
-                String sDataPath sBackup sHelpLable
+                String sDataPath sBackup
                 
                 Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
                 Get vFolderFormat sDataPath to sDataPath
                 Move (sDataPath + CS_BackupFolder) to sBackup
-                Get YesNo_Box ("This will recreate all .int files. Relations from the current .int file will be preserved, if exists. A backup of .int files and the Filelist.cfg will be created here:\n" + String(sBackup) * "folder.\n\nContinue?") to iRetval
+                Get YesNo_Box ("This will recreate all .int files. Relations from the current .int file will be preserved, if exists. A backup of .int files and the Filelist.cfg will be made in a new folder, named" * CS_BackupFolder * "and the date and time, in:\n" + String(sDataPath) + "\n\nContinue?") to iRetval
                 If (iRetval <> MBR_Yes) Begin
                     Procedure_Return    
                 End
@@ -1219,12 +1175,12 @@ Object oFilelistFixerView is a cRDCDbView
             Procedure OnClick
                 Integer iRetval iCounter
                 Boolean bBackup
-                String sDataPath sBackup sHelpLable
+                String sDataPath sBackup
                 
                 Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
                 Get vFolderFormat sDataPath to sDataPath
                 Move (sDataPath + CS_BackupFolder) to sBackup
-                Get YesNo_Box ("This will remove all uppercased columns (U_ computed columns). A backup of .int files and the Filelist.cfg will be created here:\n" + String(sBackup) * "folder.\n\nContinue?") to iRetval
+                Get YesNo_Box ("This will remove all uppercased columns (U_ computed columns). A backup of .int files and the Filelist.cfg will be made in a new folder, named" * CS_BackupFolder * "and the date and time, in:\n" + String(sDataPath) + "\n\nContinue?") to iRetval
                 If (iRetval <> MBR_Yes) Begin
                     Procedure_Return    
                 End
@@ -1278,7 +1234,7 @@ Object oFilelistFixerView is a cRDCDbView
                     Send Info_Box ("The backup folder:\n" + CS_BackupFolder + "\nCould not be created! No *.dat related files were moved.")
                 End
                 Else If (iCounter > 0) Begin
-                    Send Info_Box ("Ready! Moved:" * String(iCounter) * ".dat related files to backup folder: '.\Data\Backkup'.")
+                    Send Info_Box ("Ready! Moved:" * String(iCounter) * ".dat related files to the folder" * CS_BackupFolder * "of the data folder.")
                 End
                 Else Begin
                     Send Info_Box "Ready! No files moved."
@@ -1424,7 +1380,6 @@ Object oFilelistFixerView is a cRDCDbView
     Procedure ListRootDatFiles
         Handle ho
         String[] asFiles
-        Boolean bIsIntTable
         Integer iSize iCount iCounter
         
         Move 0 to iCounter
@@ -1492,7 +1447,6 @@ Object oFilelistFixerView is a cRDCDbView
         Handle ho hTable
         tFilelist[] FilelistTables
         tFilelist[] ErrorFilesArray
-        Boolean bDatTable
         Integer iSize iCount
         String sVal
         
@@ -1514,9 +1468,9 @@ Object oFilelistFixerView is a cRDCDbView
     End_Procedure
 
     Function FixFileListErrors Returns Integer
-        Integer iRetval hTable iSize iCount iItem iCh iCounter iAliases
+        Integer hTable iSize iCount iCh iCounter
         tFilelist[] FileListArray
-        String sNoDriverRootname sDriver sRootName sRootNameNew sDatabase sLogicalName sDisplayName sDataPath sFileList
+        String sRootName sLogicalName sDisplayName sFileList
         Boolean bIsAlias bIsDatEntry bExists bOK bCancel
         
         Move 0 to iCounter 
@@ -1582,7 +1536,7 @@ Object oFilelistFixerView is a cRDCDbView
         Integer iCounter iIntError iSize
         Handle hTable hMasterTable
         String sLogicalNameOrg sRootNameOrg sDisplayNameOrg sFileList
-        String sDriver sNoDriverRootname sRootNameNew sLogicalNameNew sDisplayNameNew sMasterRootName sMasterDriver
+        String sNoDriverRootname sRootNameNew sLogicalNameNew sDisplayNameNew sMasterRootName sMasterDriver
         Boolean bIsAlias bIsIntTable bIsAliasSQL bIsMasterSQL bOK bCancel
         tFilelist[] FilelistArray
         
@@ -1682,11 +1636,11 @@ Object oFilelistFixerView is a cRDCDbView
     End_Function
 
     Function FixFileListSQLMissingTables Returns Integer
-        Integer iRetval hTable iSize iCount iItem iCh iCounter iAliases iPos
+        Integer hTable iSize iCount iItem iCh iCounter
         String[] asSQLTables
         tFilelist[] FileListArray
         String sNoDriverRootname sDriver sRootName sRootNameNew sDatabase sLogicalName sDisplayName sFileList
-        Boolean bIsAlias bIsIntTable bExists bOK bCancel
+        Boolean bIsIntTable bExists bOK bCancel
         
         Move 0 to iCounter 
         Move 0 to hTable
@@ -1775,10 +1729,10 @@ Object oFilelistFixerView is a cRDCDbView
     End_Function
 
     Function FixFileListOpenErrors Returns Integer        
-        Integer iRetval hTable iSize iCount iItem iCh iCounter iAliases iOpenErrors
+        Integer hTable iSize iCount iCh iCounter
         tFilelist[] FileListArray
-        String sNoDriverRootname sDriver sRootName sRootNameNew sDatabase sLogicalName sDisplayName sDataPath sFileList
-        Boolean bIsAlias bExists bChange bFirst bIsSQLTable bIsIntTable bOK bCancel
+        String sNoDriverRootname sDriver sRootName sDatabase sLogicalName sDisplayName sDataPath sFileList
+        Boolean bChange bFirst bIsSQLTable bIsIntTable bOK bCancel
         
         Move False to bFirst
         Move 0 to iCounter 
@@ -1856,11 +1810,11 @@ Object oFilelistFixerView is a cRDCDbView
     End_Function
 
     Function FixAllIntFileErrors Boolean bExtractRelations Returns Integer
-        Integer iRetval iSize iCount iCounter iDriver
+        Integer iSize iCount iCounter iDriver
         tFilelist[] ErrorFilesArray FileListArray
-        String sDriver sRootName sIntFileName sConnectionID sErrorText sText
+        String sDriver sRootName sIntFileName sConnectionID
         Boolean bOK bIsSystem bCurrentUcaseMode bCancel
-        Handle hTable hoCurrentErrorObject
+        Handle hTable
 
         Get pFileListArray of ghoDUF to FileListArray
         If (SizeOfArray(FileListArray) = 0) Begin
@@ -1935,78 +1889,14 @@ Object oFilelistFixerView is a cRDCDbView
         Function_Return iCounter
     End_Function
 
-    Function RefreshAllIntFiles Returns Integer
-        Integer iRetval iSize iCount iCounter
-        tFilelist[] FileListArray
-        String sDriver sRootName sIntFileName sConnectionID sErrorText sText sDataPath
-        Boolean bOK bIsSystem bAnsi bIsAlias
-        Handle hTable
-    
-        Get pFileListArray of ghoDUF to FileListArray
-        If (SizeOfArray(FileListArray) = 0) Begin
-            Send RefreshData
-            Get pFileListArray of ghoDUF to FilelistArray
-        End
-    
-        Move 0 to iCounter
-        Move (SizeOfArray(FileListArray)) to iSize     
-        // Each Start_Restructure/End_Restructure calls the "Callback" message 3 times,
-        // and it does a "Send DoAdvance" to the ghoProgressBar...
-        Send StartStatusPanel "Refreshing Int Files" "" (iSize * 3)
-        Decrement iSize
-        
-        Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
-        Get psConnId to sConnectionID 
-        Get pbToANSI of ghoDUF to bAnsi 
-        Send OpenLogFile
-    
-        For iCount from 0 to iSize
-            Move FileListArray[iCount].sDriver to sDriver
-            Move FileListArray[iCount].hTable to hTable
-            Get _RemoveDriverFromRootName of ghoDUF FileListArray[iCount].sRootName (&sDriver) to sRootName
-            Set Message_Text of ghoStatusPanel to ("Table number:" * String(hTable))
-            If (sDriver = "") Begin
-                Get psDriverID of ghoDUF to sDriver
-            End
-            Move FileListArray[iCount].bIsAlias to bIsAlias
-            If (bIsAlias = False) Begin
-                Move (FileListArray[iCount].sNoDriverRootname + ".int") to sIntFileName
-                If (sDriver <> DATAFLEX_ID) Begin
-                    Get _IsSystemFile of ghoDUF hTable to bIsSystem
-                    Send UpdateStatusPanel ("Refreshing .int file:" * String(sRootName))
-                    
-                    // Refresh!
-                    Get _SqlUtilRefreshIntFile of ghoDUF hTable sDriver sConnectionID bansi bIsSystem to bOK
-    
-                    If (bOK) Begin
-                        Increment iCounter
-                        Set_Attribute DF_FILE_ROOT_NAME of hTable to (sDriver + ":" + FileListArray[iCount].sNoDriverRootname)
-                    End 
-                    Else Begin
-                        Send WriteError ("Could not refresh the .int file:" * FileListArray[iCount].sNoDriverRootname + ".int")
-                    End
-                End
-            End
-        Loop
-    
-        Send StopStatusPanel
-        Send CloseLogFile
-        If (iCounter <> 0) Begin
-            Send RefreshData
-        End
-    
-        Function_Return iCounter
-    End_Function
-
     Procedure GENERATE_ALL_INT_FILES_CODE_STARTS_HERE
     End_Procedure
 
     Function RecreateAllIntFiles Boolean bExtractRelations Boolean bRemoveUCol Returns Integer
-        Integer iRetval iSize iCount iCounter iDriver iLastErr iErrLine
+        Integer iSize iCount iCounter iDriver iLastErr iErrLine
         tFilelist[] FileListArray
-        String[] asIntFileData
-        String sDriver sIntFileName sConnectionID sErrorText sText sDataPath
-        Boolean bExists bOK bIsSystem bAnsi bIsAlias bIsSQL bCurrentUcaseMode bErr bCancel
+        String sDriver sIntFileName sConnectionID sDataPath
+        Boolean bOK bIsSystem bAnsi bIsAlias bIsSQL bCurrentUcaseMode bErr bCancel
         Handle hTable
     
         Get pFileListArray of ghoDUF to FileListArray
@@ -2097,9 +1987,7 @@ Object oFilelistFixerView is a cRDCDbView
     // Helper function to recreate a single .int file
     Function CreateSingleIntFile Handle hTable String sDriver String sConnectionID Boolean bIsSystem String sIntFileName Boolean bExtractRelations Boolean bRemoveUCol Returns Boolean
         Boolean bOK bAnsi bIsHidden
-        String sErrorText sText
-        Integer iRetval iDbType
-        String[] asIntFieldsData asIntFileHiddenFields asFullIntFileData
+        String[] asIntFieldsData asFullIntFileData
     
         Get pbToANSI of ghoDUF to bAnsi 
         
@@ -2136,11 +2024,10 @@ Object oFilelistFixerView is a cRDCDbView
     End_Function 
     
     Function FindAllUColumnsFiles Boolean bBackup Returns Integer
-        Integer iRetval iSize iCount iCounter iDriver iLastErr iErrLine iResult
+        Integer iSize iCount iCounter iDriver iLastErr iErrLine iResult
         tFilelist[] FileListArray
-        String[] asIntFileData
-        String sDriver sIntFileName sConnectionID sErrorText sText sDataPath
-        Boolean bExists bOK bIsSystem bAnsi bIsAlias bIsSQL bCurrentUcaseMode bErr bCancel
+        String sDriver sIntFileName sConnectionID sDataPath
+        Boolean bOK bIsSystem bAnsi bIsAlias bIsSQL bCurrentUcaseMode bErr bCancel
         Handle hTable
     
         Get pFileListArray of ghoDUF to FileListArray
@@ -2200,7 +2087,7 @@ Object oFilelistFixerView is a cRDCDbView
                 If (sDriver <> DATAFLEX_ID) Begin
                     Open hTable
                     Get _IsSystemFile of ghoDUF hTable to bIsSystem
-                    Send UpdateStatusPanel ("Searhing Table:" * String(FileListArray[iCount].sNoDriverRootname))
+                    Send UpdateStatusPanel ("Searching Table:" * String(FileListArray[iCount].sNoDriverRootname))
                     
                     Get FindSingleUColumnsFile hTable sDriver sConnectionID bIsSystem sIntFileName bBackup to iResult
                     
@@ -2314,7 +2201,6 @@ Object oFilelistFixerView is a cRDCDbView
         Integer iSize iCount
         String[] asIntFile asData
         String sLine sFieldTxt
-        Boolean bFound
         
         Get FullDataPathFileName sIntFile to sIntFile
         Get ReadFileToArray sIntFile to asIntFile
@@ -2389,10 +2275,10 @@ Object oFilelistFixerView is a cRDCDbView
     
     // To add FIELD_NUMBER DATETIME attributes.
     Function CollectDateTimeAttributes Handle hTable String sDriver String[] asIntFileData Returns String[]
-        Integer iSize iCount iItem iField iDbType iFieldNumber
-        String sFieldNoTxt sLine sHidden sFieldDateTxt sFieldHiddenTxt sFieldName
+        Integer iSize iCount iDbType
+        String sFieldNoTxt sFieldDateTxt
         Boolean bFound bOpen
-        String[] asColumnsNames asFieldTimeDates asFieldHidden
+        String[] asColumnsNames asFieldTimeDates
 
         Open hTable
         Get_Attribute DF_FILE_OPENED of hTable to bOpen
@@ -2425,10 +2311,10 @@ Object oFilelistFixerView is a cRDCDbView
 
     // To add HIDDEN FIELD_NUMBER settings.
     Function CollectHiddenAttributes Handle hTable String sDriver String[] asIntFileData Boolean ByRef bIsHidden Returns String[]
-        Integer iSize iCount iItem iField iDbType iFieldNumber
-        String sFieldNoTxt sLine sHidden sFieldDateTxt sFieldHiddenTxt sFieldName
-        Boolean bFound bOpen
-        String[] asColumnsNamesOrg asColumnsNames asFieldTimeDates asFieldHidden
+        Integer iSize iCount iField iDbType
+        String sFieldNoTxt sLine sFieldHiddenTxt sFieldName
+        Boolean bFound
+        String[] asColumnsNamesOrg asColumnsNames asFieldHidden
         
         Move False to bIsHidden
         Get piDbType of ghoDUF to iDbType
@@ -2639,40 +2525,6 @@ Object oFilelistFixerView is a cRDCDbView
         Function_Return asCombinedArray
     End_Function
     
-    Function ProcessBlocks tBlock[] aSourceBlocks tBlock[] aProcessedBlocks Returns tBlock[]
-        Integer iCount iSize jCount
-        Boolean bExists
-        tBlock SourceBlock
-        tBlock[] aTargetBlocks
-    
-        // Initialize the output array
-        Move (ResizeArray(aTargetBlocks, 0)) to aTargetBlocks
-        Move (SizeOfArray(aSourceBlocks)) to iSize
-        Decrement iSize
-        
-        // Loop through the source blocks
-        For iCount from 0 to iSize
-            Move aSourceBlocks[iCount] to SourceBlock
-    
-            // Check if the FIELD_NUMBER already exists in the processed blocks
-            Move False to bExists
-            For jCount from 0 to (SizeOfArray(aProcessedBlocks) - 1)
-                If (SourceBlock.iFieldNumber = aProcessedBlocks[jCount].iFieldNumber) Begin
-                    Move True to bExists
-                    Move (SizeOfArray(aProcessedBlocks)) to jCount // We're out of here
-                End
-            Loop
-    
-            // Add the block if it does not already exist
-            If (bExists = False) Begin
-                Move SourceBlock to aProcessedBlocks[-1]
-                Move SourceBlock to aTargetBlocks[-1]
-            End
-        Loop  
-    
-        Function_Return aTargetBlocks
-    End_Function
-
     // Extracts the top part of the string array that preceeds all
     // "FIELD_NUMBER xx" data, and stops does not include IntFileIndexPart.
     Function IntFileTopPart String[] ByRef asIntFile Returns String[]
@@ -2703,7 +2555,7 @@ Object oFilelistFixerView is a cRDCDbView
     Function IntFileIndexPart String[] ByRef asIntFile Returns String[]
         String[] asResult
         String sLine
-        Integer iSize iCount iFieldNumber
+        Integer iSize iCount
         Boolean bFound
         
         Move False to bFound
@@ -2729,10 +2581,7 @@ Object oFilelistFixerView is a cRDCDbView
     // a newly created .int file (sIntFile).
     // The gather of data should be made with CollectTableRelations
     Function MergeIntFileData Handle hTable String sIntFile String[] asIntFileData Returns String[]
-        Boolean bOK bOpen
-        Integer iCh iItem iSize iCount iFieldNumber iColumnData
         String[] asIntfile asFieldsData asTopData asBottomData asResultData
-        String sLine sDummy
         
         // Read the newly created .int file:
         Get ReadFileToArray sIntFile to asIntfile  
@@ -2778,8 +2627,6 @@ Object oFilelistFixerView is a cRDCDbView
     Function ReadFileToArray String sFileName Returns String[]
         String[] asData
         Integer iCh
-        String sPath sLine
-        Boolean bFound
         
         Get Seq_New_Channel to iCh
         If (iCh < 0) Begin 
@@ -2800,7 +2647,7 @@ Object oFilelistFixerView is a cRDCDbView
 
     Function WriteArrayToFile String sFileName String[] asResultData Returns Boolean
         Boolean bStart bFound
-        Integer iSize iCount iCh iEmpty 
+        Integer iSize iCount iCh
         String sLine
         String[] asKept
         
@@ -2876,7 +2723,7 @@ Object oFilelistFixerView is a cRDCDbView
     Function FieldNumberToDataTimeText Handle hTable String sFieldNoTxt String sDriver Integer iDbType Returns String
         String sDataType sTableName sColumnName
         String[] asColumns
-        Integer iFieldNumber iType iDFType iColumns
+        Integer iFieldNumber iType
         Boolean bIsSQLTable bOpen
         
         Get ExtractFieldNumber sFieldNoTxt to iFieldNumber
@@ -2924,40 +2771,6 @@ Object oFilelistFixerView is a cRDCDbView
         Function_Return sDataType
     End_Function
 
-    // The hTable needs to be open before calling this function.
-    Function NextFieldNumberHidden Handle hTable String sFieldNoTxt Returns String
-        String sHidden
-        Integer iFieldNumber iType iDFType iNumColumns
-        Boolean bIsSQLTable bOpen
-        
-        Get ExtractFieldNumber sFieldNoTxt to iFieldNumber
-        If (iFieldNumber = -1) Begin
-            Function_Return "" 
-        End
-        Get _IsSQLEntry of ghoDUF hTable to bIsSQLTable
-        If (bIsSQLTable = False) Begin
-            Function_Return ""
-        End
-        Get_Attribute DF_FILE_OPENED of hTable to bOpen
-        If (bOpen = False) Begin
-            Function_Return ""
-        End
-        Move "" to sHidden
-        Get_Attribute DF_FILE_NUMBER_FIELDS of hTable to iNumColumns
-        Increment iFieldNumber
-        If (iFieldNumber <= iNumColumns) Begin
-            Get_Attribute DF_FIELD_NAME of hTable iFieldNumber to sHidden
-            If (not(Uppercase(sHidden) contains "U_")) Begin
-                Function_Return ""
-            End
-            Else Begin
-                Move "NEXT_COLUMN_HIDDEN UPPERCASED" to sHidden    
-            End
-        End
-        
-        Function_Return sHidden
-    End_Function        
-    
     // The sFileName should not contain any path. Creates a backup copy of the passed sFileName
     // in the sBackup folder with a "sFileDateExt" file name suffix (prior to the file name extension).
     // Example: A passed sFileName of "register.int" will become: "register.2024-11-06__21_34_42.int"
@@ -3058,7 +2871,7 @@ Object oFilelistFixerView is a cRDCDbView
     End_Function
 
     Function FileDatePrefix Returns String
-        String sFileDateExt sDateTime
+        String sDateTime
         DateTime dDateTime
         Integer iPos
         
@@ -3138,7 +2951,7 @@ Object oFilelistFixerView is a cRDCDbView
     // Returns a string array with all *.dat related files from the passed sPath parameter,
     // as a string array.
     Function CollectFilteredFiles String sPath String sFilter Returns String[]
-        Integer iCounter iCh iItem
+        Integer iCh iItem
         String sLine sExt 
         String[] asFiles asExt
         
@@ -3166,7 +2979,6 @@ Object oFilelistFixerView is a cRDCDbView
 
     Function SanitizeDatRelatedFiles String[] asFiles String[] asDatFilesInUse Returns String[]
         Integer iSize iCount iItem
-        String sFileName sFileNameNoExt sExt sFileNameShort
         
         // We add these files to the .dat files array as we don't want them to be moved:
         Move "dbversion.dat" to asDatFilesInUse[-1]
@@ -3190,7 +3002,7 @@ Object oFilelistFixerView is a cRDCDbView
     // from the passed asFiles string array.
     Function RemoveArrayDatRelatedFiles String[] asFiles String sFileName Returns String[]
         String sExt sFileNameShortOrg sFileNameShortNew
-        Integer iSize iCount iItem
+        Integer iSize iItem
         
         Move (SizeOfArray(asFiles)) to iSize
         If (iSize = 0) Begin
@@ -3328,9 +3140,6 @@ Object oFilelistFixerView is a cRDCDbView
         End
 
         Get piChannel to iCh  
-        If (iCh < 0) Begin
-            Showln "iCh = " iCh " Err = " (Err) " LastErr = " LastErr " ErrLine = " ErrLine
-        End
         If (iCh >= 0) Begin
             Move (CurrentDateTime()) to sTimeStamp
             Writeln channel iCh "Log file closed date/time: " (String(sTimeStamp))
@@ -3345,26 +3154,6 @@ Object oFilelistFixerView is a cRDCDbView
         Set pbOpenLogFile to False
     End_Procedure
                 
-    Procedure WriteAliasEntryError Boolean bIsIntFile Handle hTable String sRootNameAlias String sLogicalNameAlias String sRootNameMaster String sLogicalNameMaster
-        Integer iCh
-        
-        Send OpenLogFile
-        Get piChannel to iCh
-        Writeln channel iCh "File Number        = " hTable
-        Writeln channel iCh "Alias RootName     = " sRootNameAlias
-        Writeln channel iCh "Alias LogicalName  = " sLogicalNameAlias
-        Writeln channel iCh "Master RootName    = " sRootNameMaster
-        Writeln channel iCh "Master LogicalName = " sLogicalNameMaster
-        If (bIsIntFile = False) Begin
-            Writeln channel iCh "Alias RootName Error"
-        End
-        Else Begin
-            Writeln channel iCh "Alias '.int' Filelist error OR the .int file doesn't exist."    
-        End
-        Writeln channel iCh  
-        Send CloseLogFile            
-    End_Procedure
-    
     Procedure WriteToLogFile Boolean bIsAlias Handle hTable String sLogicalNameOrg String sRootNameOrg String sRootNameNew String sDisplayNameOrg String sDisplayNameNew
         Integer iCh
 

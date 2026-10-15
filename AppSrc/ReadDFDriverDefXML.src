@@ -238,7 +238,6 @@ Object oMainPanel is a BasicPanel
         Object oOutputFilename_fm is a Form
             Set Size to 13 298
             Set Location to 20 43
-//            Set Label to "Output Package File Name:"
             Set Label_Justification_Mode to JMode_Top
             Set Label_Col_Offset to 0
             Set Prompt_Button_Mode to PB_PromptOn
@@ -325,7 +324,6 @@ Object oMainPanel is a BasicPanel
         Procedure OnClick
             tColumnType[] aColumnType
             String sFileName sDriverXMLFile 
-            Boolean bExists          
             
             Get paColumnType to aColumnType
             If (SizeOfArray(aColumnType) = 0) Begin
@@ -360,10 +358,10 @@ Object oMainPanel is a BasicPanel
         DateTime dtExecStart dtExecEnd
         TimeSpan tsTotalTime
         Handle hoXML hoRoot hoList hoBeginAfter hoName hoNextSibling
-        Integer iItems i iCount
+        Integer iItems iCount
         Boolean bOK bExists
-        String  sNamespace sValue sError
-        Variant vRoot vChild vList vBeginAfter vName vNextSibling
+        String sError
+        Variant vRoot vList vBeginAfter vName vNextSibling
         tColumnType[] aColumnType
 
         Move (CurrentDateTime()) to dtExecStart
@@ -569,7 +567,7 @@ Object oMainPanel is a BasicPanel
     Procedure WriteXMLDriverTypeData String sFileName String sDriverXMLFile tColumnType[] aColumnType
         Integer iSize iCount iCh iDbType iDataFlexType
         String sSpace sDriverID sDataFlexType sValue
-        DateTime dtExecStart dtExecEnd
+        DateTime dtExecStart
         
         Get Seq_Open_Output_Channel sFileName to iCh
         If (iCh = DF_SEQ_CHANNEL_ERROR) Begin
@@ -665,7 +663,6 @@ Object oMainPanel is a BasicPanel
         Move "\MSSQLDRV_DriverDef.xml" to sXMLFileName
         Set Value of oDriverXMLFileName_fm to (sBinPath + sXMLFileName) 
         Set Value of oDbType_cf   to EN_DbTypeMSSQL
-//        Set Value of oDriverID_cf to MSSQLDRV_ID
     End_Procedure
     Send OnStartUp
 

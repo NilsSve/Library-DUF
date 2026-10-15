@@ -252,7 +252,7 @@ Object oCompareDatabases_vw is a dbView
     Procedure MainProcess
         String sFilelistFrom sFilelistTo
         Integer[] iaDifferences
-        Integer iSize iRetval
+        Integer iSize
         Boolean bFromExists bToExists
         tAPITableBooleans CompareCheckBoxes
         DateTime dtExecStart
@@ -315,171 +315,6 @@ Object oCompareDatabases_vw is a dbView
                 Send Info_Box "An unknown error occurred. Process interrupted."
         Case End
     End_Procedure
-
-//    Function SetupPathingAndGetDatabaseInfo String sFilelist Boolean bIsFrom String ByRef sDatabaseCollation Returns Boolean
-//        Boolean bOK bIsEmbedded
-//        String sDatabase
-//
-//        Get ChangeFilelistPathing of ghoApplication sFilelist to bOK
-//        If (bOK = False) Begin
-//            Function_Return False
-//        End
-//        
-//        Get UtilIsAllFilelistEntriesDataFlexTables of ghoDbUpdateFunctionLibrary to bIsEmbedded
-//        If (bIsEmbedded = False) Begin
-//            Get psDatabase of ghoDbUpdateFunctionLibrary to sDatabase
-//            Get SqlDatabaseCollationQuery of ghoDbUpdateFunctionLibrary sDatabase True to sDatabaseCollation
-//        End 
-//        Else Begin
-//            Move "Embedded Database (DataFlex)" to sDatabaseCollation
-//        End
-//        
-//        Function_Return True
-//    End_Function
-//
-//    Function CompareAndOutputDiffs String sFilelistFrom String sFilelistTo tAPITableBooleans CompareCheckBoxes DateTime dtExecStart Returns Integer[]
-//        Integer iSize iCount iNoOfTablesFrom iNoOfTablesTo iCh
-//        Boolean bIsSame bFilelistError bUserCancel bOK bCollationDiff bIsEmbedded
-//        Handle hTable
-//        String sLogicalName sDatabaseCollationFrom sDatabaseCollationTo sDatabase
-//        tAPITable[] aFromStructure aToStructure
-//        tAPITableCompare[] aAPITableCompare
-//        Integer[] iaDifferences iaDifferencesEmpty 
-//
-//        Set Message_Text of ghoStatusPanel to ""
-//        
-//        // Set up the pathing and get database information for 'FROM' Filelist.cfg
-//        Get SetupPathingAndGetDatabaseInfo sFilelistFrom True (&sDatabaseCollationFrom) to bOK
-//        If (bOK = False) Begin
-//            Function_Return iaDifferencesEmpty
-//        End
-//        
-//        // Fill the 'FROM' structure with data
-//        Get UtilTablesStructArrayFill of ghoDbUpdateFunctionLibrary True True True to aFromStructure
-//        If (aFromStructure[0].bCancel = True) Begin
-//            Move -1 to iaDifferencesEmpty[0]
-//            Function_Return iaDifferencesEmpty
-//        End
-//        If (aFromStructure[0].bError = True) Begin
-//            Move aFromStructure[0].ApiTableInfo.iTableNumber to hTable
-//            Move (-999999 - hTable) to iaDifferencesEmpty[0]
-//            Function_Return iaDifferencesEmpty
-//        End
-//        
-//        // Set up the pathing for the 'TO' Filelist.cfg
-//        Get SetupPathingAndGetDatabaseInfo sFilelistTo False (&sDatabaseCollationTo) to bOK
-//
-//        If (bOK = False) Begin
-//            Function_Return iaDifferencesEmpty
-//        End
-//        // Fill the 'TO' structure with data
-//        Get UtilTablesStructArrayFill of ghoDbUpdateFunctionLibrary True True False to aToStructure
-//        If (aToStructure[0].bCancel = True) Begin
-//            Move -1 to iaDifferencesEmpty[0]
-//            Function_Return iaDifferencesEmpty
-//        End
-//        If (aToStructure[0].bError = True) Begin
-//            Move aToStructure[0].ApiTableInfo.iTableNumber to hTable
-//            Move (-999999 - hTable) to iaDifferencesEmpty[0]
-//            Function_Return iaDifferencesEmpty
-//        End
-//
-//        Set Message_Text of ghoStatusPanel to "Comparing and Writing Differences: (3 of 3)"
-//        Move 0 to hTable
-//        Move 0 to iCount
-//        Get WriteReportHeader sDatabaseCollationFrom sDatabaseCollationTo to iCh
-//
-//        Get UtilTableCombineFromAndToArrays of ghoDbUpdateFunctionLibrary aFromStructure aToStructure to aAPITableCompare
-//        Move (SizeOfArray(aAPITableCompare))   to iSize
-//        Set piMaximum of ghoProgressBar        to iSize
-//        Set piMaximum of ghoProgressBarOverall to iSize
-//        Decrement iSize
-//
-//        For iCount from 0 to iSize
-//            Move True to bIsSame
-//            Set piPosition of ghoProgressBarOverall to iCount
-//            Move aAPITableCompare[iCount].hTable to hTable
-//
-//            If (aAPITableCompare[iCount].bExistsFrom = True) Begin
-//                Move aAPITableCompare[iCount].APITableNameInfoCompare.sLogicalNameFrom to sLogicalName
-//            End
-//            Else Begin
-//                Move aAPITableCompare[iCount].APITableNameInfoCompare.sLogicalNameTo   to sLogicalName
-//            End
-//            Set Action_Text of ghoStatusPanel to ("Name:" * sLogicalName * String("Number:") * String(hTable))
-//
-//            Get UtilTableCompare_Ex of ghoDbUpdateFunctionLibrary aAPITableCompare[iCount] CompareCheckBoxes False (&bFilelistError) to bIsSame
-//
-//            If (bIsSame = False) Begin
-//                Send MainReport (&aAPITableCompare[iCount]) (&CompareCheckBoxes) iCh
-//                Move hTable to iaDifferences[SizeOfArray(iaDifferences)]
-//            End
-//
-//            Get Check_StatusPanel of ghoStatusPanel to bUserCancel
-//            If (bUserCancel = True) Begin
-//                Move -1 to iaDifferencesEmpty[0]
-//                Function_Return iaDifferencesEmpty
-//            End
-//        Loop
-//        
-//        Move False to bCollationDiff
-//        If (Uppercase(sDatabaseCollationFrom) <> Uppercase(sDatabaseCollationTo)) Begin
-//            Move True to bCollationDiff
-//        End
-//        Send WriteReportFooter (SizeOfArray(iaDifferences)) bCollationDiff iCh dtExecStart
-//        Close DF_ALL DF_PERMANENT
-//
-//        Function_Return iaDifferences
-//    End_Function
-//
-//    Function FillStructureData Boolean bIsFrom tAPITable[] ByRef aStructure Returns Integer[]
-//        Integer[] iaDifferences
-//        
-//        Get UtilTablesStructArrayFill of ghoDbUpdateFunctionLibrary True True bIsFrom to aStructure
-//        
-//        If (aStructure[0].bCancel = True) Begin
-//            Move -1 to iaDifferences[0]
-//            Function_Return iaDifferences
-//        End
-//        
-//        If (aStructure[0].bError = True) Begin
-//            Move (aStructure[0].ApiTableInfo.iTableNumber * -1 - 999999) to iaDifferences[0]
-//            Function_Return iaDifferences
-//        End
-//        
-//        Function_Return iaDifferences
-//    End_Function
-//
-//    Function ProcessTableComparison Integer iCount tAPITableCompare[] ByRef aAPITableCompare tAPITableBooleans ByRef CompareCheckBoxes Integer[] ByRef iaDifferences Integer iCh Returns Boolean
-//        Boolean bIsSame bFilelistError bUserCancel
-//        Handle hTable
-//        String sLogicalName
-//        
-//        Set piPosition of ghoProgressBarOverall to iCount
-//        Move aAPITableCompare[iCount].hTable to hTable
-//        
-//        If (aAPITableCompare[iCount].bExistsFrom = True) Begin
-//            Move aAPITableCompare[iCount].APITableNameInfoCompare.sLogicalNameFrom to sLogicalName
-//        End
-//        Else Begin
-//            Move aAPITableCompare[iCount].APITableNameInfoCompare.sLogicalNameTo to sLogicalName
-//        End
-//        Set Action_Text of ghoStatusPanel to ("Name:" + sLogicalName + " Number:" + String(hTable))
-//
-//        Get UtilTableCompare_Ex of ghoDbUpdateFunctionLibrary aAPITableCompare[iCount] CompareCheckBoxes False (&bFilelistError) to bIsSame
-//
-//        If (bIsSame = False) Begin
-//            Send MainReport (&aAPITableCompare[iCount]) (&CompareCheckBoxes) iCh
-//            Move hTable to iaDifferences[SizeOfArray(iaDifferences)]
-//        End
-//
-//        Get Check_StatusPanel of ghoStatusPanel to bUserCancel
-//        If (bUserCancel = True) Begin
-//            Function_Return False
-//        End
-//        
-//        Function_Return True
-//    End_Function
 
     Function CompareAndOutputDiffs String sFilelistFrom String sFilelistTo tAPITableBooleans CompareCheckBoxes DateTime dtExecStart Returns Integer[]
         Integer iSize iCount iNoOfTablesFrom iNoOfTablesTo iCh
@@ -563,7 +398,6 @@ Object oCompareDatabases_vw is a dbView
         If (aToStructure[0].bError = True) Begin
             Move aToStructure[0].ApiTableInfo.iTableNumber to hTable
             Move (-999999 - hTable) to iaDifferencesEmpty[0]
-//            Function_Return iaDifferencesEmpty
         End
 
         Set Message_Text of ghoStatusPanel to "Comparing and Writing Differences: (3 of 3)"
@@ -615,7 +449,7 @@ Object oCompareDatabases_vw is a dbView
     End_Function
 
     Procedure MainReport tAPITableCompare ByRef aAPITableCompare tAPITableBooleans ByRef CompareCheckBoxes Integer iCh
-        String sDriverIDFrom sDriverIDTo sLogicalName sFrom sTo
+        String sDriverIDFrom sDriverIDTo sLogicalName
         Handle hTable
         Boolean bCompareDate_DateTime bCompareIndexUppercase bCompareIndexAscending bCompareFilelistUppercase
         Boolean bExistsFrom bExistsTo bIsSQLFrom bIsSQLTo
@@ -1044,10 +878,9 @@ Object oCompareDatabases_vw is a dbView
 
     Procedure WriteRelationDiffs Handle hTable tAPIRelationCompare[] aAPIRelationCompare Integer iCh
         Integer iSizeFrom iSize iCount iRow iItem
-        Boolean bExists bIsSame bHeader
+        Boolean bIsSame bHeader
         String sFrom sTo sFromFieldsRight sFromFields sToFields sLogicalNameFrom
         tRelationDiffs[] asRelationDiffs
-
 
         Move (SizeOfArray(aAPIRelationCompare)) to iSize
         Decrement iSize
@@ -1254,7 +1087,7 @@ Object oCompareDatabases_vw is a dbView
     End_Function
 
     Function FindTableNumber tAPITable[] ByRef aTableStructure Handle hTable Returns Integer
-        Integer iSize iCount iTable iItem
+        Integer iSize iCount iItem
         tAPITableNameInfo ApiTableNameInfo
 
         Move -1 to iItem
@@ -1270,43 +1103,6 @@ Object oCompareDatabases_vw is a dbView
 
         Function_Return iItem
     End_Function
-
-    // Pass one tAPIRelation for the FROM database and a struct array with relations for the TO database
-    // Returns the item number in the aAPIRelationsTO that equals the FROM relation struct data.
-    // If not found returns -1.
-//    Function FindEqualRelation tAPIRelation APIRelationFrom tAPIRelation[] aAPIRelationsTO Returns Integer
-//        Integer iRetval iSize iCount
-//
-//        Move -1 to iRetval
-//        Move (SizeOfArray(aAPIRelationsTO)) to iSize
-//        Decrement iSize
-//        For iCount from 0 to iSize
-//            If (APIRelationFrom.hTableFrom  = aAPIRelationsTO[iCount].hTableFrom  and ;
-//                APIRelationFrom.iColumnFrom = aAPIRelationsTO[iCount].iColumnFrom and ;
-//                APIRelationFrom.hTableTo    = aAPIRelationsTO[iCount].hTableTo    and ;
-//                APIRelationFrom.iColumnTo   = aAPIRelationsTO[iCount].iColumnTo) Begin
-//                    Move iCount to iRetval
-//                End
-//        Loop
-//
-//        Function_Return iRetval
-//    End_Function
-
-    // Returns a value <> -1 if the passed iIndex was found in the APIIndex struct array.
-    // The value returned is the item number, else a -1.
-//    Function FindIndexInArray Integer iIndex tAPIIndex[] APIIndex Returns Integer
-//        Integer iRetval iSize iCount iCompareIndex
-//
-//        Move -1 to iRetval
-//        Move (SizeOfArray(APIIndex)) to iSize
-//        Decrement iSize
-//        For iCount from 0 to iSize
-//            If (iIndex = APIIndex[iCount].iIndexNumber) Begin
-//                Move iCount to iRetval
-//            End
-//        Loop
-//        Function_Return iRetval
-//    End_Function
 
     Procedure Request_Clear
         tSQLConnection Connection
@@ -1328,7 +1124,6 @@ Object oCompareDatabases_vw is a dbView
         Set Allow_Cancel_State to True
         Set Process_Caption to "The Database Update Framework"
         Set Process_Title to "Comparing Database Structures..."
-//        Set Display_Error_State to True // Temp!
 
         Procedure OnProcess
             Send MainProcess
@@ -1354,7 +1149,6 @@ Object oCompareDatabases_vw is a dbView
 
         Procedure OnClick
             String sFilelistFrom sFilelistTo
-            Integer[] iaDifferences
             Boolean bFromExists bToExists
 
             Get Value of oFilelistPathFrom_fm to sFilelistFrom
@@ -1408,7 +1202,6 @@ Object oCompareDatabases_vw is a dbView
             String sReportName
             Get Value of oReportFileName_fm to sReportName
             Send ActivateLogFileDialog of (Client_Id(ghoCommandBars)) sReportName
-//            Runprogram Shell Background sReportName
         End_Procedure
 
         Function IsEnabled Returns Boolean
@@ -1466,7 +1259,7 @@ Object oCompareDatabases_vw is a dbView
         If (bLast = True) Begin
             Get ParseFileName sFilename to sTest
             If (Uppercase(sTest) <> "FILELIST.CFG") Begin
-                Send Info_Box "Sorry, only Filist.cfg files can be dropped here..."
+                Send Info_Box "Sorry, only Filelist.cfg files can be dropped here..."
                 Procedure_Return
             End                                           
             If (sFileListFrom = "") Begin

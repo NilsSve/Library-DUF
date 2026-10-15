@@ -12,11 +12,6 @@ Object oTableSpaceSelection_sl is a cRDCModalPanel
 
     Property String[] psTheData
 
-//    If (ghoDbUpdateFunctionLibrary = 0) Begin
-//        Object oDbUpateFunctionLibrary is a cDbUpdateFunctionLibrary
-//        End_Object
-//    End
-
     Object oSelList is a cCJGridPromptList
         Set Size to 89 167
         Set Location to 6 6

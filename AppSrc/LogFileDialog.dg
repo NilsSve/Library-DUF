@@ -32,7 +32,7 @@ Object oLogFileDialog_dg is a cRDCModalPanel
         
         Procedure DoSaveDocument
             String sLogFileName
-            Boolean bOk bOkToSave bChanged
+            Boolean bOkToSave bChanged
         
             Move False to bOkToSave       
             Get pbCanUndo to bChanged
@@ -106,30 +106,6 @@ Object oLogFileDialog_dg is a cRDCModalPanel
         Send LoadData    of ho
         // We need to active before we can send end_of_data.
         Send Activate    of ho
-//        Send End_of_Data to ho
-    End_Procedure
-
-    // Put a status bar at the bottom of the panel to add a gripper in the lower right corner.
-    Procedure End_Construct_Object
-        Integer iStyle iSize iOffset
-
-        Forward Send End_Construct_Object
-
-        Get Border_Style to iStyle
-        Move 8 to iOffset
-        If (iStyle = Border_Thick) Begin
-            Object oDialogCommandbar is a cCJCommandBarSystem
-                Object oStatusBar is a cCJStatusBar
-                    Object oStatusIdle is a cCJStatusBarPane
-                        Set piId to sbpIDIdlePane
-                        Set pbStyleStretch to True
-                    End_Object
-                End_Object
-            End_Object
-
-            Get Size to iSize
-            Set Size to (Hi(iSize) + iOffset) (Low(iSize))
-        End
     End_Procedure
 
     On_Key Key_Alt+Key_F  Send KeyAction of oTop_btn

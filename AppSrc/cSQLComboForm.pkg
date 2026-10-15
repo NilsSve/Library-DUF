@@ -19,22 +19,12 @@ Class cSQLComboForm is a cRDCComboForm
     Procedure Construct_Object
         Forward Send Construct_Object
 
-        // This will shadow the label if the form itself has its Enabled_State=False
-//        Property Boolean pbAutoShadowLabelObject True
-
         // The piItem should be set to the object's corresponding tSQLConnection member (One based)
         Property Integer piItem
 
-//        Set Label_Col_Offset to 2
-//        Set Label_Justification_Mode to JMode_Right
     End_Procedure
 
     Procedure End_Construct_Object
-//        Boolean bAutoShadowLabelObject
-//        Get pbAutoShadowLabelObject to bAutoShadowLabelObject
-//        If (bAutoShadowLabelObject = True) Begin
-//            Set Private.Label_Shadow_Display_Mode to TBSHADOW_ON_LOCAL
-//        End
         Forward Send End_Construct_Object
     End_Procedure
 
@@ -54,36 +44,5 @@ Class cSQLComboForm is a cRDCComboForm
         Get Value to sValue
         Move sValue to sConnectionData[iItem]
     End_Procedure
-
-//    Procedure Set psToolTip String sToolTip
-//        String sStatusHelp
-//
-//        Get Status_Help to sStatusHelp
-//        If (sStatusHelp = "") Begin
-//            Set Status_Help to sToolTip
-//        End
-//
-//        Forward Set psToolTip to sToolTip
-//    End_Procedure
-//
-//    // Fix for a bug when using manifest files & running Vista and above.
-//    // The bug being that the focus rectangle doesn't show.
-//    Procedure Page Integer iPageObject
-//        Handle hWnd
-//        Integer iRet iState
-//
-//        Forward Send Page iPageObject
-//
-//        If (iPageObject) Begin
-//            Get Window_Handle to hWnd
-//            If (hWnd) Begin
-//                Move (SendMessage(hWnd, WM_QUERYUISTATE, 0, 0)) to iRet
-//                If (iRet iand UISF_HIDEFOCUS) Begin
-//                    Move (UIS_CLEAR + (UISF_HIDEFOCUS * 65536)) to iState
-//                    Move (SendMessage(hWnd, WM_UPDATEUISTATE, iState, 0)) to iRet
-//                End
-//            End
-//        End
-//    End_Procedure
 
 End_Class

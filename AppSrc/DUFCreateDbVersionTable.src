@@ -1,6 +1,4 @@
-#IF (!@ > 190)
-    CompilerLevelWarning All On
-#ENDIF
+CompilerLevelWarning All On
 Use DfAllEnt.pkg
 Use cCJStandardCommandBarSystem.pkg
 Use Dfspnfrm.pkg
@@ -91,8 +89,6 @@ End_Object
 
 //Use cCJSkinFramework.pkg
 //Object oCJSkinFramework is a cCJSkinFramework
-//    Set psSkinFile to "Mac_OSX_Leopard.cjstyles"
-//    Set psSkinIni to "NormalLeopard.ini"
 //End_Object
 
 Use cToolTipController.pkg
@@ -399,7 +395,7 @@ Object oCreateDbVersionTable_pnl is a BasicPanel
         Set Location to 155 309
         Set Label to "Create Table"
         Set FontWeight to fw_Bold
-        Property String psToolTip1 "This will create a table & column for the Embedded database, to be used with the DataFlex Update Framework."
+        Property String psToolTip1 "This will create a table & column for the Embedded database, to be used with the Database Update Framework."
         Property String psToolTip2 "There is also a 'SQLUtilCreateDbVersionTable' function that can be used to create/move the Table at customer site to SQL."
         Set psToolTip to (psToolTip1(Self) + psToolTip2(Self))
 
@@ -473,6 +469,8 @@ Object oCreateDbVersionTable_pnl is a BasicPanel
 
             Get ApiTableCreate of ghoDbUpdateFunctionLibrary hTable sTableName sTableName sTableName False True True to bOk
             If (bOk = False) Begin
+                // The cursor comes back on this exit too. (It stayed the wait cursor.)
+                Send Cursor_Ready of Cursor_Control
                 Send Info_Box "Sorry, it didn't work to create the table."
                 Procedure_Return
             End

@@ -13,9 +13,7 @@
 //
 // The code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 // without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-// This is free software; you can redistribute it and/or modify it under the terms of the
-// GNU Lesser General Public License - see the "GNU Lesser General Public License.txt"
-// in the help folder for more details.
+// This is free software under the MIT License - see the LICENSE file of the repository.
 //
 Use Winkern.pkg
 Use cIniFile.pkg

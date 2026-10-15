@@ -111,12 +111,14 @@ Object oAddToStudio_dg is a ModalPanel
     End_Object
 
     Function AddProgramToStudioToolsMenu String sStudioVersion Returns Integer
-        Boolean bOk bExists bOpen bIs64
+        Boolean bOk bExists bOpen
         String sKey sValue sProgramPath sProgram sProduct sStudioPath
         Handle hoReg hoArray
-        Integer i iItems iCreated iRetval
+        Integer i iItems iCreated iRetval iFree
 
         Move False to bOk
+        // A failure until something succeeds. (It started at 0, which is cx_RegKeyAlreadyExist.)
+        Move cx_RegkeyFailed to iRetval
         Move (CS_StudioPath + (Trim(sStudioVersion)))  to sStudioPath
         If (sStudioVersion > "17.1") Begin
             Move (Replace("Visual ", sStudioPath, "")) to sStudioPath
@@ -180,11 +182,13 @@ Object oAddToStudio_dg is a ModalPanel
                 Send Destroy of hoArray
                 If (bExists = False) Begin
                     Set pfAccessRights of hoReg to KEY_ALL_ACCESS
-                    // We need to create the next key number:
-                    // The studio expect tools menu items to be numbered 1,2,3...n
-                    Increment iItems
-                    Increment iItems
-                    Get CreateKey of hoReg (sStudioPath + "\" + String(iItems)) to iCreated
+                    // The first free key number: the studio expect tools menu items to be numbered 1,2,3...n. (The
+                    // count + 1 was taken: with a gap in the numbering that is the key of another tool.)
+                    Move 1 to iFree
+                    While (KeyExists(hoReg, (sStudioPath + "\" + String(iFree))))
+                        Increment iFree
+                    Loop
+                    Get CreateKey of hoReg (sStudioPath + "\" + String(iFree)) to iCreated
                     If (iCreated = 0) Begin
                         Send WriteString of hoReg CS_Name sProduct
                         Send WriteString of hoReg CS_Command (sProgramPath + sProgram)

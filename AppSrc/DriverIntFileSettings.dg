@@ -150,7 +150,7 @@ Object oDbDriverIntSettings_dg is a ModalPanel
     Function ReadFileToArray String sFileName Returns String[]
         String[] asData
         Integer iCh
-        String sPath sLine
+        String sPath
         Boolean bFound
         
         Get Seq_New_Channel to iCh

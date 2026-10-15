@@ -61,16 +61,4 @@ Procedure WriteProgramCode Integer iCh String sSourcePackageName Number nSourceP
     Writeln channel iCh "Send Exit_Application"
     Writeln channel iCh ("/" + "/ *** End-Of-Program Code ***")
 
-//    Writeln channel iCh "Object oMainPanel is a BasicPanel"
-//    Writeln channel iCh "    Set Location to 59 173"
-//    Writeln channel iCh "    Set Size to 180 394"
-//    Writeln channel iCh "    Set piMinSize to 180 394"
-//    Writeln channel iCh "    Set Border_Style to Border_Thick"
-//    Writeln channel iCh "    Set Locate_Mode to Center_On_Screen"
-//    Writeln channel iCh "    Set Label to (psProduct(ghoApplication))"
-//    Writeln channel iCh "    Set Maximize_Icon to False"
-//    Writeln channel iCh "    Set peNeighborhood to nhPublic"
-//    Writeln channel iCh "End_Object"
-//    Writeln channel iCh "
-//    Writeln channel iCh "Start_UI oMainPanel
 End_Procedure

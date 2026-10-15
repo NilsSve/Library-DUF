@@ -32,7 +32,7 @@ Object oSourceCodeDialog_dg is a cRDCModalPanel
 
         Procedure DoSaveDocument
             String sSourceCode
-            Boolean bOk bOkToSave bChanged
+            Boolean bOkToSave bChanged
 
             Move False to bOkToSave
             Get pbCanUndo to bChanged
@@ -104,33 +104,6 @@ Object oSourceCodeDialog_dg is a cRDCModalPanel
         Move (oSourceCode_edt(Self)) to ho
         Send LoadData    of ho
         Send Activate    of ho
-    End_Procedure
-
-    Procedure Page Integer iPageObject
-        Forward Send Page iPageObject
-    End_Procedure
-
-    // Put a status bar at the bottom of the panel to add a gripper in the lower right corner.
-    Procedure End_Construct_Object
-        Integer iStyle iSize iOffset
-
-        Forward Send End_Construct_Object
-
-        Get Border_Style to iStyle
-        Move 8 to iOffset
-        If (iStyle = Border_Thick) Begin
-            Object oDialogCommandbar is a cCJCommandBarSystem
-                Object oStatusBar is a cCJStatusBar
-                    Object oStatusIdle is a cCJStatusBarPane
-                        Set piId to sbpIDIdlePane
-                        Set pbStyleStretch to True
-                    End_Object
-                End_Object
-            End_Object
-
-            Get Size to iSize
-            Set Size to (Hi(iSize) + iOffset) (Low(iSize))
-        End
     End_Procedure
 
     On_Key Key_Alt+Key_T  Send KeyAction of oTop_btn

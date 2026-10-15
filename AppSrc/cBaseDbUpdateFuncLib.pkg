@@ -1062,7 +1062,6 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return sReturnArray
     End_Function
 
-
     // Returns a string array with all table indexes for the passed table handle and driver id.
     Function _SqlUtilEnumerateIndexes String sTableName String sDriverID Returns String[]
         String[] asReturnArray asReturnArray2
@@ -1829,7 +1828,6 @@ Class cBaseDbUpdateFuncLib is a cObject
 
         Send Ignore_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
         Move SQLConnection.sConnectionString to sConnectionString
-        // 2020-03-14 This was not correct when testing a MS-SQL ODBC driver connection from CMOS.
 
         Get EnumerateTables of hoSQLHandler sConnectionString to iSize
         Move False to Err
@@ -1866,12 +1864,6 @@ Class cBaseDbUpdateFuncLib is a cObject
     Function _SqlUtilUpdateIntFile Integer hTable Returns Boolean
         String sOrgFormat sNewFormat sRootName sTableName sDriverID
         Boolean bOpened bOK
-
-        // ToDo: This needs further investigation but for now we just skip CodeMast & CodeType .int files update...
-        // For some reason this .int file update screws up of CodeMast & CodeType .int files
-        // which makes the program unable to run because they can't be opened.
-        // Also note that there is another helper function "UtilTableCreateCodeMastCodeTypeIntFiles" to create
-        // proper .int files for the two tables.
 
         Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
         Get _TableNameOnly sRootName to sTableName
@@ -2075,8 +2067,6 @@ Class cBaseDbUpdateFuncLib is a cObject
                 Set Message_Text of ghoStatusPanel to ("Table number:" * String(hTableOrg))
             End
         End
-
-        // Wait a sec for Windows to finish writing the file:
 
         Function_Return (Err = False)
     End_Function 
@@ -3879,7 +3869,6 @@ Class cBaseDbUpdateFuncLib is a cObject
         End
         Function_Return bContinueOnError
     End_Function
-
 
     Function _UtilUpdateTAGFile String sFullTAGFileName String sColumnName Returns Boolean
         Integer iChIn iChOut // iCount

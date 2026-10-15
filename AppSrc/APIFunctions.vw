@@ -59,7 +59,6 @@ Object oAPIFunctions_vw is a dbView
                     Set Label_Row_Offset to 1
                     Set Enabled_State to False
                     Set FontWeight to fw_Bold
-//                    Set Label_FontWeight to fw_Bold
 
                     Procedure Page Integer iPageObject
                         String sValue
@@ -144,11 +143,12 @@ Object oAPIFunctions_vw is a dbView
                         Get NextFreeFilelistSlot of ghoDbUpdateFunctionLibrary to hTable
                         Set psDriverID of ghoDbUpdateFunctionLibrary to sDriverID
                         Get ApiTableCreate of ghoDbUpdateFunctionLibrary hTable sTableName sTableName sTableName True True True to bOk
+                        // The cursor comes back in both cases. (Only after a failure.)
+                        Send Cursor_Ready of Cursor_Control
                         If (bOk = True) Begin
                             Send Info_Box ("Test table" * sTableName * "was successfully created and put in filelist slot:" * String(hTable))
                         End
                         Else Begin
-                            Send Cursor_Ready of Cursor_Control
                             Send Info_Box ("Nope, the test table" * sTableName * "could not be created, or does it already exist?") "Error"
                             Procedure_Return
                         End
@@ -320,18 +320,23 @@ Object oAPIFunctions_vw is a dbView
 
                         Set psDriverID       of ghoDbUpdateFunctionLibrary to sDriverID
                         Get ApiTableCreate   of ghoDbUpdateFunctionLibrary hTable sTableName sTableName sTableName True True True to bOk
+                        // A column is added only when the one before was. (Each result overwrote the one before.)
                         If (bOk = True) Begin
                             Get ApiColumnAdd of ghoDbUpdateFunctionLibrary hTable "Col1Ascii"   DF_ASCII 10 0 to bOk
+                        End
+                        If (bOk = True) Begin
                             Get ApiColumnAdd of ghoDbUpdateFunctionLibrary hTable "Col2Date"    DF_DATE   6 0 to bOk
+                        End
+                        If (bOk = True) Begin
                             Get ApiColumnAdd of ghoDbUpdateFunctionLibrary hTable "Col3Numeric" DF_BCD    6 2 to bOk
                         End
                         Send Cursor_Ready of Cursor_Control
 
+                        // The slot the table was made in. (The message named slot 401.)
                         If (bOk = True) Begin
-                            Send Info_Box ("Test table" * sTableName * "with Columns: 'Col1 ASCII 10', 'Col2 Date' and 'Col3 Numeric 6,2' was successfully created and put in filelist slot:" * String(CI_Table1_FileNo))
+                            Send Info_Box ("Test table" * sTableName * "with Columns: 'Col1 ASCII 10', 'Col2 Date' and 'Col3 Numeric 6,2' was successfully created and put in filelist slot:" * String(hTable))
                         End
                         Else Begin
-                            Send Cursor_Ready of Cursor_Control
                             Send Info_Box ("Nope, the test table" * sTableName * "could not be created") "Error"
                             Procedure_Return
                         End

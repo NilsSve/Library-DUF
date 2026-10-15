@@ -14,9 +14,7 @@
 //
 // The code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 // without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-// This is free software; you can redistribute it and/or modify it under the terms of the
-// GNU Lesser General Public License - see the "GNU Lesser General Public License.txt"
-// in the help folder for more details.
+// This is free software under the MIT License - see the LICENSE file of the repository.
 //
 Use cSQLConnectionIniFile.h.pkg
 Use cDbUpdateDatabaseDriver.pkg
@@ -150,11 +148,6 @@ Class cSQLConnectionIniFile is a cIniFile
 
         Function_Return (EQ)
     End_Function
-
-    // The normal connection string looks something like this;
-    // "SERVER=.\SQLEXPRESS; DATABASE=OrderEntry; TRUSTED_CONNECTION=Yes; ,0"
-    // ...but the full connection string looks like this;
-    // "DFConnectionId OrderEntry, SERVER=.\SQLEXPRESS; DATABASE=OrderEntry; TRUSTED_CONNECTION=Yes; ,0"
 
     Function DeleteAllIniFileConnections Returns Boolean
         Integer iCount
