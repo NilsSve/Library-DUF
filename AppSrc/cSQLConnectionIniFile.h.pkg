@@ -24,7 +24,6 @@ Use cIniFile.pkg
 #ELSE      
     Use cCryptographerEx.pkg
 #ENDIF
-Use Base64Functions.pkg
 Use MSSqldrv.pkg
 Use db2_drv.pkg
 Use odbc_drv.pkg

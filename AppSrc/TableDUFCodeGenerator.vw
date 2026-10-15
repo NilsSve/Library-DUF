@@ -886,7 +886,7 @@ Object oTableDUFCodeGenerator is a cRDCDbView
             Send Info_Box ("Ready! But the code contains ERRORS because there were fields with length = 0! Search the generated code for the word 'ERROR!' to see those fields.")
         End
         If (iErrors = GenerateOpenTableError) Begin
-            Send Info_Box ("Sorry, couldn't open the table! (Table No:" * String(phTable(Self)) * String(psFileName(Self)) + ") Process halted.")
+            Send Info_Box ("Sorry, couldn't open the table! (Table No:" * String(phTable(Self)) * String(psTableName(Self)) + ") Process halted.")
         End
         If (iErrors = GenerateUserCancel) Begin
             Send Info_Box "Process cancelled by user."
@@ -913,13 +913,14 @@ Object oTableDUFCodeGenerator is a cRDCDbView
         Move 0 to iTable
         Move TheData[iTable].hTable to hTable
 
+        // The input is tested before the output file is opened. (A wrong input emptied the file and kept the channel.)
+        If (hTable < 1 or nVersionNumber <= 0) Begin
+            Function_Return GenerateUserInputError
+        End
+
         Get Seq_Open_Output_Channel sSourceFile to iCh
         If (iCh = DF_SEQ_CHANNEL_ERROR) Begin
             Function_Return GenerateChannelError
-        End
-
-        If (hTable < 1 or nVersionNumber <= 0) Begin
-            Function_Return GenerateUserInputError
         End
 
         Send Initialize_StatusPanel of ghoStatusPanel "The Database Update Framework" "Generating Update Code" ""
@@ -939,7 +940,7 @@ Object oTableDUFCodeGenerator is a cRDCDbView
         If (bOpened = False) Begin
             Send Seq_Close_Channel iCh
             Set phTable to hTable
-            Set psFileName to TheData[iTable].sLogicalName
+            Set psTableName to TheData[iTable].sLogicalName
             Function_Return GenerateOpenTableError
         End
 
@@ -1016,11 +1017,17 @@ Object oTableDUFCodeGenerator is a cRDCDbView
 
                 Set Action_Text of ghoStatusPanel to ("Number:" * String(APITableNameInfo.iTableNumber) * String(APITableNameInfo.sLogicalName))
                 Get UtilColumnsStructFill of ghoDbUpdateFunctionLibrary hTable to APIColumns
-                If (APIColumns[0].bError = True) Begin
-                    Function_Return GenerateError
-                End
-                If (APIColumns[0].bCancel = True) Begin
-                    Function_Return GenerateUserCancel
+                // Element 0 only when the list has one: a table without relations or indexes gives none. (It was read
+                // anyway, and the error that raised hid real ones.) The output channel is closed on these exits.
+                If (SizeOfArray(APIColumns) > 0) Begin
+                    If (APIColumns[0].bError = True) Begin
+                        Send Seq_Close_Channel iCh
+                        Function_Return GenerateError
+                    End
+                    If (APIColumns[0].bCancel = True) Begin
+                        Send Seq_Close_Channel iCh
+                        Function_Return GenerateUserCancel
+                    End
                 End
 
                 If (APITableNameInfo.bIsAlias = False) Begin
@@ -1070,11 +1077,15 @@ Object oTableDUFCodeGenerator is a cRDCDbView
 
                     // Create Index Definitions:
                     Get UtilIndexesStructFill of ghoDbUpdateFunctionLibrary hTable to APIIndexes
-                    If (APIIndexes[0].bError = True) Begin
-                        Function_Return GenerateError
-                    End
-                    If (APIIndexes[0].bCancel = True) Begin
-                        Function_Return GenerateUserCancel
+                    If (SizeOfArray(APIIndexes) > 0) Begin
+                        If (APIIndexes[0].bError = True) Begin
+                            Send Seq_Close_Channel iCh
+                            Function_Return GenerateError
+                        End
+                        If (APIIndexes[0].bCancel = True) Begin
+                            Send Seq_Close_Channel iCh
+                            Function_Return GenerateUserCancel
+                        End
                     End
                     Move (SizeOfArray(APIIndexes)) to iIndexes
                     Decrement iIndexes
@@ -1116,11 +1127,15 @@ Object oTableDUFCodeGenerator is a cRDCDbView
 
                     // Create Relation Definitions:
                     Get UtilRelationsStructFill of ghoDbUpdateFunctionLibrary hTable to APIRelations
-                    If (APIRelations[0].bError = True) Begin
-                        Function_Return GenerateError
-                    End
-                    If (APIRelations[0].bCancel = True) Begin
-                        Function_Return GenerateUserCancel
+                    If (SizeOfArray(APIRelations) > 0) Begin
+                        If (APIRelations[0].bError = True) Begin
+                            Send Seq_Close_Channel iCh
+                            Function_Return GenerateError
+                        End
+                        If (APIRelations[0].bCancel = True) Begin
+                            Send Seq_Close_Channel iCh
+                            Function_Return GenerateUserCancel
+                        End
                     End
                     Move (SizeOfArray(APIRelations)) to iSize
                     Decrement iSize
@@ -1183,6 +1198,11 @@ Object oTableDUFCodeGenerator is a cRDCDbView
         Writeln channel iCh ("End_Object")
 
         Send Seq_Close_Channel iCh
+        // Fields the generator could not write are "ERROR!" lines in the code: then it is no success. (It answered
+        // GenerateOK, and "Ready!" was shown.)
+        If (iErrors > 0) Begin
+            Function_Return GenerateError
+        End
         Function_Return GenerateOK
     End_Function
 
@@ -1317,15 +1337,16 @@ Procedure TagFileNamesForCodeGeneration
     Integer[] iaDifferences
     Handle ho
 
+    // The Filelist to tag is read before the view is cleared: Request_Clear empties psFilelistFrom. (Nothing was
+    // loaded or tagged, and the box still reported the number of tables.)
+    Get psFilelistFrom of ghoApplication to sFileListFrom
+    Get piaDifferences of ghoApplication to iaDifferences
     Send Activate_oTableDUFCodeGenerator
     Move (oTableDUFCodeGenerator(Self)) to ho
     Get Value of (oFilelistPath_fm(ho)) to sCurrentFilelist
     If (sCurrentFilelist <> "") Begin
         Send Request_Clear of ho
     End
-
-    Get psFilelistFrom of ghoApplication to sFileListFrom
-    Get piaDifferences of ghoApplication to iaDifferences
     Send TagChangedTables of ho sFileListFrom iaDifferences
     Send Info_Box ("Ready marking tables. Number of different tables:" * (String(SizeOfArray(iaDifferences))))
 End_Procedure

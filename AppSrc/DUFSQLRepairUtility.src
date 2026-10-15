@@ -32,6 +32,8 @@ Object oApplication is a cDUFApplication
         String sArgument sPath sWsFile sFileList
         Boolean bExists
 
+        // cDUFApplication takes a .sws argument - what the Studio passes for "Add to Studio". (It was never asked.)
+        Forward Send OnCreate
         Get phoCommandLine to hoCmdLine
         Get Argument of hoCmdLine 1 to sArgument
         // Open any Filelist.cfg file passed on the command line.

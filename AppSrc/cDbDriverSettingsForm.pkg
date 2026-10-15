@@ -56,13 +56,15 @@ Class cDbDriverSettingsForm is a Form
     Procedure SetValue String sDriver String sLabel Integer iAttribute
         Integer iDriver
         String sValue
+        Boolean bAttributeErr
 
         // Sadly driver API attributes are only supported by the CLI-drivers,
         // and the Pervasive driver is not amongst them. So do nothing if Pervasive.
         If (sDriver <> DFBTRDRV_ID and sDriver <> DATAFLEX_ID) Begin
             Send Ignore_Error of Error_Object_Id DFERR_CANT_LOAD_DLL
             Get DriverIndex of ghoSQLConnectionHandler sDriver to iDriver
-            Set private.pbDriverLoadingError to (iDriver = -1)
+            // DriverIndex answers 0 for a driver that cannot be loaded.
+            Set private.pbDriverLoadingError to (iDriver = 0)
             Send Trap_Error of Error_Object_Id DFERR_CANT_LOAD_DLL
             If (iDriver <= 0) Begin
                 Procedure_Return
@@ -71,6 +73,9 @@ Class cDbDriverSettingsForm is a Form
             // This way we can decide to show the object or not, based on success/failure.
             Move False to Err
             Get_Attribute iAttribute of iDriver to sValue
+            // The result of the attribute, for the caller: reading the .int comment below clears Err. (So the
+            // caller's test of Err never saw an attribute the driver does not support.)
+            Move Err to bAttributeErr
             If (sValue = "0") Begin
                 Move "0 (False)" to sValue
             End
@@ -88,6 +93,7 @@ Class cDbDriverSettingsForm is a Form
             Get ExtractIniFileComment sLabel to sValue
             Set Status_Help to sValue
             Set psToolTip to sValue
+            Move bAttributeErr to Err
         End
     End_Procedure
 

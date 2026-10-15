@@ -138,12 +138,15 @@ Object oSQLFunctions_vw is a dbView
 
                     Procedure DoCombo_Fill_List
                         String[] sTablesArray
-                        String sDriverID
+                        String sDriverID sDatabase sSchema
                         Integer iCount iSize
 
                         Send Delete_Data
                         Get Value of oDriverID2_cf to sDriverID
-                        Get _SqlUtilEnumerateTables of ghoDbUpdateFunctionLibrary sDriverID to sTablesArray
+                        // All three parameters. (It passed one of three.)
+                        Get psDatabase of ghoDbUpdateFunctionLibrary to sDatabase
+                        Get psSchema   of ghoDbUpdateFunctionLibrary to sSchema
+                        Get _SqlUtilEnumerateTables of ghoDbUpdateFunctionLibrary sDriverID sDatabase sSchema to sTablesArray
                         Move (SizeOfArray(sTablesArray)) to iSize
                         Decrement iSize
                         For iCount from 0 to iSize

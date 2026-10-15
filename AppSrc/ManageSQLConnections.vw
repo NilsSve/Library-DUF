@@ -692,6 +692,7 @@ Object oSQLMaintainConnection is a dbView
         End_Procedure
 
         Procedure OnHeaderClick Integer iCol
+            Boolean bDFConnId
             String sPath sFileName
             Handle ho
 
@@ -704,7 +705,9 @@ Object oSQLMaintainConnection is a dbView
                 Set psIniFilePath of ho to sPath
                 Get ParseFileName sFileName to sFileName
                 Set psIniFileName of ho to sFilename
-                Set pbDFConnId of ho to (sFileName <> CS_SQLIniFileName)
+                // One rule for the mode, before every load: the file is a DAW DFConnId.ini (IsDFConnId). (Here every
+                // other name than SQLConnections.ini counted; a dropped file was loaded with the mode it found.)
+                Get IsDFConnId to bDFConnId
                 Send LoadData of oSQLConnections_grd
             End
         End_Procedure
@@ -844,7 +847,7 @@ Object oSQLMaintainConnection is a dbView
     End_Function
 
     Procedure OnFileDropped String sFilename Boolean bLast
-        Boolean bHasChange
+        Boolean bHasChange bDFConnId
         Handle ho hoGrid
         Integer iRetval
         String sPath
@@ -869,6 +872,7 @@ Object oSQLMaintainConnection is a dbView
             Get phoSQLConnectionIniFile of ghoSQLConnectionHandler to ho
             Set psIniFilePath of ho to sPath
             Set psIniFileName of ho to sFilename
+            Get IsDFConnId to bDFConnId
             Send LoadData of oSQLConnections_grd
         End
     End_Procedure

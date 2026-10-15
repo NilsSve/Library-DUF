@@ -5,8 +5,9 @@ Define CS_DUFTestProgram for "DUFInternalUpdateProgram.src"
 Function WriteTestProgram String sSourcePackageName String sAppSrcPath Number nSourcePackageVersion Integer iDbVersionTable Integer iDbVersionField Returns Boolean
     Integer iCh                                                               
     
-    Get Seq_Open_Output_Channel sSourcePackageName to iCh
-    If (iCh = DF_SEQ_CHANNEL_ERROR) Begin
+    // A free channel. (Seq_Open_Output_Channel opened the update package's own name for output, and so emptied it.)
+    Get Seq_New_Channel to iCh
+    If (iCh = DF_SEQ_CHANNEL_NOT_AVAILABLE) Begin
         Send Info_Box "No free channel to write output to. Process interrupted" "Error"
         Function_Return False
     End  

@@ -83,6 +83,9 @@ Object oFilelistFixerView is a cRDCDbView
             Integer iPos
             Handle hoLocalError_Object_Id hoOrgError_Object_Id
             
+            // The local handler is put back at the end in any case. (It was set only when the Filelist existed: an
+            // empty or mistyped path made the error object 0.)
+            Move (oLocalError_Info_Object(Self)) to hoLocalError_Object_Id
             Get Value to sFileList
             Get vFilePathExists sFileList to bExists
             Move (Lowercase(sFileList) contains ".cfg") to bCfgFile
@@ -505,12 +508,11 @@ Object oFilelistFixerView is a cRDCDbView
                 Boolean bExists
                 String sDatabase sFileName
 
+                // No query here: IsEnabled runs on every idle event. The collation is read by RefreshData and after a
+                // change. (It connected to the server and queried on every idle event.)
                 Get psConnIdFile to sFileName
                 File_Exist sFileName bExists
                 Get psDatabase of ghoDUF to sDatabase
-                If (sDatabase <> "") Begin
-                    Send UpdateCollatingSequence sDatabase
-                End
                 Function_Return (sDatabase <> "" and bExists = True)
             End_Function
     
@@ -594,6 +596,9 @@ Object oFilelistFixerView is a cRDCDbView
                 String sDatabase sCurrentCollatingSequence sCollatingSequence sSteps
                 Integer iRetval
                 Boolean bOK bBackup
+                tSQLLoggedInUser[] aUsers
+                String sUsers
+                Integer iUser
                 
                 Get Checked_State of oMakeBackup_cb to bBackup
                 Get psDatabase of ghoDUF to sDatabase   
@@ -617,8 +622,24 @@ Object oFilelistFixerView is a cRDCDbView
                 
                 Get IsDatabaseInUse of ghoDUF to bOK
                 If (bOK = False) Begin
+                    Send StopStatusPanel
                     Send Info_Box "Not all tables could be opened exclusivly, which indicates that somebody else is using the database. It is therefor not advised to try to change the collating sequence at current."
                     Procedure_Return
+                End
+                // IsDatabaseInUse sees embedded tables only: the sessions on the SQL database are listed, and the
+                // user decides. This program's own sessions are among them.
+                Get SqlUtilEnumerateLoggedInUsers of ghoDUF MSSQLDRV_ID sDatabase to aUsers
+                If (SizeOfArray(aUsers) > 1) Begin
+                    Move "" to sUsers
+                    For iUser from 0 to (SizeOfArray(aUsers) - 1)
+                        Move (sUsers + "\n" + aUsers[iUser].sUser * "(" + aUsers[iUser].sProgram + ")") to sUsers
+                    Loop
+                    Send StopStatusPanel
+                    Get YesNo_Box ("These sessions are connected to database" * sDatabase + ":" + sUsers + "\n\nThe collation is changed in single-user mode: what they have not saved is rolled back. Continue?") to iRetval
+                    If (iRetval <> MBR_Yes) Begin
+                        Procedure_Return
+                    End
+                    Send StartStatusPanel "Changing the collating sequence..." "" -1
                 End
                 Set Title_Text of ghoStatusPanel to "Running SQL script to change collating sequence." 
                 Set Message_Text of ghoStatusPanel to ("For database:" * String(sDatabase))
@@ -630,6 +651,7 @@ Object oFilelistFixerView is a cRDCDbView
                 Get SqlDatabaseCollationQuery of ghoDUF sDatabase to sCurrentCollatingSequence                
                 Move (sCurrentCollatingSequence = sCollatingSequence) to bOK
                 Send StopStatusPanel
+                Send UpdateCollatingSequence of (oCurrentCollatingSequence_fm(Self)) sDatabase
                 If (bOK = True) Begin
                     Send Info_Box ("Success! The collating sequence was changed for database:" * sDatabase)
                 End
@@ -1283,7 +1305,11 @@ Object oFilelistFixerView is a cRDCDbView
         Property String  psErrText
         
         Procedure OnCreate
-            Set phoOrgError_Object_Id to Error_Object_Id
+            // The program's own handler is kept; a second OnCreate - ShowFileListData sends it again - finds this
+            // object as the error object. (It kept this object as the "original" then.)
+            If (Error_Object_Id <> Self) Begin
+                Set phoOrgError_Object_Id to Error_Object_Id
+            End
             Move Self to Error_Object_Id 
 #IF (!@ > 210)
             Move Self to ghoErrorHandler
@@ -1539,7 +1565,8 @@ Object oFilelistFixerView is a cRDCDbView
             End 
             Get Check_StatusPanel of ghoStatusPanel to bCancel
             If (bCancel = True) Begin
-                Function_Return iCounter
+                // Cancelled: the clean-up below runs, and the answer is what was done. (It returned at once.)
+                Break
             End
         Loop
         
@@ -1615,7 +1642,7 @@ Object oFilelistFixerView is a cRDCDbView
                             End
                             Move (sNoDriverRootname * "ALIAS") to sDisplayNameNew
                             Set_Attribute DF_FILE_DISPLAY_NAME of hTable to sDisplayNameNew
-                            Send WriteToLogFile True hTable sLogicalNameOrg sRootNameOrg sRootNameNew sNoDriverRootname sDisplayNameOrg sDisplayNameNew
+                            Send WriteToLogFile True hTable sLogicalNameOrg sRootNameOrg sRootNameNew sDisplayNameOrg sDisplayNameNew
                             Increment iCounter
                         End
                     End
@@ -1624,12 +1651,13 @@ Object oFilelistFixerView is a cRDCDbView
                         Set_Attribute DF_FILE_ROOT_NAME    of hTable to ""
                         Set_Attribute DF_FILE_LOGICAL_NAME of hTable to ""
                         Set_Attribute DF_FILE_DISPLAY_NAME of hTable to ""
-                        Send WriteToLogFile True hTable sLogicalNameOrg sRootNameOrg "" sDisplayNameOrg "Alias Filelist entry SHOULD BE REMOVED!"
+                        Send WriteToLogFile True hTable sLogicalNameOrg sRootNameOrg "" sDisplayNameOrg "Alias Filelist entry removed: it has no master table."
                         Increment iCounter
                     End
+                    // An entry that was removed gets no display name back. (It did, and was counted twice.)
                     Get_Attribute DF_FILE_DISPLAY_NAME of hTable to sDisplayNameNew
                     Get_Attribute DF_FILE_LOGICAL_NAME of hTable to sLogicalNameNew
-                    If (not(Lowercase(sDisplayNameNew) contains "alias")) Begin
+                    If (hMasterTable <> 0 and not(Lowercase(sDisplayNameNew) contains "alias")) Begin
                         Move (sLogicalNameNew * "(" + sNoDriverRootname * "ALIAS)") to sDisplayNameNew
                         Set_Attribute DF_FILE_DISPLAY_NAME of hTable to sDisplayNameNew
                         Send WriteToLogFile True hTable sLogicalNameOrg sRootNameOrg sRootNameNew sDisplayNameOrg sDisplayNameNew
@@ -1645,7 +1673,8 @@ Object oFilelistFixerView is a cRDCDbView
             End
             Get Check_StatusPanel of ghoStatusPanel to bCancel
             If (bCancel = True) Begin
-                Function_Return iCounter
+                // Cancelled: the clean-up below runs, and the answer is what was done. (It returned at once.)
+                Break
             End
         Until (hTable = 0)
         Send StopStatusPanel
@@ -1732,7 +1761,8 @@ Object oFilelistFixerView is a cRDCDbView
             End
             Get Check_StatusPanel of ghoStatusPanel to bCancel
             If (bCancel = True) Begin
-                Function_Return iCounter
+                // Cancelled: the clean-up below runs, and the answer is what was done. (It returned at once.)
+                Break
             End
         Loop
 
@@ -1812,7 +1842,8 @@ Object oFilelistFixerView is a cRDCDbView
             End
             Get Check_StatusPanel of ghoStatusPanel to bCancel
             If (bCancel = True) Begin
-                Function_Return iCounter
+                // Cancelled: the clean-up below runs, and the answer is what was done. (It returned at once.)
+                Break
             End
         Loop
 
@@ -1888,7 +1919,8 @@ Object oFilelistFixerView is a cRDCDbView
             End
             Get Check_StatusPanel of ghoStatusPanel to bCancel
             If (bCancel = True) Begin
-                Function_Return iCounter
+                // Cancelled: the clean-up below runs, and the answer is what was done. (It returned at once.)
+                Break
             End
         Loop
     
@@ -2042,7 +2074,8 @@ Object oFilelistFixerView is a cRDCDbView
             End                              
             Get Check_StatusPanel of ghoStatusPanel to bCancel
             If (bCancel = True) Begin
-                Function_Return 0
+                // Cancelled: the clean-up below runs, and the answer is what was done. (It returned at once.)
+                Break
             End
             Send DoAdvance of ghoStatusPanel 
         Loop
@@ -2103,7 +2136,7 @@ Object oFilelistFixerView is a cRDCDbView
     End_Function 
     
     Function FindAllUColumnsFiles Boolean bBackup Returns Integer
-        Integer iRetval iSize iCount iCounter iDriver iLastErr iErrLine
+        Integer iRetval iSize iCount iCounter iDriver iLastErr iErrLine iResult
         tFilelist[] FileListArray
         String[] asIntFileData
         String sDriver sIntFileName sConnectionID sErrorText sText sDataPath
@@ -2169,13 +2202,14 @@ Object oFilelistFixerView is a cRDCDbView
                     Get _IsSystemFile of ghoDUF hTable to bIsSystem
                     Send UpdateStatusPanel ("Searhing Table:" * String(FileListArray[iCount].sNoDriverRootname))
                     
-                    Get FindSingleUColumnsFile hTable sDriver sConnectionID bIsSystem sIntFileName bBackup to bOK
+                    Get FindSingleUColumnsFile hTable sDriver sConnectionID bIsSystem sIntFileName bBackup to iResult
                     
                     Close hTable
-                    If (bOK) Begin 
+                    // Only a table whose columns were removed counts.
+                    If (iResult = 1) Begin
                         Increment iCounter
                     End
-                    Else Begin
+                    Else If (iResult = -1) Begin
                         Send WriteError ("Searching for 'U_' columns for table:" * String(FileListArray[iCount].sNoDriverRootname) * "failed.") 
                     End
                     // A backup copy that could not be made stops the run: the next file would be changed without one.
@@ -2186,7 +2220,8 @@ Object oFilelistFixerView is a cRDCDbView
             End
             Get Check_StatusPanel of ghoStatusPanel to bCancel
             If (bCancel = True) Begin
-                Function_Return 0
+                // Cancelled: the clean-up below runs, and the answer is what was done. (It returned at once.)
+                Break
             End
             Send DoAdvance of ghoStatusPanel 
         Loop
@@ -2205,34 +2240,42 @@ Object oFilelistFixerView is a cRDCDbView
         Function_Return iCounter
     End_Function
 
-    // Helper function to recreate a single .int file
-    Function FindSingleUColumnsFile Handle hTable String sDriver String sConnectionID Boolean bIsSystem String sIntFileName Boolean bBackup Returns Boolean
+    // Removes the uppercased (U_) columns of one table: 1 when columns were removed, 0 when the table had none, -1
+    // when it failed - the reason is in the log. (It answered the result of the backup or of the last step: with a
+    // backup every table without U_ columns counted as "removed", without one as "failed".)
+    Function FindSingleUColumnsFile Handle hTable String sDriver String sConnectionID Boolean bIsSystem String sIntFileName Boolean bBackup Returns Integer
         Boolean bOK bAnsi bIsHidden
-        String sErrorText sText
-        Integer iRetval iDbType
-        String[] asIntFieldsData asIntFileHiddenFields asFullIntFileData
-    
-        Get pbToANSI of ghoDUF to bAnsi 
+        String[] asIntFieldsData asFullIntFileData
+
+        Get pbToANSI of ghoDUF to bAnsi
         // 1. Backup the .int file (also backs-up Filelist.cfg). Without the backup the file is not touched.
-        If (bBackup = True) Begin    
+        If (bBackup = True) Begin
             Get BackupIntFile sIntFileName to bOK
             If (bOK = False) Begin
                 Send WriteError ("The uppercased columns of" * sIntFileName * "were not removed:" * psBackupError(Self))
-                Function_Return False
+                Function_Return -1
             End
         End
         // 2. Find "NEXT_COLUMN_HIDDEN UPPERCASED" attributes from the SQL back-end.
         Get CollectHiddenAttributes hTable sDriver asIntFieldsData (&bIsHidden) to asIntFieldsData
-        If (bIsHidden = True) Begin
-            // 3. Merge the new .int file with collected data:
-            Get MergeIntFileData hTable sIntFileName asIntFieldsData to asFullIntFileData
-            // 4. Write the updated .int file to disk:
-            Get WriteArrayToFile sIntFileName asFullIntFileData to bOK 
-            // 5. Restructure to remove U_ columns
-            Get RemoveU_Columns hTable sDriver to bOK
+        If (bIsHidden = False) Begin
+            Function_Return 0
         End
-        Function_Return bOK
-    End_Function 
+        // 3. Merge the new .int file with collected data:
+        Get MergeIntFileData hTable sIntFileName asIntFieldsData to asFullIntFileData
+        // 4. Write the updated .int file to disk:
+        Get WriteArrayToFile sIntFileName asFullIntFileData to bOK
+        If (bOK = False) Begin
+            Send WriteError ("The .int file" * sIntFileName * "could not be written.")
+            Function_Return -1
+        End
+        // 5. Restructure to remove U_ columns
+        Get RemoveU_Columns hTable sDriver to bOK
+        If (bOK = False) Begin
+            Function_Return -1
+        End
+        Function_Return 1
+    End_Function
     
     Function RemoveU_Columns Handle hTable String sDriver Returns Boolean
         Boolean bErr bOK
@@ -2244,7 +2287,7 @@ Object oFilelistFixerView is a cRDCDbView
         // We need to close the table permanently, then re-open it, for the
         // Structure_Start/End to work properly.
         Close hTable DF_PERMANENT
-        Open hTable DF_EXCLUSIVE
+        Open hTable Mode DF_EXCLUSIVE
         Move "DUFTEMP2024" to sNewFieldName
         Structure_Start hTable sDriver
             // This command creates a new column. If {column-num} is omitted or 0,
@@ -2303,24 +2346,21 @@ Object oFilelistFixerView is a cRDCDbView
         Function_Return asData
     End_Function
     
-    // Removes column names = "RECNUM" or that starts with a "U_" from the array.
+    // The column names without RECNUM and the uppercased (U_) columns. (It removed while counting up, so the
+    // column after a removed one was never looked at.)
     Function SanitizeColumnNames String[] asColumns Returns String[]
-        Integer iSize iCount
+        Integer iCount
         String sColName
-        
-        Move (SizeOfArray(asColumns)) to iSize
-        If (iSize = 0) Begin
-            Function_Return asColumns
-        End
-        Decrement iSize
-        For iCount from 0 to iSize
+
+        Move (SizeOfArray(asColumns) - 1) to iCount
+        While (iCount >= 0)
             Move asColumns[iCount] to sColName
             If (Left(Uppercase(sColName), 2) = "U_" or Uppercase(sColName) = "RECNUM") Begin
                 Move (RemoveFromArray(asColumns, iCount)) to asColumns
-                Decrement iSize
             End
+            Decrement iCount
         Loop
-        Function_Return asColumns    
+        Function_Return asColumns
     End_Function
 
     Function IsDuplicateAttribute String[] asIntFileData String sFieldNoText String sAttribute Returns Boolean
@@ -2762,6 +2802,7 @@ Object oFilelistFixerView is a cRDCDbView
         Boolean bStart bFound
         Integer iSize iCount iCh iEmpty 
         String sLine
+        String[] asKept
         
         Get Seq_New_Channel to iCh
         If (iCh < 0) Begin 
@@ -2769,37 +2810,30 @@ Object oFilelistFixerView is a cRDCDbView
             Function_Return False
         End 
 
-        // Remove any more than two consequitive lines:
-        Move 0 to iEmpty
+        // From the first field on, no two empty lines in a row; no empty line at the end. (The loop tested one element
+        // and removed another, and removed while counting up, so lines were dropped or left.)
         Move False to bStart
-        Move (SizeOfArray(asResultData)) to iSize
-        Decrement iSize
-        For iCount from 0 to iSize
-            Move (Uppercase(asResultData[iCount])) to sLine
+        For iCount from 0 to (SizeOfArray(asResultData) - 1)
+            Move asResultData[iCount] to sLine
             If (bStart = False) Begin
-                Move (Left(sLine, 12) = "FIELD_NUMBER") to bStart
+                Move (Left(Uppercase(sLine), 12) = "FIELD_NUMBER") to bStart
             End
-            If (bStart = True) Begin
-                If (Trim(asResultData[iCount]) = "") Begin
-                    Increment iEmpty
+            Move True to bFound
+            If (bStart = True and Trim(sLine) = "" and SizeOfArray(asKept) > 0) Begin
+                If (Trim(asKept[SizeOfArray(asKept) - 1]) = "") Begin
+                    Move False to bFound
                 End
-                If (iEmpty >= 2) Begin
-                    Move (RemoveFromArray(asResultData, iCount)) to asResultData
-                    Decrement iSize
-                    If (iCount < iSize and Trim(asResultData[iCount +1]) = "") Begin
-                        Move (RemoveFromArray(asResultData, iCount)) to asResultData
-                        Decrement iSize
-                    End
-                    Move 0 to iEmpty 
-                End
-                Move (Uppercase(asResultData[iCount]) contains "FIELD_NUMBER " or Uppercase(asResultData[iCount]) contains "INDEX_NUMBER ") to bFound
-                If (bFound = True) Begin
-                    Move 0 to iEmpty
-                End
+            End
+            If (bFound = True) Begin
+                Move sLine to asKept[SizeOfArray(asKept)]
             End
         Loop
-        // Remove the very last empty line
-        Move (RemoveFromArray(asResultData, -1)) to asResultData
+        If (SizeOfArray(asKept) > 0) Begin
+            If (Trim(asKept[SizeOfArray(asKept) - 1]) = "") Begin
+                Move (ResizeArray(asKept, (SizeOfArray(asKept) - 1))) to asKept
+            End
+        End
+        Move asKept to asResultData
         
         // Write the updated .int file:
         Move False to Err
@@ -2841,6 +2875,7 @@ Object oFilelistFixerView is a cRDCDbView
     // Note: The hTable needs to be open before calling this function.
     Function FieldNumberToDataTimeText Handle hTable String sFieldNoTxt String sDriver Integer iDbType Returns String
         String sDataType sTableName sColumnName
+        String[] asColumns
         Integer iFieldNumber iType iDFType iColumns
         Boolean bIsSQLTable bOpen
         
@@ -2853,7 +2888,15 @@ Object oFilelistFixerView is a cRDCDbView
         If (bIsSQLTable = True) Begin 
             Get_Attribute DF_FILE_ROOT_NAME of hTable to sTableName
             Get _TableNameOnly of ghoDUF sTableName to sTableName
-            Get _SqlColumnNumberToColumnName of ghoDUF sTableName iFieldNumber to sColumnName
+            // The DataFlex field number counts the columns without RECNUM and the uppercased (U_) columns. (It was
+            // used as an index into the server's own list, which holds them: off by one without RECNUM, and past
+            // every U_ column.)
+            Get _SqlUtilEnumerateColumns of ghoDUF sDriver sTableName to asColumns
+            Get SanitizeColumnNames asColumns to asColumns
+            Move "" to sColumnName
+            If (iFieldNumber > 0 and iFieldNumber <= SizeOfArray(asColumns)) Begin
+                Move asColumns[iFieldNumber - 1] to sColumnName
+            End
             Get SqlColumnType of ghoDUF sDriver hTable sTableName sColumnName to iType
         End
                 
@@ -3082,7 +3125,8 @@ Object oFilelistFixerView is a cRDCDbView
             End
             Get Check_StatusPanel of ghoStatusPanel to bCancel
             If (bCancel = True) Begin
-                Function_Return iCounter
+                // Cancelled: the clean-up below runs, and the answer is what was done. (It returned at once.)
+                Break
             End
             Send DoAdvance of ghoStatusPanel
         Loop
@@ -3341,12 +3385,14 @@ Object oFilelistFixerView is a cRDCDbView
     End_Procedure   
     
     Procedure RefreshData
-        String sFileList  
+        String sFileList sDatabase
         Get psFileList to sFileList
         If (sFileList = "") Begin
             Procedure_Return
         End
         Send ShowSQLTablesCount 
+        Get psDatabase of ghoDUF to sDatabase
+        Send UpdateCollatingSequence of (oCurrentCollatingSequence_fm(oSQL_grp(Self))) sDatabase
         // This is to make sure the uppercase support for the driver is set properly.
         Send SetupIgnoreUcaseSupport
         Send ShowFileListData

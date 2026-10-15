@@ -45,6 +45,7 @@ Object oSQLMaintainConnections_dg is a ModalPanel
     Property tDataSourceRow[] pTheData
     Property Boolean pbDFConnId  False // Is set to True if this is a DAW "DFConnId.ini" file; in which case we warn to not encrypt/decrypt password. (different algorithms and don't touch password)
     Property String psUncryptedPw      // Used if  pbDFConnId = True to temporary save the un-encrypted password.
+    Property Boolean pbCancelOpen False // Set when the user does not go on with a DFConnId.ini password: Popup returns.
 
     Object oSettings_grp is a cRDCHeaderGroup
         Set Size to 263 303
@@ -501,6 +502,9 @@ Object oSQLMaintainConnections_dg is a ModalPanel
                 If (sError <> "") Begin
                     Set Value of oLoginInfo_tb to CS_LoginFailed
                     Send Info_Box sError
+                    // The program's error object and the cursor come back. (The button stayed the error object.)
+                    Move hoErrorObj to Error_Object_Id
+                    Send Cursor_Ready of Cursor_Control
                     Procedure_Return
                 End
                 
@@ -509,6 +513,9 @@ Object oSQLMaintainConnections_dg is a ModalPanel
                     Set TextColor of oLoginInfo_tb to clRed
                     Set Value of oLoginInfo_tb to CS_LoginFailed
                     Send Info_Box ("The driver" * sDriverID * "could not be loaded. Is the driver installed? And equally imporant; Is the corresponding database server or client software installed?")
+                    // The program's error object and the cursor come back. (The button stayed the error object.)
+                    Move hoErrorObj to Error_Object_Id
+                    Send Cursor_Ready of Cursor_Control
                     Procedure_Return
                 End
 
@@ -1255,7 +1262,8 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 //                    Set Enabled_State of oCheckLogin_btn to False
                 End
                 Else Begin
-                    Send Stop_UI
+                    // The dialog does not open. (Stop_UI was sent from here, a conversion function.)
+                    Set pbCancelOpen to True
                 End
             End
             Else Begin
@@ -1327,6 +1335,10 @@ Object oSQLMaintainConnections_dg is a ModalPanel
         Boolean bAdd 
         Handle hoDriver
 
+        // Nothing of the connection edited before. (The remembered DFConnId password was never cleared: a connection
+        // without a password got the one of the connection edited before it.)
+        Set psUncryptedPw to ""
+        Set pbCancelOpen to False
         Move (piCurrentRow(Self) = -1) to bAdd
         Get pSQLConnectionData to SQLConnection             
         // we need these as the oConnectionType_grp has been moved to be the last object(s) in the dialog.
@@ -1336,6 +1348,9 @@ Object oSQLMaintainConnections_dg is a ModalPanel
             Move True to SQLConnection.bEnabled
         End
         Get MoveSQLConnectionToStringArray SQLConnection to asConnectionData
+        If (pbCancelOpen(Self) = True) Begin
+            Procedure_Return
+        End
 
         If (SQLConnection.sDriverID <> "") Begin
             Set Value of oDriverID_cf to SQLConnection.sDriverID

@@ -17,7 +17,8 @@ REM  program AppSrc\UnitTests.src; on DataFlex 26 it comes as a package.
 REM
 REM  When DUF is consumed as a library inside another workspace, that
 REM  workspace's own setup provides the three siblings and this script is not
-REM  needed - if run there, it finds them already present and does nothing.
+REM  needed - if run there, it finds them already present and leaves them as
+REM  they are. "setup.bat /pull" updates siblings that are there already.
 REM
 REM  Open DUFDev25.0.sws (or DUFDev26.0.sws) to build DUF standalone. The
 REM  consumer-facing entry points are DUFLibrary25.0.sws (DataFlex 25; it
@@ -28,6 +29,9 @@ REM  mistake.
 REM ===========================================================================
 
 cd /d "%~dp0"
+set "PULL="
+if /i "%~1"=="/pull" set "PULL=1"
+set "PULLFAILED="
 
 echo.
 echo === Library-DUF standalone setup ===
@@ -47,8 +51,16 @@ if errorlevel 1 (
 
 for %%N in (DFAbout RDCToolsLib vwin32fh DFUnit) do (
     if exist "..\%%N\.git" (
-        echo [%%N] already present - pulling latest...
-        git -C "..\%%N" pull --ff-only
+        if defined PULL (
+            echo [%%N] already present - pulling latest...
+            git -C "..\%%N" pull --ff-only
+            if errorlevel 1 (
+                echo [%%N] the pull did not succeed - the library is as it was.
+                set "PULLFAILED=1"
+            )
+        ) else (
+            echo [%%N] already present - left as it is. Run "setup.bat /pull" to update it.
+        )
     ) else (
         echo [%%N] cloning as a sibling...
         git clone https://github.com/NilsSve/Library-%%N.git "..\%%N"
@@ -65,7 +77,11 @@ for %%N in (DFAbout RDCToolsLib vwin32fh DFUnit) do (
 )
 
 echo.
-echo === Setup complete ===
+if defined PULLFAILED (
+    echo === Setup finished, but a pull did not succeed - see above ===
+) else (
+    echo === Setup complete ===
+)
 echo.
 echo DFAbout, RDCToolsLib, vwin32fh and DFUnit are now siblings of this folder.
 echo Open DUFDev25.0.sws (or DUFDev26.0.sws) in the Studio to build DUF

@@ -220,5 +220,7 @@ Procedure ActivateDriverIntSettingsDialog String sDriverIntFile
     End
     Move (oDbDriverIntSettings_dg(Self)) to ho
     Set psDriverIntFile of ho to sDriverIntFile
+    // The file is read on every open. (Only the first open of a run loaded it.)
+    Set pbLoaded of ho to False
     Send Popup of ho
 End_Procedure

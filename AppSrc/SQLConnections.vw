@@ -62,19 +62,20 @@ Object oSQLConnections_vw is a dbView
                     Procedure PromptUpdate Handle hoPrompt
                         String[] sSelectedNames                    
                 
-                        Get SelectedColumnValues of hoPrompt 2 to sSelectedNames // Col 2 = Server column
+                        // The connection ID column, into this form: Prompt above takes the new ID. (A copy of a server
+                        // prompt: it set the server only, and kept the old ID, database, driver and login.)
+                        Get SelectedColumnValues of hoPrompt 0 to sSelectedNames // Col 0 = Connection ID column
                         If (SizeOfArray(sSelectedNames)) Begin
-                            Set psServer of ghoSQLConnectionHandler to sSelectedNames[0] 
-                            Delegate Send Page True // Broadcast sends refresh
+                            Set Value to sSelectedNames[0]
                         End
                     End_Procedure   
 
                     Procedure Prompt_Callback Handle hoPrompt
-                        String sServer
+                        String sConnectionID
                         Set peUpdateMode of hoPrompt to umPromptCustom
-                        Set piUpdateColumn of hoPrompt to 2 // The server column
-                        Get Value of oServer_fm to sServer
-                        Set psSeedValue of hoPrompt to sServer
+                        Set piUpdateColumn of hoPrompt to 0 // The connection ID column
+                        Get Value to sConnectionID
+                        Set psSeedValue of hoPrompt to sConnectionID
                         Set phmPromptUpdateCallback of hoPrompt to (RefProc(PromptUpdate))
                     End_Procedure
 
@@ -295,9 +296,9 @@ Object oSQLConnections_vw is a dbView
                         Integer iDriverID
                         Handle hoDriver ho
 
-                        Set_Attribute DF_DRIVER_SILENT_LOGIN of iDriverID to True
-                        Send Ignore_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
-                        Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver        
+                        // The connection is read first, then the driver and its object. (The driver object and the
+                        // silent-login attribute were made from an empty driver id, and "Login Successful!" was shown
+                        // for any error but "login unsuccessful".)
                         Move (phoSQLConnectionIniFile(ghoSQLConnectionHandler)) to ho
 
                         Get Value of oDriverID_cf        to SQLConnection.sDriverID
@@ -307,23 +308,28 @@ Object oSQLConnections_vw is a dbView
                         Get Checked_State of oTrusted_cb to SQLConnection.bTrusted
                         Get Value of oUserID_fm          to SQLConnection.sUserID
                         Get Value of oPassword_fm        to SQLConnection.sPassword
+                        Get DriverIndex of ghoSQLConnectionHandler SQLConnection.sDriverID to iDriverID
+                        If (iDriverID = 0) Begin
+                            Send Info_Box ("The driver" * SQLConnection.sDriverID * "could not be loaded. Is the driver installed? And equally imporant; Is the corresponding database server or client software installed?")
+                            Procedure_Return
+                        End
+                        Get CreateDatabaseDriverObject SQLConnection.sDriverID to hoDriver
+                        If (hoDriver = 0) Begin
+                            Send Info_Box ("No DUF driver object for" * SQLConnection.sDriverID + ".")
+                            Procedure_Return
+                        End
                         If (SQLConnection.sDriverID = MSSQLDRV_ID) Begin
                             Get SQLClientVersionInteger of hoDriver MSSQLDRV_ID to SQLConnection.iClientVersion
                         End
                         Get ConstructConnectionString of ghoSQLConnectionHandler SQLConnection to SQLConnection.sConnectionString
 
-                        Get DriverIndex of ghoSQLConnectionHandler SQLConnection.sDriverID to iDriverID
-                        If (iDriverID = 0) Begin
-                            Send Destroy of hoDriver
-                            Send Info_Box ("The driver" * SQLConnection.sDriverID * "could not be loaded. Is the driver installed? And equally imporant; Is the corresponding database server or client software installed?")
-                            Procedure_Return
-                        End
-
+                        Set_Attribute DF_DRIVER_SILENT_LOGIN of iDriverID to True
+                        Send Ignore_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
                         Get DbLogin  of hoDriver SQLConnection to bLoginSuccessful
                         Send Destroy of hoDriver
 
                         Send Trap_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
-                        If (LastErr <> CLIERR_LOGIN_UNSUCCESSFUL) Begin
+                        If (bLoginSuccessful = True) Begin
                             Move (SQLConnectionStringMasked(SQLConnection.sConnectionString)) to sConnectionString
                             Set Value of oConnectionString_fm to sConnectionString
                             Send Info_Box "Login Successful!"
@@ -374,7 +380,12 @@ Object oSQLConnections_vw is a dbView
                     Set psImage to "SQLConnections.ico"
 
                     Procedure OnClick 
-                        Runprogram Background "DUFSQLConnections.exe"
+                        // The program of this program's bitness. (Programs holds the 64-bit DUFSQLConnections64.exe.)
+                        #IFDEF IS$WIN64
+                            Runprogram Background "DUFSQLConnections64.exe"
+                        #ELSE
+                            Runprogram Background "DUFSQLConnections.exe"
+                        #ENDIF
                     End_Procedure
 
                 End_Object
@@ -419,7 +430,8 @@ Object oSQLConnections_vw is a dbView
                         If (iRetval <> MBR_Yes) Begin
                             Procedure_Return
                         End
-                        Get SqlDatabaseCollationChange of ghoDbUpdateFunctionLibrary sDatabase sCollation to bOK
+                        // All five parameters: no script file, no backup, not silent. (It passed two of five.)
+                        Get SqlDatabaseCollationChange of ghoDbUpdateFunctionLibrary sDatabase sCollation False False False to bOK
                         If (bOK = True) Begin
                             Send Info_Box ("Changing the collation for database:" * String(sDatabase) * "was successful.")
                         End

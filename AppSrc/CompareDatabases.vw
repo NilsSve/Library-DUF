@@ -538,6 +538,8 @@ Object oCompareDatabases_vw is a dbView
             Function_Return iaDifferencesEmpty
         End
 
+        // The TO database's own flag. (The FROM one's was tested again.)
+        Get UtilIsAllFilelistEntriesDataFlexTables of ghoDbUpdateFunctionLibrary to bIsEmbedded
         If (bIsEmbedded = False) Begin
             Get psDatabase of ghoDbUpdateFunctionLibrary to sDatabase
             Get SqlDatabaseCollationQuery of ghoDbUpdateFunctionLibrary sDatabase True to sDatabaseCollationTo
@@ -813,7 +815,7 @@ Object oCompareDatabases_vw is a dbView
                                  aAPIColumnCompare[iCount].bExistsTo to sTo
                 Writeln channel iCh sFrom sTo
 
-                Get MakeFromString "Field Name" aAPIColumnCompare[iCount].sFieldNameFrom CS_ReportDifferenceNote aAPIColumnCompare[iCount].bExistsTo to sFrom
+                Get MakeFromString "Field Name" aAPIColumnCompare[iCount].sFieldNameFrom CS_ReportDifferenceNote aAPIColumnCompare[iCount].bExistsFrom to sFrom
                 Get MakeToString aAPIColumnCompare[iCount].sFieldNameTo "" CS_ReportDifferenceNote (Uppercase(aAPIColumnCompare[iCount].sFieldNameFrom) = ;
                                  Uppercase(aAPIColumnCompare[iCount].sFieldNameTo)) to sTo
                 Writeln channel iCh sFrom sTo
@@ -839,13 +841,13 @@ Object oCompareDatabases_vw is a dbView
                 Writeln channel iCh sFrom sTo
 
                 Get MakeFromString "Allow NULL:" (If(aAPIColumnCompare[iCount].bAllowNULLFrom = True, "Yes", "No")) CS_ReportDifferenceNote ;
-                                 aAPIColumnCompare[iCount].bExistsTo to sFrom
+                                 aAPIColumnCompare[iCount].bExistsFrom to sFrom
                 Get MakeToString (If(aAPIColumnCompare[iCount].bAllowNULLTo = True, "Yes", "No")) "" CS_ReportDifferenceNote ;
                                  aAPIColumnCompare[iCount].bExistsTo to sTo
                 Writeln channel iCh sFrom sTo
 
                 Get MakeFromString "Identity Field:" (If(aAPIColumnCompare[iCount].iOptionsFrom = C_tAPIColumn_Identity, "Yes", "No")) CS_ReportDifferenceNote ;
-                                 aAPIColumnCompare[iCount].bExistsTo to sFrom
+                                 aAPIColumnCompare[iCount].bExistsFrom to sFrom
                 Get MakeToString (If(aAPIColumnCompare[iCount].iOptionsTo = C_tAPIColumn_Identity, "Yes", "No")) "" CS_ReportDifferenceNote ;
                                  aAPIColumnCompare[iCount].bExistsTo to sTo
                 Writeln channel iCh sFrom sTo

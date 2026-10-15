@@ -26,6 +26,12 @@ Object oApplication is a cRDCApplication
     Property String psCompileDateAndTime
 End_Object
 
+// The Chilkat XML COM object this program uses is 32-bit: a 64-bit build cannot talk to it, so it says so and ends.
+#IFDEF IS$WIN64
+    Send Stop_Box "ReadDFDriverDefXML works as a 32-bit program only: the Chilkat XML COM object it uses is 32-bit. Compile it as a 32-bit program."
+    Send Exit_Application
+#ENDIF
+
 Object oMainPanel is a BasicPanel
     Set Location to 59 173
     Set Size to 180 394

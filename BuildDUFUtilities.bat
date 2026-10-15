@@ -19,7 +19,7 @@ REM  the application's workspace, or hand it the workspace file.
 REM      ..\Libraries\DUF\BuildDUFUtilities.bat
 REM      BuildDUFUtilities.bat C:\Projects\MyApp\MyApp.sws
 REM
-REM      /all       also DUFSQLConnections and ReadDFDriverDefXML
+REM      /all       also DUFSQLConnections
 REM                 (without it: DUFCodeGenerator and DUFSQLRepairUtility)
 REM      /32        32-bit programs, DataFlex 20 to 25 (19.1 is always 32-bit)
 REM      /nopause   do not wait for a key at the end
@@ -119,7 +119,7 @@ if not exist "%BUILD%\" goto NoBuildDir
 set "OUT=%WS%\Programs"
 if not exist "%OUT%\" set "OUT=%WS%"
 set "PROGRAMS=DUFCodeGenerator DUFSQLRepairUtility"
-if defined ALL set "PROGRAMS=%PROGRAMS% DUFSQLConnections ReadDFDriverDefXML"
+if defined ALL set "PROGRAMS=%PROGRAMS% DUFSQLConnections"
 
 if "%KIND%"=="LIBRARY" goto Library
 
@@ -255,7 +255,7 @@ REM DataFlex 19.1 builds two of the four: the code generator needs 20.1 or
 REM later, and DUFSQLConnections an icon DataFlex has from version 20.
 if not "%DFVER:~0,1%"=="1" goto BuildAll
 set "PROGRAMS=DUFSQLRepairUtility"
-if defined ALL set "PROGRAMS=DUFSQLRepairUtility ReadDFDriverDefXML"
+REM /all adds nothing here: DUFSQLConnections needs DataFlex 20.1 or later.
 echo.
 echo Note: on DataFlex %DFVER% DUFCodeGenerator and DUFSQLConnections cannot be
 echo built. They need DataFlex 20.1 or later.
@@ -458,7 +458,7 @@ echo BuildDUFUtilities.bat [workspace file] [/all] [/32] [/nopause]
 echo.
 echo   Builds DUFCodeGenerator and DUFSQLRepairUtility for the workspace of an
 echo   application that uses DUF, into that workspace's Programs folder.
-echo   /all      also DUFSQLConnections and ReadDFDriverDefXML
+echo   /all      also DUFSQLConnections
 echo   /32       32-bit programs, DataFlex 20 to 25
 echo   /nopause  do not wait for a key at the end
 set "RC=1"

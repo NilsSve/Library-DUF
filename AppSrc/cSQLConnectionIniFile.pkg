@@ -23,8 +23,6 @@ Use cDbUpdateDatabaseDriver.pkg
 
 #IF (!@ > 190)
     Use cLoginEncryption.pkg
-#ELSE
-    Use Base64Functions.pkg
 #ENDIF
 Use seq_chnl.pkg
 

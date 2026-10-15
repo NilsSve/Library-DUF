@@ -125,19 +125,24 @@ Object oCreateDatabase_dg is a cRDCModalPanel
                 Get psDriverID to sDriverID      
                 // The _SqlEnumerateDatabaseCollations function is at current for MSSQLDRV_ID only.
                 If (sDriverID <> MSSQLDRV_ID) Begin
-                    Function_Return aCollations
+                    Function_Return asCollations
                 End                 
                 
                 Send Cursor_Wait of Cursor_Control
+                // The names, as a String[]. (The struct array was handed over as it was.)
                 Get _SqlEnumerateDatabaseCollations of ghoDbUpdateFunctionLibrary sDriverID to aCollations
-                Set psSavedFormValues to aCollations
+                Move (SizeOfArray(aCollations)) to iSize
+                For iCount from 0 to (iSize - 1)
+                    Move aCollations[iCount].sCollation to asCollations[iCount]
+                Loop
+                Set psSavedFormValues to asCollations
                     
                 If (sDriverID = MSSQLDRV_ID) Begin
                     Get psCollation of ghoDbUpdateFunctionLibrary to sCollation
                     Set Value to sCollation
                 End
                 Send Cursor_Ready of Cursor_Control
-                Function_Return aCollations
+                Function_Return asCollations
             End_Function
     
             Procedure OnChange

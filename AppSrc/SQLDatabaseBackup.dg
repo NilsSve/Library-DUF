@@ -41,9 +41,14 @@ Object oSQLDatabaseBackup_dg is a ModalPanel
         Set Label to "Backup Name"
         Set peAnchors to anTopLeftRight
 
+        // The database name with the date and time: one backup file per run. (The bare name, with NOINIT, put
+        // every backup into one file.)
         Procedure Page Integer iPageObject
             String sValue
+            DateTime dtNow
             Get psDatabase of ghoDbUpdateFunctionLibrary to sValue
+            Move (CurrentDateTime()) to dtNow
+            Move (sValue + "_" + String(DateGetYear(dtNow)) + Right("0" + String(DateGetMonth(dtNow)), 2) + Right("0" + String(DateGetDay(dtNow)), 2) + "_" + Right("0" + String(DateGetHour(dtNow)), 2) + Right("0" + String(DateGetMinute(dtNow)), 2)) to sValue
             Set Value to sValue
             Forward Send Page iPageObject
         End_Procedure
@@ -76,7 +81,9 @@ Object oSQLDatabaseBackup_dg is a ModalPanel
         Set Location to 62 71
         Set Label_Justification_Mode to JMode_Right
         Set Label_Col_Offset to 2
-        Set Label to "Or use path:"
+        // A folder of the SQL Server's computer: the server writes the backup. (It read as a folder of this one.)
+        Set Label to "Or this folder on the SQL Server:"
+        Set psToolTip to "A folder on the computer of the SQL Server: the server writes the backup file, so the folder must exist there."
         Set Prompt_Button_Mode to PB_PromptOn
         Set peAnchors to anTopLeftRight
         Set Enabled_State to False
@@ -207,11 +214,12 @@ Function MakeSQLDatabaseBackup Returns Boolean
         If (bDefault = False) Begin
             Get Value of (oPath_fm(ho)) to sPath
         End
-        Send StartStatusPanel "The Database Update Framework" "Backup of SQL Database" 100
+        // The status panel's own messages. (The two were sent to an object that has neither.)
+        Send StartStatusPanel of ghoStatusPanel "The Database Update Framework" "Backup of SQL Database" 100 0
 
         Get SqlDatabaseBackupToDisk of ghoDbUpdateFunctionLibrary sDatabase sBackupName sPath True to bOK
 
-        Send StopStatusPanel
+        Send Stop_StatusPanel of ghoStatusPanel
     End
 
     Function_Return bOK
