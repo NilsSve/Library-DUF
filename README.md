@@ -37,6 +37,69 @@ These sections can be found in the `Developer5.chm` Help file located in the `/H
 
 The workspace also uses three other libraries from Nils Sve's GitHub page — DFAbout, RDCToolsLib and vwin32fh. As of the flattening described below, they are **no longer nested submodules of DUF**; they are separate sibling libraries. See the Dependencies section for why, and what a consuming application must do.
 
+## What is new in 1.0.4
+
+The fixes of a review of the whole source, and of a check of the SQL functions against Microsoft SQL Server.
+
+The update run:
+
+- A table whose logical name is not its root name was taken for an alias, and so left out of the conversion to
+  SQL, the date fixing, the repair and reindex, and the test that nobody has the database open. An entry is an
+  alias only when another entry with its root name is the master.
+- The database version is read from a version table that is no system file too. It stayed 0, and every update
+  ran at every start.
+- `RestoreIntFiles` works for tables that have a cache file.
+- New `pbExitOnErrorInSilentMode`: True ends the program after a failed update in silent mode. False, the
+  default, goes on as before.
+- The Filelist clean-up (`UtilTableFixALLBogusFilelistEntries`) empties only the slots of tables that are gone
+  for sure, and names each one in the log. It emptied every slot a quick test did not find.
+
+Connections to the database server:
+
+- A value with "=" in it, a password above all, keeps it. A keyword counts only at the start of a part of the
+  connection string; "FILEDSN=" was read as "DSN=".
+- `pbSilentLogin` no longer turns a login with user and password into a Windows login.
+- The Encrypt option is kept when the connections file is saved. A port, as in `SERVER=host,1433`, is no longer
+  taken for the silent-login flag.
+- `DriverIndex` answers 0 for a driver that is not loaded, and a connection with no driver needs no login.
+
+The function library:
+
+- About 30 functions that answered wrong or did nothing are repaired, among them `ApiColumnChangeByColumnNumber`,
+  `SqlColumnRename`, `SqlDatabaseDrop`, `ApiTableRemove`, `ApiIndexInsertSegment`, `ApiIndexDeleteSegment` and
+  the compare of version strings ("6.3" counted higher than "20.1").
+- For Microsoft SQL Server, names in the SQL statements of the column functions are in brackets: a blank or a
+  reserved word in a name works. A value with a quote in it is written as it is. A collation name must be one
+  word; anything typed after it was run on the server.
+- `SqlColumnChange` works on Microsoft SQL Server; the server refused every change. A column with a blank in its
+  name gets its first value and can be removed, and `SqlColumnAdd` answers False when it cannot write the first
+  value.
+- The SQL script cleaner keeps the code around a comment; a line with "*/" in it was dropped whole.
+- DUF uses the `MSSqldrv.pkg` of the DataFlex version again. Its own copy replaced the package of every
+  DataFlex version with the one of 26.0. What it added is in `cDUFMSSQLHandler.pkg`.
+- The DB2 queries read the DB2 catalogue. They are not run against a DB2 server.
+
+The programs:
+
+- SQL Repair Utility: Cancel tidies up; the removal of uppercased (U_) columns counts and reports right; the
+  four Filelist fixes change nothing when their backup copy cannot be made.
+- Code Generator: a name or default value with a double quote gives code that compiles.
+- SQL Connections: Test Login, the Connection ID prompt and the collation change are repaired.
+- `setup.bat` leaves sibling libraries that are there already as they are; `setup.bat /pull` updates them.
+
+Removed, because nothing used them or they never worked:
+
+- The stubs `SqlTableRecreateConstraints` and `SqlUtilCheckIfIndexNameExists`; `DoCheckUserCount`,
+  `IsProgramRunning` and `ReadUserCountFile` of `cDbUpdateUserCount`; `NumberOfIniFileConnections` and
+  `IsConnectionIDDuplicate` of `cSQLConnectionIniFile`; the class `cDbUpdatePSQLDriver`. A program that calls
+  one of them no longer compiles.
+- DUF's own copies of `MSSqldrv.pkg`, `Base64Functions.pkg` and `Working.pkg` (RDCToolsLib has the last one),
+  and `cConnectionDUF.pkg`.
+- The programs `DUFCreateDbVersionTable`, `AnalyzeTableMemoryUsage` and `StatusPanelExample`, the two generated
+  test programs, and files and code that nothing used.
+
+105 unit tests now.
+
 ## What is new in 1.0.3
 
 - `ApiTableUpdate` leaves the framework's `DbVersion` table alone, the table whose version number decides which
@@ -129,7 +192,8 @@ The rest:
 **Building DUF on its own** (working on the framework itself): after cloning, run **`setup.bat`**
 once from the repository root. It clones DFAbout, RDCToolsLib, vwin32fh and DFUnit as **siblings** of the
 DUF folder — the layout the `DUFDev*.sws` workspaces expect (19.1, 20.1, 23.0, 24.0, 25.0 and 26.0). Open the one
-of your DataFlex version to build. Re-run `setup.bat` any time those sibling folders look missing or stale.
+of your DataFlex version to build. Re-run `setup.bat` when a sibling folder is missing; it leaves the ones that are
+there as they are. `setup.bat /pull` also updates those.
 
 There is no plain `DUF25.0.sws`. The two workspace files are named for their role, so it is
 always clear which to use:
@@ -198,12 +262,12 @@ vwin32fh come with it. A package brings the sources of DUF's programs, but no pr
 Add it with the version after a `#`:
 
 ```
-https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.3
+https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.4
 ```
 
-Each release has a version tag (`1.0.0`, `1.0.1`, `1.0.2`, `1.0.3`, ...), listed under Tags on GitHub. Without
-the `#` part the workspace gets a commit. A workspace that also names RDCToolsLib or DFAbout itself lists them
-before DUF, in a version DUF accepts: RDCToolsLib 1.0.11 or later, DFAbout 1.0.2 or later.
+Each release has a version tag (`1.0.0`, `1.0.1`, `1.0.2`, `1.0.3`, `1.0.4`, ...), listed under Tags on GitHub.
+Without the `#` part the workspace gets a commit. A workspace that also names RDCToolsLib or DFAbout itself lists
+them before DUF, in a version DUF accepts: RDCToolsLib 1.0.11 or later, DFAbout 1.0.2 or later.
 
 The package puts **`BuildDUFUtilities.bat`** into the workspace folder. Start it there. It compiles
 `DUFCodeGenerator` and `DUFSQLRepairUtility` into the workspace's `Programs` folder:
@@ -212,9 +276,8 @@ The package puts **`BuildDUFUtilities.bat`** into the workspace folder. Start it
   else does not have;
 - with the DataFlex version the workspace file names, 64-bit, with icon and manifest as the Studio builds them.
 
-`BuildDUFUtilities.bat /all` also builds `DUFSQLConnections` and `ReadDFDriverDefXML`. With several workspace
-files in the folder, name the one to build for: `BuildDUFUtilities.bat MyApp.sws`. Run it again after the
-package is updated.
+`BuildDUFUtilities.bat /all` also builds `DUFSQLConnections`. With several workspace files in the folder, name
+the one to build for: `BuildDUFUtilities.bat MyApp.sws`. Run it again after the package is updated.
 
 It is a plain batch file and needs only Windows and DataFlex. It finds `df-cli.exe` on the PATH or through the
 registry, or takes its path from the variable `DFCLI`. It writes to `Programs` and to a folder
@@ -264,8 +327,9 @@ BuildDUFUtilities.bat C:\Projects\MyApp\MyApp.sws
 
 It compiles `DUFCodeGenerator` and `DUFSQLRepairUtility` with that DataFlex version's own compiler and with the
 application's `AppSrc\LoginEncryptionKey.inc`, into the application's `Programs` folder. `/all` adds
-`DUFSQLConnections` and `ReadDFDriverDefXML`, and `/32` builds 32-bit programs on DataFlex 20 to 25. On
-DataFlex 19.1 it builds `DUFSQLRepairUtility`, with `/all` also `ReadDFDriverDefXML`, both 32-bit.
+`DUFSQLConnections`, and `/32` builds 32-bit programs on DataFlex 20 to 25. On DataFlex 19.1 it builds
+`DUFSQLRepairUtility`, 32-bit. `ReadDFDriverDefXML` is built in the Studio, as a 32-bit program: the XML object
+it uses is 32-bit.
 
 The workspace file has to name `DUFLibrary<version>.sws` among its libraries, beside RDCToolsLib, DFAbout and
 vwin32fh. The script finds the compiler through the registry, or takes its path from the variable
