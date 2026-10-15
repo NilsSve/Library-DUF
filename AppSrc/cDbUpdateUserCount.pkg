@@ -190,26 +190,12 @@ Class cDbUpdateUserCount is a cObject
     Function OpenUserCountFile String sFileName Returns Handle
         Handle  hFile
         Pointer pFileName
-        String sPath sFile
-        Integer iCh
 
+        // The file is opened, and made when it is not there yet, by one Windows call with the path as Windows gave
+        // it (ApplicationPath, an ANSI path). (It was made with Direct_Output, which reads the same path as a
+        // DataFlex string: UTF-8 from DataFlex 20, OEM before. A folder name with a national character then failed.)
         Move (Addressof(sFileName)) to pFileName
-        Move (Win32_CreateFile(pFileName, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, (FILE_ATTRIBUTE_NORMAL ior FILE_FLAG_WRITE_THROUGH), 0)) to hFile
-
-        // If lock file doesn't exist, create it.
-        If (hFile = INVALID_HANDLE_VALUE) Begin
-            Get ApplicationPath to sPath
-            Get vFolderFormat sPath to sPath
-            Move (sPath + psLockFileName(Self)) to sFile
-            Get Seq_Open_Output_Channel sFile to iCh
-            If (iCh = DF_SEQ_CHANNEL_ERROR) Begin
-                Function_Return 0
-            End
-            Direct_Output channel iCh sFile
-                Write channel iCh ""
-            Send Seq_Close_Channel iCh
-            Move (Win32_CreateFile(pFileName, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, (FILE_ATTRIBUTE_NORMAL ior FILE_FLAG_WRITE_THROUGH), 0)) to hFile
-        End
+        Move (Win32_CreateFile(pFileName, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_ALWAYS, (FILE_ATTRIBUTE_NORMAL ior FILE_FLAG_WRITE_THROUGH), 0)) to hFile
 
         Function_Return hFile
     End_Function

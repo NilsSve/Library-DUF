@@ -236,7 +236,9 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
         Property Boolean Private.pbOnPreUpdateExecuted False
         { Visibility=Private }
         Property Boolean Private.pbProcessingError False
-        { Visibility=Private }
+        // True after an error in the update run. A program in silent mode tests it after the handler object:
+        // in silent mode the program goes on after a failed update unless pbExitOnErrorInSilentMode is True.
+        { Visibility=Public }
         Property Boolean pbDbUpdateErrorHasOccured False
         { Visibility=Private }
         // Don't touch. It is being used by the cDbUpdateVersion
@@ -286,9 +288,17 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
         // If = True, no question will be asked if the update
         // should begin. Also, even if the pbShowErrorLogPostRun=True,
         // the error log won't be shown. The logfile itself will still be created though.
+        // After a failed update the program goes on, on a database that is not fully updated: test
+        // pbDbUpdateErrorHasOccured after the handler object, or set pbExitOnErrorInSilentMode.
         // You have to know what you're doing!
         { Category="Error Handling" MethodType=Property Visibility=Public }
         Property Boolean pbSilentMode False
+
+        // In silent mode: True ends the program after a failed update, as it ends without silent mode. False, the
+        // default, lets it go on (a program that cannot be ended, such as a web application, then tests
+        // pbDbUpdateErrorHasOccured).
+        { Category="Error Handling" MethodType=Property Visibility=Public }
+        Property Boolean pbExitOnErrorInSilentMode False
         
         { Category="Error Handling" MethodType=Property Visibility=Public }
         Property Boolean pbEnableCancelButton False
@@ -613,8 +623,8 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
         Function_Return bExists    
     End_Function
 
-    // The logic is activated by setting the property "pbCheckIntFiles = True" in the
-    // cDbUpdateHandler object.
+    // Nothing in DUF sends it: a program that wants the check sends CheckIntFilesIntegrity itself, for instance
+    // in OnPreUpdate, with the property "pbCheckIntFiles = True" in the cDbUpdateHandler object.
     //
     // Checks that all .int files are intact, or else writes new copies to disk. 
     // Also checks that there is a Filelist.cfg, and if missing writes a new copy to disk.
@@ -630,7 +640,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
         Boolean bCheckIntFiles bExists bOK bSaved bIsSQL bFileListExist bResult bDevelop bZipExists bIntFilesTablesCheckDone
         String sPaths sDataPath sIntFileName sRootFileNname sFileListName sDDSrcPath sCurrentFolder
         String sFileListZipFile sParam sProgram sFile 
-        Integer iDataPaths iCount
+        Integer iDataPaths iCount iRetval
         Handle hTable hIntFilesTable                    
         UChar[] asFileListArray 
         String[] asSavedIntFile
@@ -655,13 +665,14 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
 //        Get ReadFileListResource "res_EmbeddedFilelistCfg" to asFileListArray
         
         Get psFileList of (phoWorkspace(ghoApplication)) to sFileListName
+        // The folder of Filelist.cfg: a backup copy is made there, or a missing Filelist.cfg is made from it.
+        Get ParseFolderName sFileListName to sDataPath
+        Get vFolderFormat sDataPath to sDataPath
         Get vFilePathExists sFileListName to bExists 
         If (bExists = True) Begin
-            Get ParseFolderName sFileListName to sDataPath    
-            Get vFolderFormat sDataPath to sDataPath                              
             Get ParseFileName sFileListName to sFile
             // We need to create a backup copy of Filelist.cfg.
-            Get vCopyFile sFileListName (sDataPath + CS_FilelistBackupFile) to bOK
+            Get vCopyFile sFileListName (sDataPath + CS_FilelistBackupFile) to iRetval
             Get vFilePathExists (sDataPath + CS_FilelistBackupFile) to bOK
             If (bOK = False) Begin
                 Move False to bResult
@@ -670,7 +681,9 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
         End
         // If the Filelist.cfg is missing - create it from a previous backup copy.
         Else Begin
-            Get vCopyFile (sDataPath + CS_FilelistBackupFile) sFileListName to bOK
+            // vCopyFile answers 0 when the copy is made.
+            Get vCopyFile (sDataPath + CS_FilelistBackupFile) sFileListName to iRetval
+            Move (iRetval = 0) to bOK
 //            Get WriteFileListResource asFileListArray sFileListName to bOK  
             If (bOK = False) Begin   
                 Move False to bResult
@@ -742,7 +755,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
                             Get vFilePathExists (sDataPath + sIntFileName) to bExists
                             If (bExists = False) Begin                           
                                 // If the .int file is missing on disk; create it from database.
-                                Get CreateIntFileFromSavedData hIntFilesTable sIntFileName sDataPath to bOK
+                                Get CreateIntFileFromSavedData sIntFileName sDataPath to bOK
                                 If (bOK = False) Begin         
                                     Move False to bResult
                                     Error DFERR_PROGRAM ("Could not create .int file:" * String(sIntFileName))
@@ -1056,9 +1069,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
     // Writes an .int for the passed sIntFileName file to disk by reading data from the piIntFilesFileNumber data table.
     // It first deletes the .cch file (if any).
     Function CreateIntFileFromSavedData String sIntFileName String sDataPath Returns Boolean
-        Boolean bOK bFound bExists bErr
-        Integer iCh iSize iCount
-        String sFileName sCCHFileName sVal
+        Boolean bOK bErr
         String[] asIntFile
         
         Move (Lowercase(sIntFileName)) to sIntFileName
@@ -1067,39 +1078,15 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
         Move False to bOK
 
         Get RetrieveIntFileData sDataPath sIntFileName to asIntFile
-        Move (SizeOfArray(asIntFile)) to iSize
-        If (iSize = 0) Begin
+        If (SizeOfArray(asIntFile) = 0) Begin
+            Move bErr to Err
             Function_Return False        
         End                      
-        Decrement iSize
         
-        Get Seq_New_Channel to iCh
-        If (iCh = DF_SEQ_CHANNEL_NOT_AVAILABLE) Begin
-            Function_Return False
-        End   
-        
-        // Before we start to actually create the new .int file, make sure we delete
-        // the .cch file.                                     
-        Move (Uppercase(sIntFileName)) to sCCHFileName
-        Move (Replace(".INT", sCCHFileName, ".CCH")) to sCCHFileName
-        Get vFilePathExists (sDataPath + sCCHFileName) to bExists
-        If (bExists = True) Begin
-            Get vDeleteFile (sDataPath + sCCHFileName) to bOK
-            If (bOK = False) Begin
-                Function_Return False
-            End
-        End
-        
-        Direct_Output channel iCh (sDataPath + sIntFileName)
-        For iCount from 0 to iSize
-            Writeln channel iCh asIntFile[iCount]
-        Loop
-        
-        Close_Input channel iCh
-        Send Seq_Release_Channel iCh
-        Move (not(Err)) to bOK
         Move bErr to Err
         
+        // The cache file goes first, then the file is written (DUFWriteIntFile, cDbUpdateHandler.h.pkg).
+        Move (DUFWriteIntFile(sDataPath, sIntFileName, asIntFile)) to bOK
         Function_Return bOK
     End_Function   
               
@@ -1787,9 +1774,11 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
         Get paDbVersionInfoArray to aDbVersionInfoArray
         Move (SizeOfArray(aDbVersionInfoArray)) to iSize
         Decrement iSize
+        // Cleanup put the program's error handler back: the errors of this run are the handler's again.
+        Move Self to Error_Object_Id
         
         For iCount from 0 to iSize
-            Move aDbVersionInfoArray[0].hObject to hoDbVersionObject
+            Move aDbVersionInfoArray[iCount].hObject to hoDbVersionObject
             Send ProcessUpdate                  of hoDbVersionObject False
         Loop
         Send Cleanup
@@ -2038,6 +2027,10 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
             Send DoReleaseUserCount of (phoDatabaseUpdateLock(Self))
 
             Send StopStatusPanel
+            If (pbSilentMode(Self) = True and bError = True and pbExitOnErrorInSilentMode(Self) = True) Begin
+                Get piOrgErrorHandlerID to Error_Object_Id
+                Send Exit_Application
+            End
             If (pbSilentMode(Self) = False) Begin
                 If (bError = True) Begin
                     If (pbShowErrorLogPostRun(Self) = True) Begin

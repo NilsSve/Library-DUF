@@ -1,11 +1,13 @@
 Use cDbUpdateHandler.pkg
 
+// The update handler of the DUF utilities (DUFCodeGenerator, DUFSQLRepairUtility, DUFTestProgram): it gives the
+// function library its error handling, log and settings, and updates no database. A utility is built into the
+// workspace it works on, so it makes no table there and keeps no Filelist slot. (It made a DbVersion table in
+// slot 285 and an .int backup table in slot 286 of that workspace, and its version object read the table in slot
+// 285 - an application table when the workspace used that slot - as the database version.)
 Object oDbUpdateHandler is a cDbUpdateHandler
-    Set pbAutoCreateDbVersionTable to True
-    Set piDbVersionFileNumber  to 285
-    Set piDbVersionFieldNumber to 1
-    Set pbUseIntFilesBackup    to True
-    Set piIntFilesFileNumber   to 286
+    Set pbAutoCreateDbVersionTable to False
+    Set pbUseIntFilesBackup    to False
     Set pbCheckIntFiles to False 
     Set psDriverID to DATAFLEX_ID
 
@@ -14,9 +16,5 @@ Object oDbUpdateHandler is a cDbUpdateHandler
     
     Procedure OnPreUpdate
     End_Procedure  
-
-    Object oDbUpdateVersion1_0 is a cDbUpdateVersion
-        Set pnVersionNumber to 1.0
-    End_Object
 
 End_Object

@@ -1,0 +1,101 @@
+// oDbUpdateIntFile-Tests.pkg - DUFWriteIntFile, which writes an .int file back from the lines saved in the
+// handler's .int backup table (cDbUpdateHandler.CreateIntFileFromSavedData, RestoreIntFiles).
+//
+// The tests write into a folder of their own in the temp folder and remove it again. No database is touched.
+//
+// Only procedures carrying { Published=True } are run as tests.
+
+Use DFUnit\Fixturing\Fixture.pkg
+Use cDbUpdateHandler.h.pkg
+
+Object oDbUpdateIntFile_Tests is a cTestFixture
+    Set psTestFixtureName to "DUFWriteIntFile - an .int file written back from its saved lines"
+
+    Property String psFolder ""
+
+    Procedure Setup
+        String sTemp sFolder
+
+        Get_Environment "TEMP" to sTemp
+        Get vFolderFormat sTemp to sTemp
+        Move (sTemp + "DUFIntFileTests" + String(Random(899999) + 100000) + "\") to sFolder
+        Make_Directory sFolder
+        Set psFolder to sFolder
+    End_Procedure
+
+    Procedure TearDown
+        String sFolder
+
+        Get psFolder to sFolder
+        If (sFolder <> "" and (Uppercase(sFolder) contains "DUFINTFILETESTS")) Begin
+            EraseFile (sFolder + "DUFTI1.int")
+            EraseFile (sFolder + "DUFTI1.cch")
+            Remove_Directory sFolder
+        End
+        Set psFolder to ""
+    End_Procedure
+
+    Function IntLines Returns String[]
+        String[] asLines
+
+        Move "DRIVER_NAME MSSQLDRV" to asLines[0]
+        Move "DATABASE_NAME DUFTI1" to asLines[1]
+        Move "PRIMARY_INDEX 1" to asLines[2]
+        Function_Return asLines
+    End_Function
+
+    // The lines of a file, read back
+    Function FileLines String sFileName Returns String[]
+        String[] asLines
+        String sLine
+        Integer iCh
+
+        Get Seq_New_Channel to iCh
+        Direct_Input channel iCh sFileName
+        While (not(SeqEof))
+            Readln channel iCh sLine
+            If (not(SeqEof) or sLine <> "") Begin
+                Move sLine to asLines[SizeOfArray(asLines)]
+            End
+        Loop
+        Close_Input channel iCh
+        Send Seq_Release_Channel iCh
+        Function_Return asLines
+    End_Function
+
+    // The driver's cache file of the table goes first, then the .int file is written - and closed, so it can be
+    // removed again. (A cache file that was removed made the call fail, as the result of vDeleteFile - 0 when the
+    // file is gone - was read the wrong way round; and the written file was never closed.)
+    { Published=True }
+    Procedure Test_The_Cache_File_Goes_And_The_Int_File_Is_Written_And_Closed
+        String sFolder
+        String[] asLines
+        Integer iCh
+
+        Get psFolder to sFolder
+        Get Seq_New_Channel to iCh
+        Direct_Output channel iCh (sFolder + "DUFTI1.cch")
+        Writeln channel iCh "cache"
+        Close_Output channel iCh
+        Send Seq_Release_Channel iCh
+
+        Send Assert (DUFWriteIntFile(sFolder, "DUFTI1.int", IntLines(Self))) "The call answers True."
+        Send AssertFalse (vFilePathExists(sFolder + "DUFTI1.cch")) "The cache file is gone."
+        Get FileLines (sFolder + "DUFTI1.int") to asLines
+        Send AssertIAreEqual 3 (SizeOfArray(asLines)) "The .int file has the three lines."
+        Send AssertSAreEqual "DATABASE_NAME DUFTI1" asLines[1] "In their order."
+        Send AssertIAreEqual 0 (vDeleteFile(sFolder + "DUFTI1.int")) "The file is closed: it can be removed."
+    End_Procedure
+
+    // Without a cache file the .int file is written as well.
+    { Published=True }
+    Procedure Test_Without_A_Cache_File_The_Int_File_Is_Written
+        String sFolder
+
+        Get psFolder to sFolder
+        Send Assert (DUFWriteIntFile(sFolder, "DUFTI1.int", IntLines(Self))) "The call answers True."
+        Send AssertIAreEqual 3 (SizeOfArray(FileLines(Self, sFolder + "DUFTI1.int"))) "The .int file has the three lines."
+        Send AssertIAreEqual 0 (vDeleteFile(sFolder + "DUFTI1.int")) "The file is closed: it can be removed."
+    End_Procedure
+
+End_Object

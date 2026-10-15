@@ -17,15 +17,12 @@
 Use UI
 Use vWin32fh.pkg
 
-#IFNDEF _struct_tDbUpdateError
-Struct tDbUpdateError
-    Number  nUpdateVersion
-    Integer iError
-    String  sErrorText
-    Integer iErrorLine
-    Boolean bError
-End_Struct
-#ENDIF
+// tDbUpdateError as the log fills it. (A shorter copy of the struct stood here: Used before the handler's
+// header, the class did not compile.)
+Use cDbUpdateHandler.h.pkg
+// Events of cDbUpdateHandler, the parent, for a log written to a data table.
+Register_Procedure OnErrorWriteHeader_DataTable DateTime dtUpdateStart
+Register_Procedure OnErrorWriteRow_DataTable tDbUpdateError[] DbUpdateErrorArray
 
 #IFNDEF CS_DatabaseUpdateFramework
     Define CS_DatabaseUpdateFramework for " ***  The Database Update Framework (DUF) ***"
@@ -186,6 +183,8 @@ Class cDbUpdateLogFile is a cObject
         Move (CurrentDateTime()) to dtUpdateStart
         If (pbUseDataTableLog(Self) = True) Begin
             Send OnWriteHeader_DataTable dtUpdateStart
+            // Once in a run. (Without this the event was sent for every logged row.)
+            Set pbHeaderWritten to True
             Procedure_Return
         End
 

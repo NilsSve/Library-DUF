@@ -1,0 +1,49 @@
+// oDbUpdateLogFile-Tests.pkg - cDbUpdateLogFile, the log of an update run.
+//
+// The log object of the tests writes to a data table: the program's own events stand in for that table, so no
+// file and no database is touched.
+//
+// Only procedures carrying { Published=True } are run as tests.
+
+Use DFUnit\Fixturing\Fixture.pkg
+Use cDbUpdateHandler.h.pkg
+Use cDbUpdateLogFile.pkg
+
+Object oDbUpdateLogFile_Tests is a cTestFixture
+    Set psTestFixtureName to "cDbUpdateLogFile - the update log"
+
+    // Stands in for cDbUpdateHandler: the log asks its parent for the table and the column of an error.
+    Object oHost is a cObject
+        Property Handle  Private.phCurrentTable 0
+        Property Integer Private.piCurrentField 0
+
+        // A log written to a data table. The events of the program count the header and the rows.
+        Object oLog is a cDbUpdateLogFile
+            Set pbUseDataTableLog to True
+            Property Integer piHeaders 0
+
+            Procedure OnWriteHeader_DataTable DateTime dtUpdateStart
+                Set piHeaders to (piHeaders(Self) + 1)
+            End_Procedure
+
+            Procedure OnWriteRow_DataTable
+            End_Procedure
+        End_Object
+    End_Object
+
+    // The header of a log that is written to a data table is written once in a run. (Its event was sent for
+    // every logged row: the flag that says the header is written was never set in that branch.)
+    { Published=True }
+    Procedure Test_The_Header_Of_A_Data_Table_Log_Is_Written_Once
+        Handle ho
+
+        Move (oLog(oHost(Self))) to ho
+        Set piHeaders       of ho to 0
+        Set pbHeaderWritten of ho to False
+        Send LogError of ho 1.0 0 "The first line" 0 False
+        Send LogError of ho 1.0 0 "The second line" 0 False
+        Send WriteErrorLog of ho
+        Send AssertIAreEqual 1 (piHeaders(ho)) "One header for two lines and the end of the run."
+    End_Procedure
+
+End_Object

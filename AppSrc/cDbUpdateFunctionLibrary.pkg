@@ -8860,60 +8860,49 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return ColumnType
     End_Function
 
-    // Returns True if the passed hTable (filelist slot number) is an Alias table.
-    // An Alias file/table is a filelist number that share the same Physical filename
-    // but the Logical name is different.
-    // Note: If the table cannot be opened; the table is not considered to be an Alias.
+    // Is the table an alias - another Filelist entry for the root name of a master table? An entry is an alias
+    // when another entry has the same root name (any driver prefix or .int stripped) and that one is the master:
+    // the entry whose logical name is the root name, or, when no entry is named so, the one in the lowest slot.
+    // A table whose root name no other entry has is no alias, whatever its logical name. (Every table whose
+    // logical name was not its root name was called an alias - the search for its master was commented out - and
+    // was so left out of the conversion to SQL, the date fixing, the repair and reindex and the test that nobody
+    // has the database open.)
     Function UtilTableIsAlias Handle hTable Returns Boolean
-        String sRootName sRootNameCompare sLogicalName sLogicalNameCompare
-        Handle hInTable hMasterTable 
-        Boolean bIsAlias
-        
-        Move hTable to hInTable
-        Move False to bIsAlias
-        Move 0 to hMasterTable
-        
+        String sRootName sOtherRootName sOtherLogicalName
+        Handle hOther hMaster
+        Boolean bNamedMaster
+
         Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
-        // Remove any prefix with a driver name.
-        Get _TableNameOnly sRootName to sRootName     
-        Get_Attribute DF_FILE_LOGICAL_NAME of hTable to sLogicalName
-        Get _TableNameOnly sLogicalName to sLogicalName     
-        
-        // If the table has the same root and logical name it can't be an alias,
-        // so we can safely return a "False".
-        If (Uppercase(sRootName) <> Uppercase(sLogicalName)) Begin
-            Function_Return True
+        Get _TableNameOnly sRootName to sRootName
+        Move (Uppercase(sRootName)) to sRootName
+        If (sRootName = "") Begin
+            Function_Return False
         End
-        
-        Function_Return False
-        
-        // Now we need to find a master table with the same root name (sRootName above),
-        // as the passed hTable root name.
-        // A master table always has the same root and logical name (except for any driver name prefix or .int suffix).
-//        Move 0 to hTable
-//        Repeat
-//            Get_Attribute DF_FILE_NEXT_USED of hTable to hTable
-//            If (hTable > 0 and hTable <> 50) Begin
-//                Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootNameCompare
-//                Get _TableNameOnly sRootNameCompare to sRootNameCompare
-//                // If we found another table with the same root and logical name
-//                // we have found a master table.
-//                If (Uppercase(sRootName) = Uppercase(sRootNameCompare)) Begin
-//                    Get_Attribute DF_FILE_LOGICAL_NAME of hTable to sLogicalNameCompare
-//                    Get _TableNameOnly sLogicalNameCompare to sLogicalNameCompare     
-//                    If (Uppercase(sRootNameCompare) = Uppercase(sLogicalNameCompare)) Begin
-//                        Move hTable to hMasterTable   
-//                        Move 0 to hTable // To end the loop.
-//                    End
-//                End
-//            End
-//        Until (hTable = 0)
-//        
-//        If (hMasterTable <> 0 and hMasterTable <> hInTable) Begin
-//            Move True to bIsAlias
-//        End
-//        
-//        Function_Return bIsAlias
+
+        // The master of the root name: the entry named like it, else the lowest slot that has it.
+        Move 0 to hMaster
+        Move False to bNamedMaster
+        Move 0 to hOther
+        Repeat
+            Get_Attribute DF_FILE_NEXT_USED of hOther to hOther
+            If (hOther > 0) Begin
+                Get_Attribute DF_FILE_ROOT_NAME of hOther to sOtherRootName
+                Get _TableNameOnly sOtherRootName to sOtherRootName
+                If (Uppercase(sOtherRootName) = sRootName) Begin
+                    Get_Attribute DF_FILE_LOGICAL_NAME of hOther to sOtherLogicalName
+                    Get _TableNameOnly sOtherLogicalName to sOtherLogicalName
+                    If (Uppercase(sOtherLogicalName) = sRootName and bNamedMaster = False) Begin
+                        Move hOther to hMaster
+                        Move True to bNamedMaster
+                    End
+                    If (hMaster = 0) Begin
+                        Move hOther to hMaster
+                    End
+                End
+            End
+        Until (hOther = 0)
+
+        Function_Return (hMaster <> 0 and hMaster <> hTable)
     End_Function
 
     // To Open a table with any driver.

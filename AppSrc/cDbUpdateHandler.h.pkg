@@ -60,6 +60,63 @@ Struct tDbUpdateError
 End_Struct
 #ENDIF
 
+// Writes an .int file from its saved lines into sDataPath (a folder with a backslash at the end). The driver's
+// cache file of the table (.cch) is removed first, as the driver would go on using it. Returns False when the
+// cache file cannot be removed or the file cannot be written; the channel is given back on every path, and Err is
+// as it was. (cDbUpdateHandler's CreateIntFileFromSavedData read the result of the removal the wrong way round -
+// vDeleteFile answers 0 when the file is gone - so it stopped whenever there was a cache file, and kept its
+// channel; and it closed the written file with Close_Input, which does not close an output file.)
+Function DUFWriteIntFile Global String sDataPath String sIntFileName String[] asIntFile Returns Boolean
+    String sCCHFileName
+    Integer iCh iCount
+    Boolean bErr bOK
+
+    Move (Uppercase(sIntFileName)) to sCCHFileName
+    Move (Replace(".INT", sCCHFileName, ".CCH")) to sCCHFileName
+    If (vFilePathExists(sDataPath + sCCHFileName)) Begin
+        If (vDeleteFile(sDataPath + sCCHFileName) <> 0) Begin
+            Function_Return False
+        End
+    End
+
+    Move (Seq_New_Channel()) to iCh
+    If (iCh = DF_SEQ_CHANNEL_NOT_AVAILABLE) Begin
+        Function_Return False
+    End
+    Move Err to bErr
+    Move False to Err
+    Direct_Output channel iCh (sDataPath + sIntFileName)
+    For iCount from 0 to (SizeOfArray(asIntFile) - 1)
+        Writeln channel iCh asIntFile[iCount]
+    Loop
+    Close_Output channel iCh
+    Send Seq_Release_Channel iCh
+    Move (not(Err)) to bOK
+    Move bErr to Err
+    Function_Return bOK
+End_Function
+
+// The version number in a version table that keeps it in its one record: a system table has that record in its
+// buffer once it is open; another table is searched for its first record - the record UpdateVersionColumnValue
+// writes the new number into. 0 when there is no record. The table must be open. (Only a system table was read:
+// in another one the number stayed 0, below every version, and every update ran again at every start.)
+Function DbVersionStoredValue Global Handle hTable Integer iColumn Returns Number
+    Boolean bSystemTable
+    Number nValue
+
+    Move 0 to nValue
+    Get_Attribute DF_FILE_IS_SYSTEM_FILE of hTable to bSystemTable
+    If (bSystemTable = False) Begin
+        Clear hTable
+        Vfind hTable 0 GE
+        If (not(Found)) Begin
+            Function_Return 0
+        End
+    End
+    Get_Field_Value hTable iColumn to nValue
+    Function_Return nValue
+End_Function
+
 //  DF_FILE_ALIAS_DEFAULT if no master or alias
 //  DF_FILE_IS_MASTER if master
 //  DF_FILE_IS_ALIAS if alias

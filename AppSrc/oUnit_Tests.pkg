@@ -19,6 +19,8 @@ Object oWorkspace_Tests is a cTestFixture
 
     // *** Test files below - one Use line per subject: ***
     Use oDbUpdateFunctionLibrary-Tests.pkg
+    Use oDbUpdateIntFile-Tests.pkg
+    Use oDbUpdateLogFile-Tests.pkg
     Use oDbUpdateConnectionID-Tests.pkg
     Use oDbUpdateDatabaseDriver-Tests.pkg
     Use oDbUpdateTableUpdate-Tests.pkg

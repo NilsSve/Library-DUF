@@ -10,6 +10,7 @@
 
 Use DFUnit\Fixturing\Fixture.pkg
 Use cDbUpdateFunctionLibrary.pkg
+Use cDbUpdateHandler.h.pkg
 
 Object oDbUpdateTableUpdate_Tests is a cTestFixture
     Set psTestFixtureName to "ApiTableUpdate on embedded tables"
@@ -1098,6 +1099,53 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Get FixBogusEntries to iErrors
         Send AssertIAreEqual 0 iErrors ("The fix runs without an error." + psErrors(oErrors(Self)))
         Send AssertSAreEqual "DUFTESTDRV:DUFTT28" (Uppercase(RootNameOf(Self, h))) "The slot keeps its root name."
+    End_Procedure
+
+    // A table whose logical name is not its root name is no alias when no other entry shares its root name. (Every
+    // such table was called an alias, and so it was left out of the conversion to SQL, the date fixing, the repair
+    // and reindex and the test that nobody has the database open.)
+    { Published=True }
+    Procedure Test_A_Table_With_A_Root_Name_Of_Its_Own_Is_No_Alias
+        Handle h
+
+        Get AddFilelistEntry "DUFTT30" "DUFTT30X" to h
+        Send AssertFalse (UtilTableIsAlias(ghoDbUpdateFunctionLibrary, h)) "Its root name is its own: no alias."
+    End_Procedure
+
+    // Of two entries that share a root name, the one whose logical name is the root name is the master.
+    { Published=True }
+    Procedure Test_The_Entry_Named_Like_Its_Root_Is_The_Master_Of_An_Alias
+        Handle hMaster hAlias
+
+        Get AddFilelistEntry "DUFTT31" "DUFTT31A" to hAlias
+        Get AddFilelistEntry "DUFTT31" "DUFTT31" to hMaster
+        Send AssertFalse (UtilTableIsAlias(ghoDbUpdateFunctionLibrary, hMaster)) "The master is no alias, though its slot is the higher one."
+        Send Assert (UtilTableIsAlias(ghoDbUpdateFunctionLibrary, hAlias)) "The other entry is its alias."
+    End_Procedure
+
+    // When no entry of a shared root name is named like the root, the lower slot is the master.
+    { Published=True }
+    Procedure Test_Without_An_Entry_Named_Like_The_Root_The_Lower_Slot_Is_The_Master
+        Handle hFirst hSecond
+
+        Get AddFilelistEntry "DUFTT32" "DUFTT32M" to hFirst
+        Get AddFilelistEntry "DUFTT32" "DUFTT32A" to hSecond
+        Send AssertFalse (UtilTableIsAlias(ghoDbUpdateFunctionLibrary, hFirst)) "The lower slot is the master."
+        Send Assert (UtilTableIsAlias(ghoDbUpdateFunctionLibrary, hSecond)) "The higher one is its alias."
+    End_Procedure
+
+    // The version table is read in its first record when it is no system file - the record that the new number is
+    // written into. (Only a system table was read: the number stayed 0, and every update ran at every start.)
+    { Published=True }
+    Procedure Test_The_Version_Is_Read_From_A_Table_That_Is_No_System_File
+        Handle h
+
+        Send MakeBaseTable "DUFTT33" 5 False
+        Get phTable to h
+        Open h
+        Send AssertNAreEqual 1 (DbVersionStoredValue(h, 1)) "Column 1 of the first record."
+        Send AssertNAreEqual 12.5 (DbVersionStoredValue(h, 5)) "Column 5 of the first record."
+        Close h
     End_Procedure
 
 End_Object

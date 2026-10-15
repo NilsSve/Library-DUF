@@ -18,6 +18,7 @@
 Use UI
 Use DUFLanguageConstants.h.pkg
 Use cDbUpdateFunctionLibrary.pkg
+Use cDbUpdateHandler.h.pkg // DbVersionStoredValue
 Use for_all.pkg // Handy to have available in the OnUpdate event.
 
 #IFNDEF _struct_tDbVersionInfo
@@ -717,15 +718,15 @@ Register_Procedure StopForSetupError String sText
         If (iStatus = DF_FILE_INACTIVE) Begin
             Vfind hTable 0 GT
         End
+        // The version table has one record (DbVersionStoredValue). A custom version table that is no system file
+        // is searched by the program (OnFindVersionRecord).
         Get_Attribute DF_FILE_IS_SYSTEM_FILE of hTable to bSystemTable
-        If (bSystemTable = True) Begin
-            Get_Field_Value hTable iColumn to nCurrentValue
+        If (bSystemTable = True or bUseCustomDbVersion = False) Begin
+            Move (DbVersionStoredValue(hTable, iColumn)) to nCurrentValue
         End
         Else Begin
-            If (bUseCustomDbVersion = True) Begin
-                Send OnFindVersionRecord
-                Get_Field_Value hTable iColumn to nCurrentValue
-            End
+            Send OnFindVersionRecord
+            Get_Field_Value hTable iColumn to nCurrentValue
         End
 
         Close hTable
