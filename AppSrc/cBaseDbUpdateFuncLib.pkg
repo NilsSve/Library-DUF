@@ -2431,6 +2431,94 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return (sFolder <> "")
     End_Function
 
+    // Is the root name that of a table of a database driver? A driver prefix in front - MSSQLDRV:Customer - or an
+    // .int file - Customer.int. A drive in front - C:\Data\Customer - is a folder: a driver id is longer than one
+    // letter.
+    Function _UtilRootNameIsDriverTable String sRootName Returns Boolean
+        If (Lowercase(Right(sRootName, 4)) = ".int") Begin
+            Function_Return True
+        End
+        Function_Return (Pos(":", sRootName) > 2)
+    End_Function
+
+    // Is the data file of an embedded table where the runtime looks for it? A root name with a folder of its own
+    // is looked for there. Else each folder of the data path is looked at, and then each folder of the open path
+    // (DF_OPEN_PATH): the runtime searches the open path when it opens a table, and it can name other folders.
+    Function _UtilEmbeddedTableIsFound String sRootName Returns Boolean
+        String sOpenPath sFolder
+        Integer iPaths iPath
+        Boolean bExists
+
+        If ((sRootName contains "\") or (sRootName contains ":")) Begin
+            Get vFilePathExists (sRootName + ".dat") to bExists
+            If (bExists = True) Begin
+                Function_Return True
+            End
+        End
+        Get _UtilEmbeddedTableFileExists sRootName to bExists
+        If (bExists = True) Begin
+            Function_Return True
+        End
+        Get_Attribute DF_OPEN_PATH to sOpenPath
+        Get CountOfPaths of (phoWorkspace(ghoApplication)) sOpenPath to iPaths
+        For iPath from 1 to iPaths
+            Get PathAtIndex of (phoWorkspace(ghoApplication)) sOpenPath iPath to sFolder
+            If (Trim(sFolder) <> "") Begin
+                Get vFolderFormat sFolder to sFolder
+                Get vFilePathExists (sFolder + sRootName + ".dat") to bExists
+                If (bExists = True) Begin
+                    Function_Return True
+                End
+            End
+        Loop
+        Function_Return False
+    End_Function
+
+    // Is the table of a database driver gone for sure? Only its server can say so: the table must be missing from
+    // the list of tables of the database the library is connected to. When there is no such list to look in - an
+    // .int file without a driver prefix, another driver than the library's, no database, or an empty list - the
+    // answer is False, and sWhy says why the table could not be looked for. When the answer is True, sWhy says
+    // where it was not found.
+    Function _UtilDriverTableIsGone String sRootName String ByRef sWhy Returns Boolean
+        String sDriverID sOwnDriverID sDatabase sSchema sTable
+        String[] asTables
+        Integer iPos
+
+        Move "" to sWhy
+        Move "" to sDriverID
+        Move (Pos(":", sRootName)) to iPos
+        If (iPos > 2) Begin
+            Move (Left(sRootName, (iPos - 1))) to sDriverID
+        End
+        If (sDriverID = "") Begin
+            Move "only the driver named in the .int file can tell whether its table is there" to sWhy
+            Function_Return False
+        End
+        Get psDriverID to sOwnDriverID
+        Get psDatabase to sDatabase
+        If (Uppercase(sDriverID) <> Uppercase(sOwnDriverID) or sDatabase = "") Begin
+            Move ("the library is not connected to a database of the" * sDriverID * "driver, so the table could not be looked for") to sWhy
+            Function_Return False
+        End
+        Move (Uppercase(sOwnDriverID)) to sOwnDriverID
+        If (sOwnDriverID <> MSSQLDRV_ID and sOwnDriverID <> DB2_DRV_ID and sOwnDriverID <> ODBC_DRV_ID) Begin
+            Move ("the tables of the" * sDriverID * "driver cannot be listed, so the table could not be looked for") to sWhy
+            Function_Return False
+        End
+        Get psSchema to sSchema
+        Get _SqlUtilEnumerateTables sOwnDriverID sDatabase sSchema to asTables
+        If (SizeOfArray(asTables) = 0) Begin
+            Move ("the database" * sDatabase * "gave no list of its tables, so the table could not be looked for") to sWhy
+            Function_Return False
+        End
+        Get _TableNameOnly sRootName to sTable
+        If (SearchArray(sTable, asTables, Desktop, (RefFunc(DFSTRICMP))) <> -1) Begin
+            Function_Return False
+        End
+        Move ("the database" * sDatabase * "has no table" * sTable) to sWhy
+        Function_Return True
+    End_Function
+
     // After an embedded table was copied to a new root name in sFolder: removes each file of the old name - the
     // .dat, .hdr, .tag and .vld file and the index files .k1 to .k15 - whose copy under the new name is there.
     // An old file without a copy, or one that cannot be removed, stays and is named in the log. Returns False

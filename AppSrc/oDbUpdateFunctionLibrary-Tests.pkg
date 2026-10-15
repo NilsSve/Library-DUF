@@ -189,4 +189,16 @@ Object oDbUpdateFunctionLibrary_Tests is a cTestFixture
         Send AssertSAreEqual "ID,NAME,CITY," sNames "NAME stays once, CITY is added once."
     End_Procedure
 
+    // A driver prefix or an .int file makes a root name that of a database driver's table. A drive in front is a
+    // folder: a driver id is longer than one letter.
+    { Published=True }
+    Procedure Test_RootNameIsDriverTable_Takes_A_Drive_For_A_Folder
+        Send Assert (_UtilRootNameIsDriverTable(ghoDbUpdateFunctionLibrary, "MSSQLDRV:Customer")) "A driver prefix."
+        Send Assert (_UtilRootNameIsDriverTable(ghoDbUpdateFunctionLibrary, "Customer.int")) "An .int file."
+        Send Assert (_UtilRootNameIsDriverTable(ghoDbUpdateFunctionLibrary, "CUSTOMER.INT")) "An .int file in capitals."
+        Send AssertFalse (_UtilRootNameIsDriverTable(ghoDbUpdateFunctionLibrary, "Customer")) "A plain name is embedded."
+        Send AssertFalse (_UtilRootNameIsDriverTable(ghoDbUpdateFunctionLibrary, "C:\Data\Customer")) "A drive in front is a folder."
+        Send AssertFalse (_UtilRootNameIsDriverTable(ghoDbUpdateFunctionLibrary, "..\Data\Customer")) "So is a relative folder."
+    End_Procedure
+
 End_Object

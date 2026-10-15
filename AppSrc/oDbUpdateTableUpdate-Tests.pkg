@@ -55,6 +55,23 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         End_Procedure
     End_Object
 
+    // Stands in for the update handler as the parent of a library object that a test makes for itself: the
+    // library asks its parent for the log object, and this log object keeps the lines it is given.
+    Object oLogHost is a cObject
+        Object oLog is a cObject
+            Property String psLines ""
+            Procedure LogError Number nVersion Integer iError String sText Integer iLine Boolean bError
+                Set psLines to (psLines(Self) + sText + " | ")
+            End_Procedure
+        End_Object
+        Function phoLogFile Returns Handle
+            Function_Return (oLog(Self))
+        End_Function
+        Function pnCurrentVersionUpdate Returns Number
+            Function_Return 0
+        End_Function
+    End_Object
+
     Procedure Setup
         Handle ho hoWorkspace
         String sTemp sFolder sValue
@@ -967,6 +984,120 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Set psTable to "DUFTT23"
         Send AssertIAreEqual 0 iErrors ("The call answers True and raises no error." + psErrors(oErrors(Self)))
         Send AssertSAreEqual "Id,Code,Name,Created,Amount" (ColumnNames(Self)) "The table keeps its columns; Note is not added."
+    End_Procedure
+
+    // A Filelist entry with no table behind it, in a free slot of the copied Filelist from 501 on.
+    Function AddFilelistEntry String sRootName String sName Returns Handle
+        Handle h
+        String sRoot
+
+        Move 500 to h
+        Repeat
+            Increment h
+            Get_Attribute DF_FILE_ROOT_NAME of h to sRoot
+        Until (sRoot = "" or h > 4000)
+        Set_Attribute DF_FILE_ROOT_NAME    of h to sRootName
+        Set_Attribute DF_FILE_LOGICAL_NAME of h to sName
+        Set_Attribute DF_FILE_DISPLAY_NAME of h to sName
+        Function_Return h
+    End_Function
+
+    // One call of UtilTableFixALLBogusFilelistEntries with the fixture's error object in place, made by a library
+    // object of the test's own whose parent is oLogHost; the lines it logs are in psLines of oLog. The library
+    // object of the program is put back afterwards. Returns the number of errors that were raised, or -1 when the
+    // call returned False without one.
+    Function FixBogusEntries Returns Integer
+        Handle hoErrors hoLibrary hoProgramLibrary
+        Boolean bOK
+        Integer iErrors
+
+        Set psLines of (oLog(oLogHost(Self))) to ""
+        Move ghoDbUpdateFunctionLibrary to hoProgramLibrary
+        Get Create of (oLogHost(Self)) (RefClass(cDbUpdateFunctionLibrary)) to hoLibrary
+        Move (oErrors(Self)) to hoErrors
+        Set piErrors of hoErrors to 0
+        Set psErrors of hoErrors to ""
+        Set phOldErrorObject to Error_Object_Id
+        Move hoErrors to Error_Object_Id
+        Move False to Err
+        Get UtilTableFixALLBogusFilelistEntries of hoLibrary to bOK
+        Close DF_ALL
+        Move (phOldErrorObject(Self)) to Error_Object_Id
+        Move False to Err
+        Send Destroy of hoLibrary
+        Move hoProgramLibrary to ghoDbUpdateFunctionLibrary
+        Get piErrors of hoErrors to iErrors
+        If (iErrors = 0 and bOK = False) Begin
+            Move -1 to iErrors
+        End
+        Function_Return iErrors
+    End_Function
+
+    Function LoggedLines Returns String
+        Function_Return (psLines(oLog(oLogHost(Self))))
+    End_Function
+
+    Function RootNameOf Handle h Returns String
+        String sRoot
+
+        Get_Attribute DF_FILE_ROOT_NAME of h to sRoot
+        Function_Return sRoot
+    End_Function
+
+    // UtilTableFixALLBogusFilelistEntries empties the Filelist slot of a table that is gone, and names the slot in
+    // the log with its three names, so the entry can be put back by hand. (It emptied it with no line at all.)
+    { Published=True }
+    Procedure Test_A_Filelist_Entry_With_No_Table_Is_Emptied_And_Named_In_The_Log
+        Handle h
+        Integer iErrors
+        String sLog
+
+        Get AddFilelistEntry "DUFTT24" "DUFTT24" to h
+        Get FixBogusEntries to iErrors
+        Send AssertIAreEqual 0 iErrors ("The fix runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "" (RootNameOf(Self, h)) "The slot is empty."
+        Get LoggedLines to sLog
+        Send Assert ((sLog contains "DUFTT24") and (sLog contains "emptied")) ("The log names the emptied slot. Log:" * sLog)
+    End_Procedure
+
+    // A table whose data file is in a folder of the open path (DF_OPEN_PATH) but not of the data path is found by
+    // the runtime, so its slot stays.
+    { Published=True }
+    Procedure Test_A_Table_Found_Through_The_Open_Path_Keeps_Its_Filelist_Entry
+        Integer iErrors
+
+        Send MakeBaseTable "DUFTT25" 5 False
+        Set psDataPath of (phoWorkspace(ghoApplication)) to (psFolder(Self) + "\Second")
+        Get FixBogusEntries to iErrors
+        Send AssertIAreEqual 0 iErrors ("The fix runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "DUFTT25" (Uppercase(RootNameOf(Self, phTable(Self)))) "The slot keeps its root name."
+    End_Procedure
+
+    // Whether the table of an .int file is there only its driver can tell, so the slot stays, and the log says why.
+    { Published=True }
+    Procedure Test_The_Filelist_Entry_Of_An_Int_File_Is_Kept_And_Named_In_The_Log
+        Handle h
+        Integer iErrors
+        String sLog
+
+        Get AddFilelistEntry "DUFTT27.int" "DUFTT27" to h
+        Get FixBogusEntries to iErrors
+        Send AssertIAreEqual 0 iErrors ("The fix runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "DUFTT27.INT" (Uppercase(RootNameOf(Self, h))) "The slot keeps its root name."
+        Get LoggedLines to sLog
+        Send Assert ((sLog contains "DUFTT27") and (sLog contains "kept")) ("The log names the kept slot. Log:" * sLog)
+    End_Procedure
+
+    // A table of a driver the library is not connected to cannot be looked for on its server, so the slot stays.
+    { Published=True }
+    Procedure Test_The_Filelist_Entry_Of_Another_Driver_Is_Kept
+        Handle h
+        Integer iErrors
+
+        Get AddFilelistEntry "DUFTESTDRV:DUFTT28" "DUFTT28" to h
+        Get FixBogusEntries to iErrors
+        Send AssertIAreEqual 0 iErrors ("The fix runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "DUFTESTDRV:DUFTT28" (Uppercase(RootNameOf(Self, h))) "The slot keeps its root name."
     End_Procedure
 
 End_Object

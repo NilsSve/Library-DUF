@@ -6180,31 +6180,59 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return (Err = False)
     End_Function
 
+    // Empties the Filelist slots whose table is gone for sure:
+    //   - an embedded table: no data file of it in the folder of its root name, the folders of the data path or
+    //     the folders of the open path;
+    //   - a table of a database driver: the database the library is connected to has no such table.
+    // A slot whose table cannot be looked for - an .int file, a table of another driver, or no list of tables
+    // from the server - is kept. Each emptied slot, and each driver slot that is kept that way, is named in the log
+    // with its root, logical and display name, so that an entry can be put back by hand. FlexErrs, CodeType and
+    // CodeMast are left alone. Returns False when a slot could not be emptied.
+    // (It emptied every slot whose quick test said "not found", with no line in the log: also a table in a folder
+    // of the open path, a root name with a drive in front, every .int file, and every SQL table when the server
+    // could not be asked.)
     Function UtilTableFixALLBogusFilelistEntries Returns Boolean
-        Boolean bIgnore bExists bOK bResponse
-        Handle hTable   
-        String sTableName
-        
-        Move False to Err 
+        Boolean bIgnore bOK bResponse bGone bDriverTable
+        Handle hTable
+        String sLogicalName sRootName sDisplayName sSlot sWhy
+
+        Move False to Err
         Move True to bOK
         Move 0 to hTable
         Repeat
             Get_Attribute DF_FILE_NEXT_USED of hTable to hTable
             If (hTable > 0) Begin
-                Get_Attribute DF_FILE_LOGICAL_NAME of hTable to sTableName
-                Move (Uppercase(sTableName) = "FLEXERRS" or Uppercase(sTableName) = "CODETYPE" or Uppercase(sTableName) = "CODEMAST")  to bIgnore
+                Get_Attribute DF_FILE_LOGICAL_NAME of hTable to sLogicalName
+                Move (Uppercase(sLogicalName) = "FLEXERRS" or Uppercase(sLogicalName) = "CODETYPE" or Uppercase(sLogicalName) = "CODEMAST") to bIgnore
                 If (bIgnore = False) Begin
-                    Get _UtilTableExists hTable to bExists
-                    If (bExists = False) Begin
+                    Get_Attribute DF_FILE_ROOT_NAME    of hTable to sRootName
+                    Get_Attribute DF_FILE_DISPLAY_NAME of hTable to sDisplayName
+                    Move ("Filelist slot" * String(hTable) * "(root name" * sRootName + ", logical name" * sLogicalName + ", display name" * sDisplayName + ")") to sSlot
+                    Get _UtilRootNameIsDriverTable sRootName to bDriverTable
+                    If (bDriverTable = True) Begin
+                        Get _UtilDriverTableIsGone sRootName (&sWhy) to bGone
+                    End
+                    Else Begin
+                        Get _UtilEmbeddedTableIsFound sRootName to bGone
+                        Move (not(bGone)) to bGone
+                        Move "no data file of it is in the folder of its root name, the data path or the open path" to sWhy
+                    End
+                    If (bGone = True) Begin
                         Get ApiTableChangeFileListSlot "" "" "" hTable DATAFLEX_ID to bResponse
-                        If (bResponse = False) Begin
-                            Move False to bOK
+                        If (bResponse = True) Begin
+                            Send LogError (sSlot * "was emptied:" * sWhy + ".") False
                         End
-                        
+                        Else Begin
+                            Move False to bOK
+                            Send LogError (sSlot * "could not be emptied:" * sWhy + ".") True
+                        End
+                    End
+                    Else If (bDriverTable = True and sWhy <> "") Begin
+                        Send LogError (sSlot * "was kept:" * sWhy + ".") False
                     End
                 End
             End
-        Until (hTable = 0)                     
+        Until (hTable = 0)
         
         Set Action_Text of ghoStatusPanel to "" 
         Function_Return bOK

@@ -27,6 +27,7 @@ Define CS_BackupFolder   for "Backup"
 Define CS_CRLF           for (Character(13) + Character(10))
 
 Register_Object oConnIDErrors_edt
+Register_Function BackupStoppedText String sDone Integer iDone Returns String
 
 Struct tBlock
     Integer iFieldNumber
@@ -44,6 +45,8 @@ Object oFilelistFixerView is a cRDCDbView
     
     Property String psFileList ""
     Property String psBackupFolder ""
+    // Why the last backup copy could not be made, or "". A run that needs one stops when it is not "".
+    Property String psBackupError ""
     Property String psConnId   ""
     Property String psConnIdFile ""
     Property Boolean pbOpenLogFile False
@@ -843,6 +846,10 @@ Object oFilelistFixerView is a cRDCDbView
                 End
                 
                 Get FixFileListErrors to iCounter
+                If (iCounter < 0) Begin
+                    Send Stop_Box (BackupStoppedText(Self, "", 0))
+                    Procedure_Return
+                End
                 If (iCounter <> 0) Begin
                     Send Info_Box ("Ready! Removed" * String(iCounter) * "Filelist.cfg entries that pointed to a .dat file but the .dat file was missing, and the table was not an Alias. See: Log file!")
                 End
@@ -878,6 +885,10 @@ Object oFilelistFixerView is a cRDCDbView
                 End
                 
                 Get FixFileListAliasProblems to iCounter
+                If (iCounter < 0) Begin
+                    Send Stop_Box (BackupStoppedText(Self, "", 0))
+                    Procedure_Return
+                End
                 
                 If (iCounter <> 0) Begin 
                     Send RefreshData
@@ -914,6 +925,10 @@ Object oFilelistFixerView is a cRDCDbView
                     Procedure_Return    
                 End
                 Get FixFileListSQLMissingTables to iCounter               
+                If (iCounter < 0) Begin
+                    Send Stop_Box (BackupStoppedText(Self, "", 0))
+                    Procedure_Return
+                End
                 If (iCounter <> 0) Begin
                     Send Info_Box ("Ready!" * String(iCounter) * "RootName entries in Filelist.cfg that pointed to SQL tables that doesn't exist in the SQL database, were adjusted.\n\nTop tip: If tables were added to the ''Open Table Errors', check the list 'Int table Errors' (top right) for a match. The odds are high that there is something wrong with the .int file.")
                 End
@@ -950,6 +965,10 @@ Object oFilelistFixerView is a cRDCDbView
                 End
 
                 Get FixFileListOpenErrors to iCounter
+                If (iCounter < 0) Begin
+                    Send Stop_Box (BackupStoppedText(Self, "", 0))
+                    Procedure_Return
+                End
                 Get _CountFileListOpenErrors of ghoDUF to iOpenErrors
                 
                 If (iOpenErrors <> 0 and iCounter = 0) Begin 
@@ -996,6 +1015,10 @@ Object oFilelistFixerView is a cRDCDbView
                 Move (iRetval = MBR_Yes) to bExtractRelations
                 
                 Get FixAllIntFileErrors bExtractRelations to iCounter
+                If (psBackupError(Self) <> "") Begin
+                    Send Stop_Box (BackupStoppedText(Self, ".int files recreated", iCounter))
+                    Procedure_Return
+                End
                 If (iCounter > 0) Begin
                     Send Info_Box ("Ready! Update to:" * String(iCounter) * ".int files done.")
                 End
@@ -1139,6 +1162,10 @@ Object oFilelistFixerView is a cRDCDbView
                 Get Checked_State of oRemoveUColumns_cb        to bRemoveUCol
                 
                 Get RecreateAllIntFiles bExtractRelations bRemoveUCol to iCounter
+                If (psBackupError(Self) <> "") Begin
+                    Send Stop_Box (BackupStoppedText(Self, ".int files recreated", iCounter))
+                    Procedure_Return
+                End
                 If (iCounter > 0) Begin
                     Send Info_Box ("Ready!" * String(iCounter) * ".int files recreated.")
                 End
@@ -1183,6 +1210,10 @@ Object oFilelistFixerView is a cRDCDbView
                 Move (iRetval = MBR_Yes) to bBackup
                 
                 Get FindAllUColumnsFiles bBackup to iCounter
+                If (psBackupError(Self) <> "") Begin
+                    Send Stop_Box (BackupStoppedText(Self, "tables searched for uppercased columns", iCounter))
+                    Procedure_Return
+                End
                 If (iCounter > 0) Begin
                     Send Info_Box ("Ready!" * "Uppercased columns for:" * String(iCounter) * "tables were removed.")
                 End
@@ -1476,6 +1507,12 @@ Object oFilelistFixerView is a cRDCDbView
         Send StartStatusPanel "Fixing Filelist RootName .dat Errors" "" iSize
         Get psFileList of (phoWorkspace(ghoApplication)) to sFileList
         Get BackupAnyFileToBackupFolder sFileList to bOK
+        // Nothing is changed without the backup copy that the question promised.
+        If (bOK = False) Begin
+            Send CloseLogFile
+            Send StopStatusPanel
+            Function_Return -1
+        End
         
         Decrement iSize
         For iCount from 0 to iSize
@@ -1529,6 +1566,10 @@ Object oFilelistFixerView is a cRDCDbView
         End
         Get psFileList of (phoWorkspace(ghoApplication)) to sFileList
         Get BackupAnyFileToBackupFolder sFileList to bOK
+        // Nothing is changed without the backup copy that the question promised.
+        If (bOK = False) Begin
+            Function_Return -1
+        End
                 
         Send StartStatusPanel "Fixing Alias Filelist Errors" "" iSize
         Move 0 to iCounter 
@@ -1639,6 +1680,11 @@ Object oFilelistFixerView is a cRDCDbView
         Move (SizeOfArray(FileListArray)) to iSize 
         Get psFileList of (phoWorkspace(ghoApplication)) to sFileList
         Get BackupAnyFileToBackupFolder sFileList to bOK
+        // Nothing is changed without the backup copy that the question promised.
+        If (bOK = False) Begin
+            Send CloseLogFile
+            Function_Return -1
+        End
         
         Send StartStatusPanel "Enumerating SQL Tables" "" iSize
         Decrement iSize
@@ -1716,6 +1762,11 @@ Object oFilelistFixerView is a cRDCDbView
         Send StartStatusPanel "Fixing Filelist Open Errors" "" iSize
         Get psFileList of (phoWorkspace(ghoApplication)) to sFileList
         Get BackupAnyFileToBackupFolder sFileList to bOK
+        // Nothing is changed without the backup copy that the question promised.
+        If (bOK = False) Begin
+            Send StopStatusPanel
+            Function_Return -1
+        End
         Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
         Send OpenLogFile
         Get piChannel to iCh
@@ -1786,6 +1837,7 @@ Object oFilelistFixerView is a cRDCDbView
             Get pFileListArray of ghoDUF to FileListArray
         End    
 
+        Set psBackupError to ""
         Get pErrorTables of ghoDUF to ErrorFilesArray
         If (SizeOfArray(ErrorFilesArray) = 0) Begin
             Function_Return -1
@@ -1828,6 +1880,10 @@ Object oFilelistFixerView is a cRDCDbView
                 End
                 Else Begin
                     Send WriteError ("The recreation of the.int file:" * String(sIntFileName) * "failed.") 
+                End
+                // A backup copy that could not be made stops the run: the next file would be changed without one.
+                If (psBackupError(Self) <> "") Begin
+                    Break
                 End
             End
             Get Check_StatusPanel of ghoStatusPanel to bCancel
@@ -1949,6 +2005,7 @@ Object oFilelistFixerView is a cRDCDbView
         Move (SizeOfArray(FileListArray)) to iSize     
         Decrement iSize
         Set psBackupFolder to ""
+        Set psBackupError to ""
         
         // Each Start_Restructure/End_Restructure calls the "Callback" message 3 times,
         // and each one does a "Send DoAdvance" to the ghoProgressBar...
@@ -1976,6 +2033,10 @@ Object oFilelistFixerView is a cRDCDbView
                     End
                     Else Begin
                         Send WriteError ("The recreation of the.int file:" * String(sIntFileName) * "failed.") 
+                    End
+                    // A backup copy that could not be made stops the run: the next file would be changed without one.
+                    If (psBackupError(Self) <> "") Begin
+                        Break
                     End
                 End
             End                              
@@ -2009,8 +2070,12 @@ Object oFilelistFixerView is a cRDCDbView
     
         Get pbToANSI of ghoDUF to bAnsi 
         
-        // 1. Backup the .int file (also backs-up Filelist.cfg)
+        // 1. Backup the .int file (also backs-up Filelist.cfg). Without the backup the file is not touched.
         Get BackupIntFile sIntFileName to bOK
+        If (bOK = False) Begin
+            Send WriteError ("The .int file" * sIntFileName * "was not recreated:" * psBackupError(Self))
+            Function_Return False
+        End
         // 2. Collect relation and index info from old .ini file:
         If (bExtractRelations = True) Begin
             Get CollectTableRelations sIntFileName to asIntFieldsData
@@ -2059,8 +2124,17 @@ Object oFilelistFixerView is a cRDCDbView
         Move 0 to LastErr
         Move 0 to ErrLine 
         
+        Set psBackupError to ""
         If (bBackup = True) Begin
             Get MakeSQLDatabaseBackup to bOK
+            // Without the backup that was asked for, nothing is changed.
+            If (bOK = False) Begin
+                Set psBackupError to "The backup of the SQL database was not made."
+                Move bErr to Err
+                Move iLastErr to LastErr
+                Move iErrLine to ErrLine
+                Function_Return 0
+            End
         End
         
         Send OpenLogFile
@@ -2104,6 +2178,10 @@ Object oFilelistFixerView is a cRDCDbView
                     Else Begin
                         Send WriteError ("Searching for 'U_' columns for table:" * String(FileListArray[iCount].sNoDriverRootname) * "failed.") 
                     End
+                    // A backup copy that could not be made stops the run: the next file would be changed without one.
+                    If (psBackupError(Self) <> "") Begin
+                        Break
+                    End
                 End
             End
             Get Check_StatusPanel of ghoStatusPanel to bCancel
@@ -2135,9 +2213,13 @@ Object oFilelistFixerView is a cRDCDbView
         String[] asIntFieldsData asIntFileHiddenFields asFullIntFileData
     
         Get pbToANSI of ghoDUF to bAnsi 
-        // 1. Backup the .int file (also backs-up Filelist.cfg)
+        // 1. Backup the .int file (also backs-up Filelist.cfg). Without the backup the file is not touched.
         If (bBackup = True) Begin    
             Get BackupIntFile sIntFileName to bOK
+            If (bOK = False) Begin
+                Send WriteError ("The uppercased columns of" * sIntFileName * "were not removed:" * psBackupError(Self))
+                Function_Return False
+            End
         End
         // 2. Find "NEXT_COLUMN_HIDDEN UPPERCASED" attributes from the SQL back-end.
         Get CollectHiddenAttributes hTable sDriver asIntFieldsData (&bIsHidden) to asIntFieldsData
@@ -2838,11 +2920,16 @@ Object oFilelistFixerView is a cRDCDbView
     // Example: A passed sFileName of "register.int" will become: "register.2024-11-06__21_34_42.int"
     //          So "register.YYYY-MM-DD__HH_MM_SS.int 
     //          Note: The "YYYY-MM-DD" format depends on your Windows local date settings.
+    // Copies an .int file of the first data folder into the backup folder of this run. The first call of a run
+    // makes the folder and copies Filelist.cfg into it as well. An .int file that is not there yet - the one that
+    // is to be made - needs no copy. Returns False when the folder or a copy cannot be made; psBackupError then
+    // says which. (A Filelist.cfg that could not be copied went unnoticed, and no caller looked at the result.)
     Function BackupIntFile String sFileName Returns Boolean
-        String sDataPath sBackupFolder sFileDateExt sExt sFileListCfg
+        String sDataPath sBackupFolder sFileDateExt sFileList sFileListName
         Integer iRetval
         Boolean bExists
         
+        Set psBackupError to ""
         Get psDataPath  of (phoWorkspace(ghoApplication)) to sDataPath
         Get PathAtIndex of (phoWorkspace(ghoApplication)) sDataPath 1 to sDataPath
         Get vFolderFormat sDataPath to sDataPath
@@ -2854,42 +2941,77 @@ Object oFilelistFixerView is a cRDCDbView
             Get vCreateDirectory sBackupFolder to iRetval
             Get vFolderFormat sBackupFolder to sBackupFolder
             If (iRetval <> 0) Begin 
-                Error DFERR_PROGRAM ("Could not create backup folder:" * String(sBackupFolder))
+                Set psBackupError to ("The backup folder" * sBackupFolder * "could not be made.")
                 Function_Return False
             End
-            Get psFileList of (phoWorkspace(ghoApplication)) to sFileListCfg
-            Get ExtractFileName sFileListCfg to sFileListCfg
-            Get vCopyFile (sDataPath + sFileListCfg) (sBackupFolder + String(sFileListCfg)) to iRetval
+            Get psFileList of (phoWorkspace(ghoApplication)) to sFileList
+            Get ExtractFileName sFileList to sFileListName
+            Get vCopyFile sFileList (sBackupFolder + sFileListName) to iRetval
+            If (iRetval <> 0) Begin
+                Set psBackupError to (sFileList * "could not be copied to the backup folder" * sBackupFolder + ".")
+                Function_Return False
+            End
             Set psBackupFolder to sBackupFolder
         End
         Get vFolderFormat sBackupFolder to sBackupFolder
+        Get vFilePathExists (sDataPath + sFileName) to bExists
+        If (bExists = False) Begin
+            Function_Return True
+        End
         Get vCopyFile (sDataPath + sFileName) (sBackupFolder + String(sFileName)) to iRetval
-        Function_Return (iRetval = 0)
+        If (iRetval <> 0) Begin
+            Set psBackupError to (sDataPath + sFileName * "could not be copied to the backup folder" * sBackupFolder + ".")
+            Function_Return False
+        End
+        Function_Return True
     End_Function
 
+    // Copies a file into a new backup folder of the first data folder, named with the date and time. A name with a
+    // folder is copied from that folder, a bare name from the first data folder. Returns False when the folder or
+    // the copy cannot be made; psBackupError then says which.
     Function BackupAnyFileToBackupFolder String sFileName Returns Boolean
-        String sDataPath sBackupFolder sFileDateExt sFileListCfg
+        String sDataPath sBackupFolder sFileDateExt sSource
         Integer iRetval
         Boolean bExists
         
+        Set psBackupError to ""
         Get psDataPath  of (phoWorkspace(ghoApplication)) to sDataPath
         Get PathAtIndex of (phoWorkspace(ghoApplication)) sDataPath 1 to sDataPath
         Get vFolderFormat sDataPath to sDataPath
-        Move CS_BackupFolder to sBackupFolder
         Get FileDatePrefix to sFileDateExt
         Move (sDataPath + String(CS_BackupFolder) + String(sFileDateExt)) to sBackupFolder
         Get vFolderExists sBackupFolder to bExists
         If (bExists = False) Begin
             Get vCreateDirectory sBackupFolder to iRetval
             If (iRetval <> 0) Begin 
-                Error DFERR_PROGRAM ("Could not create backup folder:" * String(sBackupFolder))
+                Set psBackupError to ("The backup folder" * sBackupFolder * "could not be made.")
                 Function_Return False
             End
         End
         Get vFolderFormat sBackupFolder to sBackupFolder
+        Move sFileName to sSource
+        If (not(sFileName contains "\")) Begin
+            Move (sDataPath + sFileName) to sSource
+        End
         Get ExtractFileName sFileName to sFileName
-        Get vCopyFile (sDataPath + sFileName) (sBackupFolder + String(sFileName)) to iRetval
-        Function_Return (iRetval = 0)
+        Get vCopyFile sSource (sBackupFolder + String(sFileName)) to iRetval
+        If (iRetval <> 0) Begin
+            Set psBackupError to (sSource * "could not be copied to the backup folder" * sBackupFolder + ".")
+            Function_Return False
+        End
+        Function_Return True
+    End_Function
+
+    // The message of a run that stopped because a backup copy could not be made: why, and what the run had done
+    // before that - iDone times sDone - or that nothing was changed.
+    Function BackupStoppedText String sDone Integer iDone Returns String
+        String sText
+
+        Get psBackupError to sText
+        If (iDone > 0) Begin
+            Function_Return (sText + "\n\nThe run stopped there. Done before that:" * String(iDone) * sDone + ".")
+        End
+        Function_Return (sText + "\n\nNothing was changed.")
     End_Function
 
     Function FileDatePrefix Returns String
