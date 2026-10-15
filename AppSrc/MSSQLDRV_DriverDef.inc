@@ -68,7 +68,7 @@
             Move 93                                      to aColumnType[i].iSQLType
             Move False                                   to aColumnType[i].bCanEditSize
             Move True                                    to aColumnType[i].bNativeDataType
-            Move 122170980                               to aColumnType[i].iDefaultSize
+            Move -1                                      to aColumnType[i].iDefaultSize
             Move 23                                      to aColumnType[i].iMinSize
             Move 23                                      to aColumnType[i].nMaxSize
             Move "DF_DATETIME"                           to aColumnType[i].sDataFlexType
@@ -80,7 +80,7 @@
             Move -200                                    to aColumnType[i].iSQLType
             Move True                                    to aColumnType[i].bCanEditSize
             Move True                                    to aColumnType[i].bNativeDataType
-            Move 120833516                               to aColumnType[i].iDefaultSize
+            Move -1                                      to aColumnType[i].iDefaultSize
             Move 23                                      to aColumnType[i].iMinSize
             Move 23                                      to aColumnType[i].nMaxSize
             Move "DF_DATETIME"                           to aColumnType[i].sDataFlexType
@@ -92,7 +92,7 @@
             Move -155                                    to aColumnType[i].iSQLType
             Move True                                    to aColumnType[i].bCanEditSize
             Move True                                    to aColumnType[i].bNativeDataType
-            Move 120833516                               to aColumnType[i].iDefaultSize
+            Move -1                                      to aColumnType[i].iDefaultSize
             Move 34                                      to aColumnType[i].iMinSize
             Move 34                                      to aColumnType[i].nMaxSize
             Move "DF_DATETIME"                           to aColumnType[i].sDataFlexType
@@ -116,7 +116,7 @@
             Move 6                                       to aColumnType[i].iSQLType
             Move True                                    to aColumnType[i].bCanEditSize
             Move True                                    to aColumnType[i].bNativeDataType
-            Move 203835220                               to aColumnType[i].iDefaultSize
+            Move -1                                      to aColumnType[i].iDefaultSize
             Move 1                                       to aColumnType[i].iMinSize
             Move 14                                      to aColumnType[i].nMaxSize
             Move "DF_BCD"                                to aColumnType[i].sDataFlexType
@@ -215,8 +215,8 @@
             Move 16383                                   to aColumnType[i].iDefaultSize
             Move 1                                       to aColumnType[i].iMinSize
             Move 2000000000                              to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_TEXT"                               to aColumnType[i].sDataFlexType
+            Move DF_TEXT                                 to aColumnType[i].iDataFlexType
             Move 2000000000                              to aColumnType[i].sPrecision
             Increment i
 
@@ -224,7 +224,7 @@
             Move 7                                       to aColumnType[i].iSQLType
             Move True                                    to aColumnType[i].bCanEditSize
             Move True                                    to aColumnType[i].bNativeDataType
-            Move 122220148                               to aColumnType[i].iDefaultSize
+            Move -1                                      to aColumnType[i].iDefaultSize
             Move 1                                       to aColumnType[i].iMinSize
             Move 14                                      to aColumnType[i].nMaxSize
             Move "DF_BCD"                                to aColumnType[i].sDataFlexType
@@ -335,8 +335,8 @@
             Move 16383                                   to aColumnType[i].iDefaultSize
             Move 1                                       to aColumnType[i].iMinSize
             Move 2000000000                              to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_BINARY"                             to aColumnType[i].sDataFlexType
+            Move DF_BINARY                               to aColumnType[i].iDataFlexType
             Move 2000000000                              to aColumnType[i].sPrecision
             Increment i
 

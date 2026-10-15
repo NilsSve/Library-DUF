@@ -1,0 +1,109 @@
+// cDUFMSSQLHandler.pkg - DataFlex's cMSSQLHandler (MSSqldrv.pkg of the DataFlex version the program is compiled
+// with) and the two things DUF adds to it: EnumerateDatabasesEncrypt - EnumerateDatabases with the Encrypt option
+// and the trust-server-certificate flag that the SQL Server client 18 and later wants - and EncryptOptionToText.
+// (DUF carried a changed copy of MSSqldrv.pkg under the same file name. It replaced DataFlex's own package for DUF
+// and for every program with DUF on its path, on every DataFlex version, with the 26.0 package.)
+
+Use MSSqldrv.pkg
+
+// The SQL Server 2019 client (ODBC Driver 18) under DUF's own names, with the values of the 26.0 package: the
+// MSSqldrv.pkg of DataFlex 19.1 and 20.1 does not name it yet, and a #Replace name cannot be tested for with
+// #IFNDEF (the name is replaced there too).
+Define CI_DUFSqlServer2019Client       for 18
+Define CS_DUFSqlServer2019DriverString for "ODBC Driver 18 for SQL Server"
+
+Class cDUFMSSQLHandler is a cMSSQLHandler
+
+    // Enumerate the databases of a server, as EnumerateDatabases does, with the Encrypt option and the
+    // trust-server-certificate flag added to the connection for the SQL Server client 18 and later.
+    Function EnumerateDatabasesEncrypt String sServer String sUser String sPassWord Boolean bTrustCert Integer eEncrOpt Returns Integer
+        Integer hoSQL
+        String  sConnect
+        String  sDatabase sOptions
+        Integer hdbc
+        Integer hstmt
+        Integer iFetchResult iDriver iClientVersion
+        Integer eEncryptionOption
+        Boolean bTrustedCertificate
+
+        If (Num_Arguments < 3) ;
+            Move "" to sPassWord
+        If (Num_Arguments < 2) ;
+            Move "" to sUser
+
+        Move False to bTrustedCertificate
+        If (num_arguments > 3) Begin
+            Move bTrustCert to bTrustedCertificate
+        End
+        Move 0 to eEncryptionOption
+        If (num_arguments > 4) Begin
+            Move eEncrOpt to eEncryptionOption
+        End
+
+        If (sUser <> "") ;
+            Move ("SERVER=" + Trim(sServer) + ";UID=" + Trim(sUser) + ";PWD=" + Trim(sPassword) + ";") to sConnect
+        Else ;
+            Move ("SERVER=" + Trim(sServer) + ";Trusted_Connection=yes") to sConnect
+
+        Get DriverIndex MSSQLDRV_ID to iDriver
+        Get_Attribute DF_DRIVER_SQLSERVER_CLIENT_VERSION of iDriver to iClientVersion
+        If (iClientVersion >= 18) Begin
+            If (iClientVersion >= 18) Begin
+                Get EncryptOptionToText eEncryptionOption to sOptions
+                Append sOptions (If(bTrustedCertificate = True, ("TrustServerCertificate=yes"), ("TrustServerCertificate=no")))
+                Append sConnect ";" sOptions
+                Move (Replaces(" ", sConnect, "")) to sConnect
+            End
+        End
+
+        Object oEnumDBSQLmanager is a cSQLHandleManager
+            Move Current_Object to hoSQL
+        End_Object
+
+        If (hoSQL <> 0) Begin
+            Get SQLConnect of hoSQL "MSSQLDRV" sConnect to hdbc
+            If (hdbc <> 0) Begin
+                Get SQLOpen of hdbc to hstmt
+                If (hstmt <> 0) Begin
+                    //   We could do a direct select on the sysdatabases table but we use
+                    //   the stored procedure sp_database instead. SQL Server recommends this
+                    //   approach in case meta data might change, the stored procedure will
+                    //   stay the same.
+                    Send SQLSetProcedureName to hstmt "sp_databases"
+                    Send SQLCall to hstmt
+                    Repeat
+                        Get SQLFetch of hstmt to iFetchResult
+                        If (iFetchResult <> 0) Begin
+                            Get SQLColumnValue of hstmt 1 to sDatabase
+                            Set Value  (Item_Count(Current_Object)) to sDatabase
+                        End
+                    Until (iFetchResult = 0)
+
+                    Send SQLClose to hstmt
+                End
+                Send SQLDisconnect to hdbc
+            End
+        End
+        Send Destroy_Object to hoSQL
+
+        Function_Return (Item_Count(Current_Object))
+    End_Function
+
+    Function EncryptOptionToText Integer eEncryptionOption Returns String
+        String sEncryptionWord
+
+        Move ("Encrypt" + "=") to sEncryptionWord
+        If (eEncryptionOption = 0) Begin
+            Append sEncryptionWord "Optional"
+        End
+        Else If (eEncryptionOption = 1) Begin
+            Append sEncryptionWord "Mandatory"
+        End
+        Else If (eEncryptionOption = 2) Begin
+            Append sEncryptionWord "Strict"
+        End
+        Append sEncryptionWord ";"
+        Function_Return sEncryptionWord
+    End_Function
+
+End_Class

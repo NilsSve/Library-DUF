@@ -114,7 +114,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Case (sDriverID = MSSQLDRV_ID)
                 Get _SqlFindKeyWord CI_SQLCreateDatabase to sCreateDatabaseKeyWord
                 Get _SqlSelectFromWhereName to sSelectFromWhereName
-                Move (sSelectFromWhereName + "='" + sDatabase + "'") to sSQL
+                Move (sSelectFromWhereName + "=" + SqlQuotedValue(Self, sDatabase)) to sSQL
 
                 // Check if database exists
                 Send SqlExecDirect of hStmt sSQL
@@ -131,6 +131,12 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 If (iFetchResult = 0) Begin
                     Move (sCreateDatabaseKeyWord + " [" + sDatabase + "]") to sSQL1
                     Send Ignore_Error of Error_Object_Id CLIERR_GENERAL_ERROR
+                    // A collation is one word. (Anything after it ran on the server.)
+                    If (sCollation <> "" and _SqlIsSafeSqlWord(Self, sCollation) = False) Begin
+                        Send Trap_Error of Error_Object_Id CLIERR_GENERAL_ERROR
+                        Error DFERR_PROGRAM ("Not a collation name:" * sCollation)
+                        Function_Return False
+                    End
                     If (sCollation <> "") Begin
                         Get _SqlFindKeyWord CI_SQLDatabaseCollation to sCollateKeyWord
                         Move (sSQL1 * String(sCollateKeyWord) * String(sCollation)) to sSQL1
@@ -354,6 +360,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
 
         // The last three parameters may be left out. (They were read without a test: SQLConnections.vw passes two.)
+        // A collation is one word. (It went into the script as it was.)
+        If (_SqlIsSafeSqlWord(Self, sCollation) = False) Begin
+            Error DFERR_PROGRAM ("Not a collation name:" * sCollation)
+            Function_Return False
+        End
         Move False to bScriptFile
         Move False to bMakeBackup
         Move False to bQuiet
@@ -438,6 +449,12 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         // If the current collate is the same as the new; do nothing.
         If (sSQLCollation = sSQLCollationCheck) Begin
             Function_Return True
+        End
+
+        // A collation is one word. (Anything after it ran on the server, in single-user mode.)
+        If (_SqlIsSafeSqlWord(Self, sSQLCollation) = False) Begin
+            Error DFERR_PROGRAM ("Not a collation name:" * sSQLCollation)
+            Function_Return False
         End
 
         Get _SqlFindKeyWord CI_SQLSet               to sSet
@@ -864,7 +881,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         If (bFixed = False) Begin
             Get _SqlFormatLengthAndDecimalAsString iLength iDecimals to sLengthAndDecimals
         End
-        Move (sAlterTable * sTableName * sAddColumn * sColumnName * sDataType + sLengthAndDecimals * sNotNull) to sStmt
+        // The column name in brackets for MS SQL: a blank or a reserved word in it is no problem.
+        Move (sAlterTable * sTableName * sAddColumn * SqlQuotedName(Self, iDbType, sColumnName) * sDataType + sLengthAndDecimals * sNotNull) to sStmt
 
         Move False to Err
         Send SqlUtilExecuteQuery sStmt sDriverID
@@ -997,7 +1015,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get _SqlFormatLengthAndDecimalAsString iLength iDecimals to sLengthAndDecimals
         End
 
-        Move (sAlterTable * sTableName * sAlterColumn * sColumnName * sDataType + sLengthAndDecimals * sNotNull) to sStmt
+        Move (sAlterTable * sTableName * sAlterColumn * SqlQuotedName(Self, iDbType, sColumnName) * sDataType + sLengthAndDecimals * sNotNull) to sStmt
         Send SqlUtilExecuteQuery sStmt sDriverID
 
         // We also need to remove the cache-file since the table has been changed
@@ -1139,7 +1157,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get _SqlFindKeyWord CI_SQLAlterTable  to sAlterTable
         Get _SqlFindKeyWord CI_SQLDropColumn  to sDropColumn
 
-        Move (sAlterTable * sTableName * sDropColumn * sColumnName) to sStmt
+        Move (sAlterTable * sTableName * sDropColumn * SqlQuotedName(Self, iDbType, sColumnName)) to sStmt
         Send SqlUtilExecuteQuery sStmt sDriverID
         Move (not(Err)) to bRetval
 
@@ -1194,7 +1212,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Case Begin
             Case (iDbType = EN_dbTypeMSSQL)
-                Move (sRenameColumn * "'" + sTableName + "." + sColumnName + "'," * "'" + sNewColumnName + "'," * "'" + sColumnKeyWord + "'") to sStmt
+                // The three values of sp_rename, a quote in a name doubled.
+                Move (sRenameColumn * SqlQuotedValue(Self, sTableName + "." + sColumnName) + "," * SqlQuotedValue(Self, sNewColumnName) + "," * SqlQuotedValue(Self, sColumnKeyWord)) to sStmt
                 Case Break
             // Alter table "SYS"."Customer" rename column "Comments" to "NewColumnName"
             Case (iDbType = EN_dbTypeOracle)
@@ -7728,19 +7747,20 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return aAPIColumnCompare
     End_Function
 
-    // Checks if a field name exists in a table definition
-    // Returns True if it does
-    // Sample:
-    //   Get UtilColumnExists MyTable.File_Number "MyColumnName" to iExists
+    // Is there a column of that name in the table? A table the program had open stays open; one opened here is
+    // closed again. (It closed the table in any case.) A table that cannot be opened is no error: the answer is False.
     Function UtilColumnExists Handle hTable String sFieldName Returns Boolean
-        Integer iNumColumns iColumn
+        Integer iNumColumns iColumn iMode
         String sColumn
-        Boolean bExists bOK bOpen
+        Boolean bExists bOK bOpen bWasOpen
 
         Get AutoConnectionIDLogin to bOK
-        Send Ignore_Error of Error_Object_Id DFERR_CANT_OPEN_DATA_FILE
-        Open hTable
-        Send Trap_Error   of Error_Object_Id DFERR_CANT_OPEN_DATA_FILE
+        Get_Attribute DF_FILE_OPENED of hTable to bWasOpen
+        If (bWasOpen = False) Begin
+            Get _UtilQuietBegin DFERR_CANT_OPEN_DATA_FILE to iMode
+            Open hTable
+            Send _UtilQuietEnd DFERR_CANT_OPEN_DATA_FILE iMode
+        End
         Get_Attribute DF_FILE_OPENED of hTable to bOpen
         If (bOpen = False) Begin
             Function_Return False
@@ -7748,36 +7768,39 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Move False to bExists
         Get_Attribute DF_FILE_NUMBER_FIELDS of hTable to iNumColumns
-        for iColumn from 1 to iNumColumns
+        For iColumn from 1 to iNumColumns
             Get_Attribute DF_FIELD_NAME of hTable iColumn to sColumn
             If (Uppercase(sFieldName) = Uppercase(sColumn)) Begin
                 Move iNumColumns to iColumn
                 Move True to bExists
             End
         Loop
-        Close hTable
+        If (bWasOpen = False) Begin
+            Close hTable
+        End
 
         Function_Return bExists
     End_Function
 
-    // Returns the field/column number for the passed FieldName as an integer.
+    // The number of the column of that name, 0 when there is none. A table the program had open stays open; one
+    // opened here is closed again. (It closed the table in any case.)
     Function UtilColumnNameToColumnNumber Handle hTable String sFieldName Returns Integer
-        Integer iNumColumns iColumn iRetval
+        Integer iNumColumns iColumn iRetval iMode
         String sColumn
-        Boolean bOK bOpen
+        Boolean bOK bOpen bWasOpen
 
         Get AutoConnectionIDLogin to bOK
-        Set Error_Report_Mode to DUF_ERROR_NO_REPORT
-        Send Ignore_Error of Error_Object_Id DFERR_CANT_OPEN_DATA_FILE
-        Open hTable
-        Send Trap_Error   of Error_Object_Id DFERR_CANT_OPEN_DATA_FILE
+        Get_Attribute DF_FILE_OPENED of hTable to bWasOpen
+        If (bWasOpen = False) Begin
+            Get _UtilQuietBegin DFERR_CANT_OPEN_DATA_FILE to iMode
+            Open hTable
+            Send _UtilQuietEnd DFERR_CANT_OPEN_DATA_FILE iMode
+        End
         Get_Attribute DF_FILE_OPENED of hTable to bOpen
         If (bOpen = False) Begin
-            Set Error_Report_Mode to DUF_ERROR_REPORT
-            Function_Return False
+            Function_Return 0
         End
 
-        Move 0 to iColumn
         Move 0 to iRetval
         Get_Attribute DF_FILE_NUMBER_FIELDS of hTable to iNumColumns
         For iColumn from 1 to iNumColumns
@@ -7787,9 +7810,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Move iNumColumns to iColumn
             End
         Loop
-        Close hTable
+        If (bWasOpen = False) Begin
+            Close hTable
+        End
 
-        Set Error_Report_Mode to DUF_ERROR_REPORT
         Function_Return iRetval
     End_Function
 
@@ -8308,7 +8332,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         tAPIRelation[] APIRelations
         Integer iColumn iColumnTo iNumColumns iCount
         Handle hParent
-        Boolean bIsOpen
+        Boolean bIsOpen bParentWasOpen
 
         Set Error_Report_Mode to DUF_ERROR_NO_REPORT
         Move 0 to iCount
@@ -8329,6 +8353,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         For iColumn from 1 to iNumColumns
             Get_Attribute DF_FIELD_RELATED_FILE of hTable iColumn to hParent
             If (hParent <> 0) Begin
+                // A parent table the program had open stays open. (It was closed in any case.)
+                Get_Attribute DF_FILE_OPENED of hParent to bParentWasOpen
                 Open hParent
                 Move hTable                                             to APIRelations[iCount].hTableFrom
                 Get_Attribute DF_FILE_LOGICAL_NAME of hTable            to APIRelations[iCount].sLogicalNameFrom
@@ -8343,7 +8369,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Move False                                              to APIRelations[iCount].bShouldChange
                 Move False                                              to APIRelations[iCount].bCancel
                 Move False                                              to APIRelations[iCount].bError
-                Close hParent
+                If (bParentWasOpen = False) Begin
+                    Close hParent
+                End
                 Increment iCount
             End
         Loop
@@ -8426,10 +8454,14 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Else it is CodeMast. b) sTypeValue; either to be added If bCodeType = True, or it will be used to find the correct
     // CodeType record. c) sValue1 and d) sValue2 is the CodeType Description & Comment, or CodeMast Type and Code values.
     Function UtilCodeMasterAddValue Boolean bCodeType String sTypeValue String sValue2 String sValue3 Returns Boolean
+        Boolean bMastWasOpen bTypeWasOpen
         Boolean bFound
 
         Move False to Err
+        // A table the program had open stays open. (CodeMast and CodeType were closed in any case.)
+        Get_Attribute DF_FILE_OPENED of CODEMAST.File_Number to bMastWasOpen
         Open CodeMast
+        Get_Attribute DF_FILE_OPENED of CODETYPE.File_Number to bTypeWasOpen
         Open CodeType
 
         If (bCodeType = True) Begin
@@ -8479,8 +8511,12 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             End
         End
 
-        Close CodeMast
-        Close CodeType
+        If (bMastWasOpen = False) Begin
+            Close CodeMast
+        End
+        If (bTypeWasOpen = False) Begin
+            Close CodeType
+        End
 
         Function_Return (Err = False)
     End_Function
@@ -8488,10 +8524,14 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Changes values in CodeType & CodeMast - From type value To type value. It first changes the type value in
     // CodeType and then spins through all CodeMast records to change all related records.
     Function UtilCodeMasterChangeValue String sFromValue String sToValue Returns Boolean
+        Boolean bMastWasOpen bTypeWasOpen
         Boolean bFound
 
         Move False to Err
+        // A table the program had open stays open. (CodeMast and CodeType were closed in any case.)
+        Get_Attribute DF_FILE_OPENED of CODEMAST.File_Number to bMastWasOpen
         Open CodeMast
+        Get_Attribute DF_FILE_OPENED of CODETYPE.File_Number to bTypeWasOpen
         Open CodeType
 
         Clear CodeType
@@ -8517,17 +8557,24 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Find gt CODEMAST by Recnum
         Loop
 
-        Close CodeMast
-        Close CodeType
+        If (bMastWasOpen = False) Begin
+            Close CodeMast
+        End
+        If (bTypeWasOpen = False) Begin
+            Close CodeType
+        End
 
         Function_Return (Err = False)
     End_Function
 
     // Removes a value from CodeMast. Pass the sTypeValue and the sValue2 to remove.
     Function UtilCodeMasterRemoveValue String sTypeValue String sValue2 Returns Boolean
+        Boolean bMastWasOpen
         Boolean bFound
 
         Move False to Err
+        // A table the program had open stays open. (CodeMast and CodeType were closed in any case.)
+        Get_Attribute DF_FILE_OPENED of CODEMAST.File_Number to bMastWasOpen
         Open CodeMast
 
         Clear CODEMAST
@@ -8539,7 +8586,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Delete CODEMAST
         End
 
-        Close CodeMast
+        If (bMastWasOpen = False) Begin
+            Close CodeMast
+        End
 
         Function_Return (Err = False)
     End_Function
@@ -9009,17 +9058,20 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     Function UtilTableOpen Integer hTable String sTableName Integer iMode Returns Boolean
         String sTableNameOrg
         Boolean bOpen bOK
+        Integer iQuietMode
         tSQLConnection SQLConnection
         
         Move False to bOpen
         Move sTableName to sTableNameOrg
         If (hTable > 0) Begin
-            Send Ignore_Error of Error_Object_Id 20529
+            // A table that does not open is no error here: the .int way is tried next. Quiet under DUF's error
+            // handler as well. (Ignore_Error alone is nothing there: the failed open was logged.)
+            Get _UtilQuietBegin 20529 to iQuietMode
             Send Ignore_Error of Error_Object_Id DFERR_CANT_OPEN_DATA_FILE
             Send Ignore_Error of Error_Object_Id CLIERR_CONNECTIONIDNOTFOUND
             Send Ignore_Error of Error_Object_Id 10
             Open hTable Mode iMode
-            Send Trap_Error of Error_Object_Id 20529
+            Send _UtilQuietEnd 20529 iQuietMode
             Send Trap_Error of Error_Object_Id DFERR_CANT_OPEN_DATA_FILE
             Send Trap_Error of Error_Object_Id CLIERR_CONNECTIONIDNOTFOUND
             Send Trap_Error of Error_Object_Id 10
@@ -9452,8 +9504,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         String  sSqlServerClientVersionName
         
         Case Begin
-            Case (iClientVersion = SQLSERVER2019CLIENT)
-                Move SQLSERVER2019DRVRSTR to sSqlServerClientVersionName
+            Case (iClientVersion = CI_DUFSqlServer2019Client)
+                Move CS_DUFSqlServer2019DriverString to sSqlServerClientVersionName
                 Case Break
 
             Case (iClientVersion = SQLSERVER2017CLIENT)
@@ -9495,8 +9547,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         String  sSqlServerClientDriverName
         
         Case Begin
-            Case (iClientVersion = SQLSERVER2019CLIENT)
-                Move SQLSERVER2019DRVRSTR to sSqlServerClientDriverName
+            Case (iClientVersion = CI_DUFSqlServer2019Client)
+                Move CS_DUFSqlServer2019DriverString to sSqlServerClientDriverName
                 Case Break
 
             Case (iClientVersion = SQLSERVER2017CLIENT)
@@ -9662,7 +9714,13 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
 
         Close hTable
+        // A table in use does not open exclusively: the answer says so. Under DataFlex's standard error object the
+        // error popped up as well. (The section was quiet under DUF's handler only.)
+        Send Ignore_Error of Error_Object_Id DFERR_CANT_OPEN_DATA_FILE
+        Send Ignore_Error of Error_Object_Id DFERR_FILE_ACCESS_VIOLATION
         Open hTable Mode DF_EXCLUSIVE
+        Send Trap_Error of Error_Object_Id DFERR_CANT_OPEN_DATA_FILE
+        Send Trap_Error of Error_Object_Id DFERR_FILE_ACCESS_VIOLATION
         Get_Attribute DF_FILE_OPENED of hTable to bOpened
 
         Set Error_Report_Mode to DUF_ERROR_REPORT

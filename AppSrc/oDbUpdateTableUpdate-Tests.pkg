@@ -1319,4 +1319,19 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Set psDataPath of (phoWorkspace(ghoApplication)) to (psFolder(Self) + ";" + psFolder(Self) + "\Second")
         Send Assert (_DatFileExists(ghoDbUpdateFunctionLibrary, phTable(Self))) "The data file is found."
     End_Procedure
+    // UtilColumnExists leaves a table open that the program had open. (It closed it in any case.)
+    { Published=True }
+    Procedure Test_A_Table_The_Program_Had_Open_Stays_Open
+        Handle h
+        Boolean bExists bOpen
+
+        Send MakeBaseTable "DUFTT47" 5 False
+        Get phTable to h
+        Open h
+        Get UtilColumnExists of ghoDbUpdateFunctionLibrary h "Name" to bExists
+        Get_Attribute DF_FILE_OPENED of h to bOpen
+        Close h
+        Send Assert bExists "The column is found."
+        Send Assert bOpen "The table is still open."
+    End_Procedure
 End_Object

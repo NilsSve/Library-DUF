@@ -453,6 +453,8 @@ Object oMainPanel is a BasicPanel
         tColumnType[] aColumnType
         Handle hoChild
         Variant vChild
+        String sValue
+        Boolean bWhole
 
         // If the value was a cDataSection it will be properly translated back
         // to normal text for us.
@@ -467,10 +469,14 @@ Object oMainPanel is a BasicPanel
             Get ComGetChildContent of hoChild       "canEditSize"   to ColumnType.bCanEditSize
             
             // Some data types does not have a iDefaultSize, Min or Max size.
-            // Then denote "not defined" by a "-1":
-            Send Ignore_Error of Error_Object_Id DFERR_BAD_OPERATOR
-            Get ComGetChildContent of hoChild       "defaultSize"   to ColumnType.iDefaultSize
-            Send Trap_Error   of Error_Object_Id DFERR_BAD_OPERATOR
+            // Then denote "not defined" by a "-1". The size is read as text and taken when it is a number. (A text
+            // that was no number left junk in the field: sizes such as 122170980 in the tables.)
+            Get ComGetChildContent of hoChild       "defaultSize"   to sValue
+            Move -1 to ColumnType.iDefaultSize
+            Get IsWholeNumberText (Trim(sValue)) to bWhole
+            If (bWhole = True) Begin
+                Move (Trim(sValue)) to ColumnType.iDefaultSize
+            End
             If (ColumnType.iDefaultSize = 0) Begin
                 Move    -1                                          to ColumnType.iDefaultSize
             End
@@ -491,6 +497,63 @@ Object oMainPanel is a BasicPanel
         Set paColumnType to aColumnType
     End_Procedure  
     
+    // Is the text a whole number - digits, a minus sign in front allowed?
+    Function IsWholeNumberText String sValue Returns Boolean
+        Integer iPos iChar
+
+        If (Left(sValue, 1) = "-") Begin
+            Move (Right(sValue, (Length(sValue) - 1))) to sValue
+        End
+        If (sValue = "") Begin
+            Function_Return False
+        End
+        For iPos from 1 to (Length(sValue))
+            Move (Ascii(Mid(sValue, 1, iPos))) to iChar
+            If (iChar < 48 or iChar > 57) Begin
+                Function_Return False
+            End
+        Loop
+        Function_Return True
+    End_Function
+
+    // The DataFlex type of a column type by its name, for the names whose type number maps to the wrong DataFlex
+    // type: DB2 date, timestamp, double, blob, clob, xml; MS SQL nvarchar(max), varbinary(max); every ODBC type
+    // (they all came out as ASCII). A name not in the list keeps iDataFlexType. MS SQL timestamp is rowversion:
+    // binary.
+    Function DataFlexTypeOfSqlTypeName String sDriverID String sSQLType Integer iDataFlexType Returns Integer
+        String sName
+
+        Move (Lowercase(Trim(sSQLType))) to sName
+        If (sDriverID = MSSQLDRV_ID and sName = "timestamp") Begin
+            Function_Return DF_BINARY
+        End
+        If (sName = "date" or sName = "sql_type_date" or sName = "sql_date") Begin
+            Function_Return DF_DATE
+        End
+        If (sName = "datetime" or sName = "datetime2" or sName = "smalldatetime" or sName = "datetimeoffset" or sName = "timestamp" or sName = "sql_datetime" or sName = "sql_type_timestamp" or sName = "sql_timestamp") Begin
+            Function_Return DF_DATETIME
+        End
+        If (sName = "text" or sName = "ntext" or sName = "varchar(max)" or sName = "nvarchar(max)" or sName = "xml" or sName = "clob" or sName = "dbclob" or sName = "long varchar" or sName = "long vargraphic" or sName = "sql_longvarchar" or sName = "sql_wlongvarchar") Begin
+            Function_Return DF_TEXT
+        End
+        If (sName = "binary" or sName = "varbinary" or sName = "varbinary(max)" or sName = "image" or sName = "blob" or sName = "char for bit data" or sName = "varchar for bit data" or sName = "long varchar for bit data" or sName = "sql_binary" or sName = "sql_varbinary" or sName = "sql_longvarbinary") Begin
+            Function_Return DF_BINARY
+        End
+        If (sName = "bigint" or sName = "int" or sName = "integer" or sName = "smallint" or sName = "tinyint" or sName = "decimal" or sName = "numeric" or sName = "float" or sName = "real" or sName = "double" or sName = "money" or sName = "smallmoney" or sName = "decfloat") Begin
+            Function_Return DF_BCD
+        End
+        If (sName = "sql_numeric" or sName = "sql_decimal" or sName = "sql_integer" or sName = "sql_smallint" or sName = "sql_float" or sName = "sql_real" or sName = "sql_double" or sName = "sql_bigint" or sName = "sql_tinyint") Begin
+            Function_Return DF_BCD
+        End
+        If (sName = "char" or sName = "varchar" or sName = "nchar" or sName = "nvarchar" or sName = "graphic" or sName = "vargraphic" or sName = "uniqueidentifier" or sName = "time") Begin
+            Function_Return DF_ASCII
+        End
+        If (sName = "sql_char" or sName = "sql_varchar" or sName = "sql_wchar" or sName = "sql_wvarchar" or sName = "sql_guid" or sName = "sql_type_time" or sName = "sql_time" or sName = "sql_unknown_type") Begin
+            Function_Return DF_ASCII
+        End
+        Function_Return iDataFlexType
+    End_Function
+
     Function MakeStringLength String sValue Integer iReportColumnPos Returns String
         Move (Pad(sValue, (Length(sValue) + (iReportColumnPos - Length(sValue))))) to sValue
 
@@ -523,6 +586,7 @@ Object oMainPanel is a BasicPanel
         Decrement iSize
         For iCount from 0 to iSize                    
             Get UtilSqlColumnTypeToDataFlexType of ghoDbUpdateFunctionLibrary sDriverID iDbType aColumnType[iCount].iSQLType aColumnType[iCount].iDefaultSize to iDataFlexType 
+            Get DataFlexTypeOfSqlTypeName sDriverID aColumnType[iCount].sSQLType iDataFlexType to iDataFlexType
             Get UtilDataFlexDataTypeToString    of ghoDbUpdateFunctionLibrary iDataFlexType to sDataFlexType
             
             If (Lowercase(aColumnType[iCount].sSQLType) <> "unknown type") Begin

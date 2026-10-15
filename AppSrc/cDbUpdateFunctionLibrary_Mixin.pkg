@@ -10,7 +10,7 @@ Use VdfBase.pkg
 Use WinUuid.pkg
 Use cli.pkg
 Use sql.pkg
-Use MSSqldrv.pkg
+Use cDUFMSSQLHandler.pkg // DataFlex's MSSqldrv.pkg, and DUF's two additions in a subclass
 Use db2_drv.pkg
 Use odbc_drv.pkg
 Use DFBTRDRV.PKG
@@ -40,7 +40,7 @@ Class cDbUpdateFunctionLibrary_Mixin is a Mixin
         Property Handle phoSQLManagerMT
 
         { Visibility=Private }
-        Property Handle phoMSSQLHandler    (Create(Self,RefClass(cMSSQLHandler)))
+        Property Handle phoMSSQLHandler    (Create(Self,RefClass(cDUFMSSQLHandler)))
         { Visibility=Private }
         Property Handle phoDB2SQLHandler   (Create(Self,RefClass(cDB2Handler)))
         { Visibility=Private }

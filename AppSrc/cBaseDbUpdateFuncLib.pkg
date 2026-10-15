@@ -1001,7 +1001,8 @@ Class cBaseDbUpdateFuncLib is a cObject
 
         Case Begin
             Case (sDriverID = DB2_DRV_ID)
-                Get _SqlEnumerateEsqlDAW "select tablespace_name from dba_tablespaces" 1 to sReturnArray
+                // The DB2 catalogue. (dba_tablespaces is an Oracle view.) Not run against a DB2 server.
+                Get _SqlEnumerateEsqlDAW "SELECT TBSPACE FROM SYSCAT.TABLESPACES" 1 to sReturnArray
                 Case Break
 
             Case Else
@@ -1037,7 +1038,11 @@ Class cBaseDbUpdateFuncLib is a cObject
         End
 
         Get psConnectionString to sConnectionString
+        // The schema of the connection, "dbo" when there is none. (The MS SQL lists had "dbo." written in.)
         Get psSchema to sSchema
+        If (sSchema = "") Begin
+            Get _SqlFindKeyWord CI_SQLDBO to sSchema
+        End
 
         // We need to treat DAW's ODBC driver a bit different, as the output depends on
         // the dbType.
@@ -1052,14 +1057,14 @@ Class cBaseDbUpdateFuncLib is a cObject
                     Move ("select column_name, data_type, character_maximum_length from INFORMATION_SCHEMA.COLUMNS where table_name = '" +sTableName + "'") to sSelect
                 End
                 If (iDbType = EN_DbTypeMSSQL) Begin
-                    Move ("select name from sys.columns where [object_id] = object_id('dbo." + sTableName + "')") to sSelect
+                    Move ("select name from sys.columns where [object_id] = object_id('" + sSchema + "." + sTableName + "')") to sSelect
                 End
 
                 Get _SqlEnumerateEsqlDAW sSelect 1 to sReturnArray
                 Case Break
 
             Case (sDriverID = MSSQLDRV_ID)
-                Move ("select name from sys.columns where [object_id] = object_id('dbo." + sTableName + "')") to sSelect
+                Move ("select name from sys.columns where [object_id] = object_id('" + sSchema + "." + sTableName + "')") to sSelect
                 Get _SqlEnumerateEsqlDAW sSelect 1 to sReturnArray
                 Case Break
 
@@ -1099,10 +1104,11 @@ Class cBaseDbUpdateFuncLib is a cObject
                 Get _SqlEnumerateEsqlDAW sSelect 2 to asReturnArray
                 Case Break
 
+            // The DB2 catalogue. (It raised an error with no number and went on with an empty list.) Not run
+            // against a DB2 server.
             Case (sDriverID = DB2_DRV_ID)
-                Error "Not implemented yet! The select statement has not been finalized."
-//                Move () to sSelect
-//                Get _SqlEnumerateEsqlDAW sSelect 2 to asReturnArray
+                Move ("SELECT INDNAME FROM SYSCAT.INDEXES WHERE TABSCHEMA = '" + Uppercase(sSchema) + "' AND TABNAME = '" + Uppercase(sTableName) + "'") to sSelect
+                Get _SqlEnumerateEsqlDAW sSelect 1 to asReturnArray
                 Case Break
 
             Case Else
@@ -1124,7 +1130,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     // Returns a string array with all table names the passed table handle has relation ships with.
     // The format of the array is "TableName.FieldName"
     Function _SqlUtilEnumerateRelations String sTableName String sDriverID Returns tSQLRelation[]
-        String[] sFileNameArray sFieldNameArray
+        String[][] aRows
         tSQLRelation[] sRelationsArray
         String sConnectionString sSelect sSchema sFileName sFieldName
         Boolean bOK
@@ -1142,15 +1148,14 @@ Class cBaseDbUpdateFuncLib is a cObject
         Case Begin
             Case (sDriverID = MSSQLDRV_ID)
                 Move ("SELECT object_name(parent_object_id), object_name(referenced_object_id), name from sys.foreign_keys WHERE parent_object_id = object_id( '" + sTableName + "')") to sSelect
-                Get _SqlEnumerateEsqlDAW sSelect 2 to sFileNameArray
-                Get _SqlEnumerateEsqlDAW sSelect 3 to sFieldNameArray
+                Get _SqlEnumerateEsqlRowsDAW sSelect 3 to aRows
                 Case Break
 
+            // The same three columns from the DB2 catalogue: the table, the table it refers to, the key's name.
+            // (It raised an error with no number and went on with an empty list.) Not run against a DB2 server.
             Case (sDriverID = DB2_DRV_ID)
-                Error "Not implemented yet! The select statement has not been finalized."
-//                Move () to sSelect
-//                Get _SqlEnumerateEsqlDAW sSelect 2 to sReturnArray
-//                Get _SqlEnumerateEsqlDAW sSelect 3 to sFieldNameArray
+                Move ("SELECT TABNAME, REFTABNAME, CONSTNAME FROM SYSCAT.REFERENCES WHERE TABSCHEMA = '" + Uppercase(sSchema) + "' AND TABNAME = '" + Uppercase(sTableName) + "'") to sSelect
+                Get _SqlEnumerateEsqlRowsDAW sSelect 3 to aRows
                 Case Break
 
             Case Else
@@ -1160,12 +1165,12 @@ Class cBaseDbUpdateFuncLib is a cObject
 
         Move (Length(sTableName)) to iLength
         Move (iLength + 4)        to iLength // The related to field key has the format "FK_TableName + FieldName"
-        Move (SizeOfArray(sFileNameArray)) to iSize
+        Move (SizeOfArray(aRows)) to iSize
         Decrement iSize
         For iCount from 0 to iSize
-            If (Trim(sFileNameArray[iCount]) <> "") Begin
-                Move sFileNameArray[iCount]         to sFileName
-                Move sFieldNameArray[iCount]        to sFieldName
+            If (Trim(aRows[iCount][1]) <> "") Begin
+                Move aRows[iCount][1]               to sFileName
+                Move aRows[iCount][2]               to sFieldName
                 Move (Mid(sFieldName, 99, iLength)) to sFieldName
                 Move sFileName  to sRelationsArray[iCount].sFileName
                 Move sFieldName to sRelationsArray[iCount].sFieldName
@@ -1177,7 +1182,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function SqlUtilEnumerateLoggedInUsers String sDriverID String sDatabase Returns tSQLLoggedInUser[]
         tSQLLoggedInUser[] SQLLoggedInUser
-        String[] sUsers sPrograms
+        String[][] aRows
         String sSelect
         Integer iSize iCount
 
@@ -1185,18 +1190,17 @@ Class cBaseDbUpdateFuncLib is a cObject
             Case (sDriverID = MSSQLDRV_ID)
                 Move ("SELECT RTRIM(SP.nt_username) AS Inlog, RTRIM(SP.program_name) as Programma from master.dbo.sysprocesses SP INNER JOIN master.dbo.sysdatabases SD ON SP.dbid = SD.dbid WHERE (SP.nt_username <> '') and (SP.nt_username <> 'SYSTEM') and (SD.name = '" ;
                 + sDatabase + "') ORDER by Inlog") to sSelect
-                Get _SqlEnumerateEsqlDAW sSelect 1 to sUsers
-                Get _SqlEnumerateEsqlDAW sSelect 2 to sPrograms
+                Get _SqlEnumerateEsqlRowsDAW sSelect 2 to aRows
                 Case Break
             Case Else
                 Error DFERR_PROGRAM ("Not implemented yet for this driver (" + sDriverID + ")")
         Case End
 
-        Move (SizeOfArray(sUsers)) to iSize
+        Move (SizeOfArray(aRows)) to iSize
         Decrement iSize
         For iCount from 0 to iSize
-            Move sUsers[iCount]    to SQLLoggedInUser[iCount].sUser
-            Move sPrograms[iCount] to SQLLoggedInUser[iCount].sProgram
+            Move aRows[iCount][0] to SQLLoggedInUser[iCount].sUser
+            Move aRows[iCount][1] to SQLLoggedInUser[iCount].sProgram
         Loop
 
         Function_Return SQLLoggedInUser
@@ -1312,6 +1316,43 @@ Class cBaseDbUpdateFuncLib is a cObject
         Send SQLDisconnect of hoSQLConnect
 
         Function_Return aCollations
+    End_Function
+
+    // All rows of a result set with columns 1 to iColumns of each, trimmed and nothing removed: aRows[row][column - 1].
+    // (Callers fetched each column in a run of its own through _SqlEnumerateEsqlDAW, which drops a value equal to the
+    // one before it, and paired the lists by place: two users of one program, or two keys to one table, shifted them.)
+    Function _SqlEnumerateEsqlRowsDAW String sStmt Integer iColumns Returns String[][]
+        String[][] aRows
+        String sValue
+        Handle hoSQLHandler hoSQLConnect hstmt
+        Integer iFetchResult iRow iColumn
+        tSQLConnection SQLConnection
+
+        Get phoSQLManager to hoSQLHandler
+        If (hoSQLHandler <> 0) Begin
+            Get pSQLConnection of ghoSQLConnectionHandler to SQLConnection
+            Get SQLConnect of hoSQLHandler SQLConnection.sDriverID SQLConnection.sConnectionString to hoSQLConnect
+            If (hoSQLConnect <> 0) Begin
+                Get SQLOpen of hoSQLConnect to hstmt
+                If (hstmt <> 0) Begin
+                    Send SqlExecDirect of hstmt sStmt
+                    Move 0 to iRow
+                    Repeat
+                        Get SQLFetch of hstmt to iFetchResult
+                        If (iFetchResult <> 0) Begin
+                            For iColumn from 1 to iColumns
+                                Get SQLColumnValue of hstmt iColumn to sValue
+                                Move (Trim(sValue)) to aRows[iRow][iColumn - 1]
+                            Loop
+                            Increment iRow
+                        End
+                    Until (iFetchResult = 0)
+                    Send SQLClose of hstmt
+                End
+                Send SQLDisconnect of hoSQLConnect
+            End
+        End
+        Function_Return aRows
     End_Function
 
     // To enumerate SQL database resources with ESQL and return the result as a string array,
@@ -1433,13 +1474,9 @@ Class cBaseDbUpdateFuncLib is a cObject
             // most probably place the info is kept that we're after.
             Set phRootKey of hoRegistry to HKEY_LOCAL_MACHINE
             Set pfAccessRights of hoRegistry to Key_Read
-            Get KeyExists of hoRegistry "SOFTWARE\Wow6432Node" to bExists
-            If (bExists = True) Begin
-                Move "SOFTWARE\Wow6432Node\ODBC\ODBC.INI" to sKey
-            End
-            Else Begin
-                Move "SOFTWARE\ODBC\ODBC.INI" to sKey
-            End
+            // One path: Windows shows a 32-bit program the 32-bit list there, a 64-bit program the 64-bit one. (The
+            // Wow6432Node key was read whenever it existed, so a 64-bit program listed the 32-bit data sources.)
+            Move "SOFTWARE\ODBC\ODBC.INI" to sKey
 
             Get KeyExists of hoRegistry sKey to bExists
             If (bExists) Begin
@@ -1464,6 +1501,8 @@ Class cBaseDbUpdateFuncLib is a cObject
                                     Get ReadString of hoRegistry CS_SQLIniDatabaseKeyword to sReturnArray[iItem].sDatabaseName
                                     Increment iItem
                                 End
+                                // Each sub-key is closed again. (Only the last one was.)
+                                Send CloseKey of hoRegistry
                             End
                         Loop
                     End
@@ -1499,6 +1538,8 @@ Class cBaseDbUpdateFuncLib is a cObject
                                     Get ReadString of hoRegistry CS_SQLIniDatabaseKeyword to sReturnArray[iItem].sDatabaseName
                                     Increment iItem
                                 End
+                                // Each sub-key is closed again. (Only the last one was.)
+                                Send CloseKey of hoRegistry
                             End
                         Loop
                     End
@@ -1616,48 +1657,52 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return sRetval
     End_Function
 
-    // Function will "clean/sanitize" the script by removing all comments and blank lines.
-    Function _SqlUtilSanitizeScript tSQLScriptArray SqlScriptArray Returns tSQLScriptArray[]
+    // Takes the comments out of a script - "/* ... */", also over several lines, and "--" to the end of a line, but
+    // not inside a text in quotes - and keeps the code around them; then drops the blank lines and the PRINT lines.
+    // (A line that held "*/" was dropped whole, code and all, and "--" in a text was taken for a comment.)
+    Function _SqlUtilSanitizeScript tSQLScriptArray SqlScriptArray Returns tSQLScriptArray
         String[] sSQLScriptArray
-        String sText sLine sTmp sCommentStart sCommentEnd sDashComment sPrint
-        Integer iSize iCount
-        Boolean bCommentStart bCommentEnd bDashComment bPrint
+        String sLine sOut sChar sNext
+        Integer iSize iCount iPos iLength
+        Boolean bInComment bInText
 
-        Move False to bCommentStart
-        Move False to bCommentEnd
-        Move False to bDashComment
-        Move "/*"  to sCommentStart   // These are the standard comment start & stop tokens...
-        Move "*/"  to sCommentEnd
-        Move "--"  to sDashComment    // ...but a comment can also start with two dashes "--".
-        Move "PRINT " to sPrint
-
+        Move False to bInComment
         Move (SizeOfArray(SqlScriptArray.sSQLScriptArray)) to iSize
-        Decrement iSize
-        Move "" to sText
-
-        for iCount from 0 to iSize
+        For iCount from 0 to (iSize - 1)
             Move SqlScriptArray.sSQLScriptArray[iCount] to sLine
-            Move (Trim(sLine)) to sTmp
-            If (sTmp <> "") Begin
-                Move False to bPrint
-                Move (Left(sTmp, 2) = sDashComment) to bDashComment
-                If (bCommentStart = False) Begin
-                    Move (Left(sTmp, 2) = sCommentStart) to bCommentStart
-                    If (bCommentStart = False) Begin
-                        Move (Uppercase(Left(sTmp, 6)) = sPrint) to bPrint
+            Move "" to sOut
+            Move False to bInText
+            Move (Length(sLine)) to iLength
+            Move 1 to iPos
+            While (iPos <= iLength)
+                Move (Mid(sLine, 1, iPos)) to sChar
+                Move (Mid(sLine, 1, (iPos + 1))) to sNext
+                If (bInComment = True) Begin
+                    If (sChar = "*" and sNext = "/") Begin
+                        Move False to bInComment
+                        Increment iPos
                     End
                 End
-                Move (sTmp contains sCommentEnd) to bCommentEnd
-                If (bCommentEnd = True) Begin
-                    Move False to bCommentStart
+                Else If (bInText = False and sChar = "/" and sNext = "*") Begin
+                    Move True to bInComment
+                    Increment iPos
                 End
-                If (bDashComment = False and bCommentStart = False and bCommentEnd = False and bPrint = False) Begin
-                    Move sLine to sSQLScriptArray[SizeOfArray(sSQLScriptArray)]
+                Else If (bInText = False and sChar = "-" and sNext = "-") Begin
+                    Move iLength to iPos
                 End
+                Else Begin
+                    If (sChar = "'") Begin
+                        Move (not(bInText)) to bInText
+                    End
+                    Move (sOut + sChar) to sOut
+                End
+                Increment iPos
+            Loop
+            If (Trim(sOut) <> "" and Uppercase(Left(Trim(sOut), 6)) <> "PRINT ") Begin
+                Move (Rtrim(sOut)) to sSQLScriptArray[SizeOfArray(sSQLScriptArray)]
             End
         Loop
 
-        // Update the retval struct array:
         Move sSQLScriptArray to SqlScriptArray.sSQLScriptArray
         Function_Return SqlScriptArray
     End_Function
@@ -1803,6 +1848,57 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return sTableName
     End_Function
 
+    // A name for an SQL statement: for MS SQL in brackets, a "]" in it doubled, so a blank or a reserved word in the
+    // name is no problem. Other back ends get the name as it is - quotes would make a DB2 name case-sensitive. A
+    // name in brackets already stays as it is.
+    Function SqlQuotedName Integer iDbType String sName Returns String
+        If (iDbType <> EN_DbTypeMSSQL or (Left(sName, 1) = "[" and Right(sName, 1) = "]")) Begin
+            Function_Return sName
+        End
+        Function_Return ("[" + Replaces("]", sName, "]]") + "]")
+    End_Function
+
+    // A value for an SQL statement: in quotes, a quote in it doubled - O'Brien is a value, not the end of the text.
+    Function SqlQuotedValue String sValue Returns String
+        Function_Return ("'" + Replaces("'", sValue, "''") + "'")
+    End_Function
+
+    // Is the text one word of letters, digits and underscores - a collation name, for instance - that can go into a
+    // statement as it is? (A collation typed in a dialog went in as it was: anything after it ran on the server.)
+    Function _SqlIsSafeSqlWord String sWord Returns Boolean
+        Integer iPos iChar
+
+        If (sWord = "") Begin
+            Function_Return False
+        End
+        For iPos from 1 to (Length(sWord))
+            Move (Ascii(Mid(sWord, 1, iPos))) to iChar
+            If (not((iChar >= 48 and iChar <= 57) or (iChar >= 65 and iChar <= 90) or (iChar >= 97 and iChar <= 122) or iChar = 95)) Begin
+                Function_Return False
+            End
+        Loop
+        Function_Return True
+    End_Function
+
+    // The start of a quiet section: error iError is neither shown nor logged - under DataFlex's standard error
+    // object (Ignore_Error) and under cDbUpdateHandler, which takes Ignore_Error for nothing and reads
+    // Error_Report_Mode instead. Returns the report mode it found, for _UtilQuietEnd. (The library used one way or
+    // the other, each working under one error handler only.)
+    Function _UtilQuietBegin Integer iError Returns Integer
+        Integer iMode
+
+        Get Error_Report_Mode to iMode
+        Set Error_Report_Mode to DUF_ERROR_NO_REPORT
+        Send Ignore_Error of Error_Object_Id iError
+        Function_Return iMode
+    End_Function
+
+    // The end of a quiet section: error iError is trapped again, and the report mode is the one _UtilQuietBegin found.
+    Procedure _UtilQuietEnd Integer iError Integer iMode
+        Send Trap_Error of Error_Object_Id iError
+        Set Error_Report_Mode to iMode
+    End_Procedure
+
     // SQL column names can be case-sensitive. This function is used to check that
     // the passed sFieldName has the correct spelling.
     // Used with Embedded SQL statement calls.
@@ -1851,7 +1947,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         Get pSQLConnection  of ghoSQLConnectionHandler to SQLConnection
 
         Send Ignore_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
-        Get EnumerateDatabases of hoSQLHandler SQLConnection.sServer SQLConnection.sUserID SQLConnection.sPassword SQLConnection.bTrustedCertificate SQLConnection.eEncryptOption to iSize
+        Get EnumerateDatabasesEncrypt of hoSQLHandler SQLConnection.sServer SQLConnection.sUserID SQLConnection.sPassword SQLConnection.bTrustedCertificate SQLConnection.eEncryptOption to iSize
         Decrement iSize
 
         For iCount from 0 to iSize
@@ -3686,7 +3782,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     End_Function
 
     Function _SqlUtilExecuteEmbeddedScript tSQLScriptArray SQLScriptArray String sDriverID Boolean bCreateScriptFile String sMemFileName Boolean bShowProgr Returns Boolean
-        String sSQLVal sStmt sCR sGOKeyWord sNoCountKeyWord sMessage sExportFile
+        String sSQLVal sStmt sCR sGOKeyWord sNoCountKeyWord sMessage sExportFile sLineUpper
         Handle hoSql hoSQLConnect hoStmt hoError
         Integer i iMsgs iRows jRows iRowType iCount jCount iChunkCounter iChunkMax iCh iNextSet iMessage iPos
         String[] asMsg 
@@ -3764,8 +3860,9 @@ Class cBaseDbUpdateFuncLib is a cObject
 
                 For iCount from 0 to iRows
                     Move (SQLScriptArray.sSQLScriptArray[iCount]) to sSQLVal
+                    Move (Uppercase(Trim(sSQLVal))) to sLineUpper
 
-                    If (Uppercase(sSQLVal) <> sGOKeyWord) Begin
+                    If (sLineUpper <> sGOKeyWord) Begin
                         If (sSQLVal <> "") Begin
                             Move (sSQLVal + sCR) to sSQLVal
                         End
@@ -3773,8 +3870,10 @@ Class cBaseDbUpdateFuncLib is a cObject
                     End
 
                     // - Each time we encounter a "GO" statement we execute it,
-                    // or if at the very end of the script.
-                    If (Uppercase(sSQLVal) = sGOKeyWord or iChunkCounter >= iChunkMax or iCount = iRows) Begin
+                    // or if at the very end of the script. Past piChunkMax lines a chunk ends at a line that ends a
+                    // statement (";"), past twice that anywhere. (It ended at piChunkMax lines wherever that fell, in
+                    // the middle of a statement too, and "GO " with a blank after it was no GO.)
+                    If (sLineUpper = sGOKeyWord or iCount = iRows or (iChunkCounter >= iChunkMax and Right(sLineUpper, 1) = ";") or iChunkCounter >= (iChunkMax * 2)) Begin
 
                         // - It turns out it can be at least 10 times faster to execute SQL statements in chunks,
                         // instead of all in one go.

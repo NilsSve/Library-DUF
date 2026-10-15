@@ -35,8 +35,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_BCD"                                to aColumnType[i].sDataFlexType
+            Move DF_BCD                                  to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -47,8 +47,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_BCD"                                to aColumnType[i].sDataFlexType
+            Move DF_BCD                                  to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -59,8 +59,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_BCD"                                to aColumnType[i].sDataFlexType
+            Move DF_BCD                                  to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -71,8 +71,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_BCD"                                to aColumnType[i].sDataFlexType
+            Move DF_BCD                                  to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -83,8 +83,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_BCD"                                to aColumnType[i].sDataFlexType
+            Move DF_BCD                                  to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -95,8 +95,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_BCD"                                to aColumnType[i].sDataFlexType
+            Move DF_BCD                                  to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -107,8 +107,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_BCD"                                to aColumnType[i].sDataFlexType
+            Move DF_BCD                                  to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -119,8 +119,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_BCD"                                to aColumnType[i].sDataFlexType
+            Move DF_BCD                                  to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -131,8 +131,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_DATETIME"                           to aColumnType[i].sDataFlexType
+            Move DF_DATETIME                             to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -155,8 +155,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_DATE"                               to aColumnType[i].sDataFlexType
+            Move DF_DATE                                 to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -179,8 +179,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_DATETIME"                           to aColumnType[i].sDataFlexType
+            Move DF_DATETIME                             to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -191,8 +191,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_DATE"                               to aColumnType[i].sDataFlexType
+            Move DF_DATE                                 to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -215,8 +215,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_DATETIME"                           to aColumnType[i].sDataFlexType
+            Move DF_DATETIME                             to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -227,8 +227,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_TEXT"                               to aColumnType[i].sDataFlexType
+            Move DF_TEXT                                 to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -239,8 +239,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_BINARY"                             to aColumnType[i].sDataFlexType
+            Move DF_BINARY                               to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -251,8 +251,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_BINARY"                             to aColumnType[i].sDataFlexType
+            Move DF_BINARY                               to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -263,8 +263,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_BINARY"                             to aColumnType[i].sDataFlexType
+            Move DF_BINARY                               to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -275,8 +275,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_BCD"                                to aColumnType[i].sDataFlexType
+            Move DF_BCD                                  to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -287,8 +287,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_BCD"                                to aColumnType[i].sDataFlexType
+            Move DF_BCD                                  to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 
@@ -335,8 +335,8 @@
             Move 0                                       to aColumnType[i].iDefaultSize
             Move 0                                       to aColumnType[i].iMinSize
             Move 0                                       to aColumnType[i].nMaxSize
-            Move "DF_ASCII"                              to aColumnType[i].sDataFlexType
-            Move DF_ASCII                                to aColumnType[i].iDataFlexType
+            Move "DF_TEXT"                               to aColumnType[i].sDataFlexType
+            Move DF_TEXT                                 to aColumnType[i].iDataFlexType
             Move 1                                       to aColumnType[i].sPrecision
             Increment i
 

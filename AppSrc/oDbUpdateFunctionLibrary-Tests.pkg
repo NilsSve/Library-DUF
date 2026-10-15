@@ -333,4 +333,66 @@ Object oDbUpdateFunctionLibrary_Tests is a cTestFixture
         Set Error_Report_Mode of ghoDbUpdateFunctionLibrary to DUF_ERROR_REPORT
         Send AssertIAreEqual DUF_ERROR_NO_REPORT iMode "Still no report."
     End_Procedure
+    // A name in an SQL statement is bracketed for MS SQL - a blank or a reserved word in it is no problem then. A
+    // DB2 name stays as it is: quotes would make it case-sensitive.
+    { Published=True }
+    Procedure Test_SqlQuotedName_Brackets_A_Name_For_MS_SQL
+        Send AssertSAreEqual "[Order Date]" (SqlQuotedName(ghoDbUpdateFunctionLibrary, EN_DbTypeMSSQL, "Order Date")) "A name with a blank."
+        Send AssertSAreEqual "[a]]b]" (SqlQuotedName(ghoDbUpdateFunctionLibrary, EN_DbTypeMSSQL, "a]b")) "A bracket in it is doubled."
+        Send AssertSAreEqual "[Name]" (SqlQuotedName(ghoDbUpdateFunctionLibrary, EN_DbTypeMSSQL, "[Name]")) "A bracketed name stays."
+        Send AssertSAreEqual "ORDERS" (SqlQuotedName(ghoDbUpdateFunctionLibrary, EN_DbTypeDB2, "ORDERS")) "DB2: as it is."
+    End_Procedure
+
+    // A value goes into an SQL statement between quotes, a quote in it doubled: O'Brien is a value, not the end of
+    // the text.
+    { Published=True }
+    Procedure Test_SqlQuotedValue_Doubles_A_Quote
+        Send AssertSAreEqual "'O''Brien'" (SqlQuotedValue(ghoDbUpdateFunctionLibrary, "O'Brien")) "The quote is doubled."
+        Send AssertSAreEqual "''" (SqlQuotedValue(ghoDbUpdateFunctionLibrary, "")) "Nothing: two quotes."
+    End_Procedure
+
+    // A collation or another word that goes into a statement as it is may hold letters, digits and underscores
+    // only: anything typed after a collation name ran on the server.
+    { Published=True }
+    Procedure Test_A_Word_For_A_Statement_Is_Letters_Digits_And_Underscores
+        Send Assert (_SqlIsSafeSqlWord(ghoDbUpdateFunctionLibrary, "Latin1_General_CI_AS")) "A collation name."
+        Send AssertFalse (_SqlIsSafeSqlWord(ghoDbUpdateFunctionLibrary, "Latin1_General_CI_AS; DROP DATABASE x")) "More than a name."
+        Send AssertFalse (_SqlIsSafeSqlWord(ghoDbUpdateFunctionLibrary, "")) "Nothing."
+    End_Procedure
+
+    // The script cleaner takes the comments out and keeps the code around them. (A line that held "*/" was dropped
+    // whole, code and all; "--" in a text was taken for a comment.)
+    { Published=True }
+    Procedure Test_The_Script_Cleaner_Keeps_The_Code_Around_A_Comment
+        tSQLScriptArray Script
+        String sAll
+
+        Move "SELECT x /* note */ FROM t" to Script.sSQLScriptArray[0]
+        Move "/* a comment"                to Script.sSQLScriptArray[1]
+        Move "over two lines */ SELECT 1"  to Script.sSQLScriptArray[2]
+        Move "SELECT '--no comment' -- a comment" to Script.sSQLScriptArray[3]
+        Move "PRINT 'x'"                   to Script.sSQLScriptArray[4]
+        Move "-- only a comment"           to Script.sSQLScriptArray[5]
+        Get _SqlUtilSanitizeScript of ghoDbUpdateFunctionLibrary Script to Script
+        Send AssertIAreEqual 3 (SizeOfArray(Script.sSQLScriptArray)) "Three lines of code."
+        If (SizeOfArray(Script.sSQLScriptArray) = 3) Begin
+            Send AssertSAreEqual "SELECT x  FROM t" (Trim(Script.sSQLScriptArray[0])) "The code around the comment."
+            Send AssertSAreEqual "SELECT 1" (Trim(Script.sSQLScriptArray[1])) "The code after the end of a comment."
+            Send AssertSAreEqual "SELECT '--no comment'" (Trim(Script.sSQLScriptArray[2])) "Dashes in a text stay."
+        End
+    End_Procedure
+
+    // The generated type tables give a column type its DataFlex type by its name.
+    { Published=True }
+    Procedure Test_The_Type_Tables_Give_The_Right_DataFlex_Type
+        tColumnType ColumnType
+        Get _UtilColumnType of ghoDbUpdateFunctionLibrary MSSQLDRV_ID EN_DbTypeMSSQL 0 "varbinary(max)" False to ColumnType
+        Send AssertIAreEqual DF_BINARY ColumnType.iDataFlexType "MS SQL varbinary(max) is binary."
+        Get _UtilColumnType of ghoDbUpdateFunctionLibrary MSSQLDRV_ID EN_DbTypeMSSQL 0 "nvarchar(max)" False to ColumnType
+        Send AssertIAreEqual DF_TEXT ColumnType.iDataFlexType "MS SQL nvarchar(max) is text."
+        Get _UtilColumnType of ghoDbUpdateFunctionLibrary DB2_DRV_ID EN_DbTypeDB2 0 "date" False to ColumnType
+        Send AssertIAreEqual DF_DATE ColumnType.iDataFlexType "DB2 date is a date."
+        Get _UtilColumnType of ghoDbUpdateFunctionLibrary DB2_DRV_ID EN_DbTypeDB2 0 "timestamp" False to ColumnType
+        Send AssertIAreEqual DF_DATETIME ColumnType.iDataFlexType "DB2 timestamp is a DateTime."
+    End_Procedure
 End_Object
