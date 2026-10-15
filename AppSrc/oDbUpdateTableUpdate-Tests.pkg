@@ -1147,5 +1147,176 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Send AssertNAreEqual 12.5 (DbVersionStoredValue(h, 5)) "Column 5 of the first record."
         Close h
     End_Procedure
+    // The fixture's error object takes the errors of the calls between these two.
+    Procedure BeginCatch
+        Handle hoErrors
+        Move (oErrors(Self)) to hoErrors
+        Set piErrors of hoErrors to 0
+        Set psErrors of hoErrors to ""
+        Set phOldErrorObject to Error_Object_Id
+        Move hoErrors to Error_Object_Id
+        Move False to Err
+    End_Procedure
 
+    Function EndCatch Returns Integer
+        Close DF_ALL
+        Move (phOldErrorObject(Self)) to Error_Object_Id
+        Move False to Err
+        Function_Return (piErrors(oErrors(Self)))
+    End_Function
+
+    // A small text file in the test folder
+    Procedure WriteTestFile String sName String[] asLines
+        Integer iCh iLine
+        Get Seq_New_Channel to iCh
+        Direct_Output channel iCh (psFolder(Self) + "\" + sName)
+        For iLine from 0 to (SizeOfArray(asLines) - 1)
+            Writeln channel iCh asLines[iLine]
+        Loop
+        Close_Output channel iCh
+        Send Seq_Release_Channel iCh
+    End_Procedure
+
+    // ApiColumnChangeByColumnNumber gives the column the type it is asked for. (The new type was worked out from
+    // the column's present type before that was read, so a text column stayed text.)
+    { Published=True }
+    Procedure Test_A_Column_Changed_By_Its_Number_Gets_The_New_Type
+        Boolean bOK
+        Integer iErrors
+
+        Send MakeBaseTable "DUFTT34" 5 False
+        Send BeginCatch
+        Get ApiColumnChangeByColumnNumber of ghoDbUpdateFunctionLibrary DATAFLEX_ID (phTable(Self)) False False "Code" 2 DF_BCD 6 0 0 to bOK
+        Get EndCatch to iErrors
+        Send AssertIAreEqual 0 iErrors ("No error." + psErrors(oErrors(Self)))
+        Send Assert bOK "The call answers True."
+        Send AssertSAreEqual (String(DF_BCD) + "|") (Left(ColumnTypeAndFirstValue(Self, "Code"), 2)) "Code is a number column now."
+    End_Procedure
+
+    // ApiIndexInsertSegment puts the new segment in its place and moves the others up; past the end it appends it.
+    // (The last segment was written over and the new one got the segment number as its column.)
+    { Published=True }
+    Procedure Test_A_Segment_Is_Inserted_Into_An_Index
+        Boolean bOK
+        Integer iErrors
+
+        Send MakeBaseTable "DUFTT37" 5 True
+        Send BeginCatch
+        Get ApiIndexInsertSegment of ghoDbUpdateFunctionLibrary (phTable(Self)) 2 2 4 DF_CASE_USED DF_ASCENDING to bOK
+        Get EndCatch to iErrors
+        Send AssertIAreEqual 0 iErrors ("No error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Name,Created,Id" (IndexColumns(Self, 2)) "Created is the second segment."
+        Send BeginCatch
+        Get ApiIndexInsertSegment of ghoDbUpdateFunctionLibrary (phTable(Self)) 2 9 2 DF_CASE_USED DF_ASCENDING to bOK
+        Get EndCatch to iErrors
+        Send AssertSAreEqual "Name,Created,Id,Code" (IndexColumns(Self, 2)) "Past the end the segment is appended."
+    End_Procedure
+
+    // ApiTableRemove deletes the table and empties its Filelist slot.
+    { Published=True }
+    Procedure Test_A_Removed_Table_Loses_Its_Files_And_Its_Entry
+        Boolean bOK
+        Integer iErrors
+
+        Send MakeBaseTable "DUFTT38" 5 False
+        Send BeginCatch
+        Get ApiTableRemove of ghoDbUpdateFunctionLibrary (phTable(Self)) to bOK
+        Get EndCatch to iErrors
+        Send Assert bOK "The call answers True."
+        Send AssertFalse (FileThere(Self, "DUFTT38.dat")) "The data file is gone."
+        Send AssertSAreEqual "" (RootNameOf(Self, phTable(Self))) "The slot is empty."
+    End_Procedure
+
+    // A table whose data file cannot be deleted keeps its Filelist slot, and the call says so. (The slot was
+    // emptied and the call answered True whatever happened.)
+    { Published=True }
+    Procedure Test_A_Table_That_Cannot_Be_Removed_Keeps_Its_Entry
+        Boolean bOK
+        Integer iErrors iCh
+
+        Send MakeBaseTable "DUFTT39" 5 False
+        // The data file is held open: it cannot be deleted.
+        Get Seq_New_Channel to iCh
+        Direct_Input channel iCh (psFolder(Self) + "\DUFTT39.dat")
+        Send BeginCatch
+        Get ApiTableRemove of ghoDbUpdateFunctionLibrary (phTable(Self)) to bOK
+        Get EndCatch to iErrors
+        Close_Input channel iCh
+        Send Seq_Release_Channel iCh
+        Send Assert (FileThere(Self, "DUFTT39.dat")) "The open data file could not be deleted."
+        Send AssertFalse bOK "The call answers False."
+        Send AssertSAreEqual "DUFTT39" (Uppercase(RootNameOf(Self, phTable(Self)))) "The slot keeps its entry."
+    End_Procedure
+
+    // _UtilDeleteCacheFile answers True when the cache file is gone, and when there was none. (It answered the
+    // result of vDeleteFile, which is 0 - False - when the file is gone.)
+    { Published=True }
+    Procedure Test_The_Cache_File_Is_Removed
+        String[] asLines
+        Boolean bOK
+
+        Move "cache" to asLines[0]
+        Send WriteTestFile "DUFTT40.cch" asLines
+        Get _UtilDeleteCacheFile of ghoDbUpdateFunctionLibrary "DUFTT40" to bOK
+        Send Assert bOK "The call answers True."
+        Send AssertFalse (FileThere(Self, "DUFTT40.cch")) "The cache file is gone."
+        Get _UtilDeleteCacheFile of ghoDbUpdateFunctionLibrary "DUFTT40" to bOK
+        Send Assert bOK "No cache file: True as well."
+    End_Procedure
+
+    // _UtilChangeSourceCodeLine answers True when it ran without an error - a line changed or not - and writes
+    // the file only when a line changed. (It answered "a line changed", and wrote the file back with one more
+    // blank line every time.)
+    { Published=True }
+    Procedure Test_ChangeSourceCodeLine_Writes_Only_A_Changed_File
+        String[] asLines
+        String sFile
+        Boolean bOK
+        Integer iSize
+
+        Move "DRIVER_NAME MSSQLDRV" to asLines[0]
+        Move "DATABASE_NAME DUFTT41" to asLines[1]
+        Move "SCHEMA_NAME dbo" to asLines[2]
+        Send WriteTestFile "DUFTT41.int" asLines
+        Move (psFolder(Self) + "\DUFTT41.int") to sFile
+        Get vWin32_APIFileSize sFile to iSize
+        Get _UtilChangeSourceCodeLine of ghoDbUpdateFunctionLibrary sFile "NOSUCHLINE" "X" False to bOK
+        Send Assert bOK "No line to change: True."
+        Send AssertIAreEqual iSize (vWin32_APIFileSize(sFile)) "The file is as it was."
+        Get _UtilChangeSourceCodeLine of ghoDbUpdateFunctionLibrary sFile "DATABASE_NAME DUFTT41" "DATABASE_NAME DUFTT42" False to bOK
+        Send Assert bOK "A line changed: True."
+        Send AssertIAreEqual (iSize + 0) (vWin32_APIFileSize(sFile)) "The same length: one line changed for one of the same size, nothing added."
+        EraseFile sFile
+    End_Procedure
+
+    // UtilMoveMiscFilesToBackupFolder moves the files on every run. (Only the run that made the folder moved any.)
+    { Published=True }
+    Procedure Test_Misc_Files_Go_To_The_Backup_Folder_On_Every_Run
+        String[] asLines
+        String sBackup
+        Boolean bOK
+
+        Move (psFolder(Self) + "\" + CS_DUFBackupDataFolder) to sBackup
+        Move "x" to asLines[0]
+        Send WriteTestFile "DUFTT43.bak" asLines
+        Get UtilMoveMiscFilesToBackupFolder of ghoDbUpdateFunctionLibrary to bOK
+        Send WriteTestFile "DUFTT44.bak" asLines
+        Get UtilMoveMiscFilesToBackupFolder of ghoDbUpdateFunctionLibrary to bOK
+        Send Assert (vFilePathExists(sBackup + "\DUFTT43.bak")) "The first run moved its file."
+        Send Assert (vFilePathExists(sBackup + "\DUFTT44.bak")) "So did the second."
+        Send AssertFalse (FileThere(Self, "DUFTT44.bak")) "The data folder no longer has it."
+        EraseFile (sBackup + "\DUFTT43.bak")
+        EraseFile (sBackup + "\DUFTT44.bak")
+        EraseFile (sBackup + "\*.fd")
+        Remove_Directory sBackup
+    End_Procedure
+
+    // A data file in the first folder of a data path with two folders is found. (The whole path was taken for
+    // one folder name.)
+    { Published=True }
+    Procedure Test_The_Data_File_Is_Found_When_The_Data_Path_Names_Two_Folders
+        Send MakeBaseTable "DUFTT46" 5 False
+        Set psDataPath of (phoWorkspace(ghoApplication)) to (psFolder(Self) + ";" + psFolder(Self) + "\Second")
+        Send Assert (_DatFileExists(ghoDbUpdateFunctionLibrary, phTable(Self))) "The data file is found."
+    End_Procedure
 End_Object

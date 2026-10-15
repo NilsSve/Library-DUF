@@ -265,4 +265,72 @@ Object oDbUpdateFunctionLibrary_Tests is a cTestFixture
         Send Assert (iDriver > 0) "The DataFlex driver has a number."
         Send AssertIAreEqual 0 iNoDriver "A driver that cannot be loaded: 0."
     End_Procedure
+    // With no step asked for, the preparation for a conversion to SQL has not failed. (The result of the Filelist
+    // step was kept in its own input parameter, which had to be True.)
+    { Published=True }
+    Procedure Test_PrepareDataFolder_Without_A_Step_Is_No_Failure
+        Send Assert (UtilPrepareDataFolderForSQLConversion(ghoDbUpdateFunctionLibrary, False, False, False, False, False)) "No step asked for: True."
+    End_Procedure
+
+    // IsFirstStringGreaterThanSecond decides at the first part that differs. ("6.3.0.13" passed for "20.1.0.5".)
+    { Published=True }
+    Procedure Test_IsFirstStringGreaterThanSecond_Decides_At_The_First_Different_Part
+        Send AssertFalse (IsFirstStringGreaterThanSecond("6.3.0.13", "20.1.0.5")) "6 is below 20."
+        Send AssertFalse (IsFirstStringGreaterThanSecond("19.9", "20.1")) "19 is below 20."
+        Send Assert (IsFirstStringGreaterThanSecond("20.1.0.6", "20.1.0.5")) "The last part is higher."
+        Send Assert (IsFirstStringGreaterThanSecond("20.1.0.5", "20.1.0.5")) "The same version is enough."
+        Send Assert (IsFirstStringGreaterThanSecond("21", "20.1.0.5")) "A higher first part is enough."
+    End_Procedure
+
+    // UtilTableCombineFromAndToArrays takes a highest table that is on one side only. (It read one element past the
+    // array for the last one.)
+    { Published=True }
+    Procedure Test_The_Highest_Table_On_One_Side_Only_Is_Combined
+        tAPITable[] aFrom aTo
+        tAPITableCompare[] aCompare
+        Handle hoOld
+
+        Move 3    to aTo[0].hTable
+        Move True to aTo[0].bToTable
+        Move 3    to aTo[0].ApiTableInfo.iTableNumber
+        Move 5    to aFrom[0].hTable
+        Move True to aFrom[0].bFromTable
+        Move 5    to aFrom[0].ApiTableInfo.iTableNumber
+        Set piErrors of oNoErrors to 0
+        Move Error_Object_Id to hoOld
+        Move (oNoErrors(Self)) to Error_Object_Id
+        Get UtilTableCombineFromAndToArrays of ghoDbUpdateFunctionLibrary aFrom aTo to aCompare
+        Move hoOld to Error_Object_Id
+        Move False to Err
+        Send AssertIAreEqual 0 (piErrors(oNoErrors(Self))) "No error."
+        Send AssertIAreEqual 2 (SizeOfArray(aCompare)) "Both tables are in the result."
+    End_Procedure
+
+    // A type name is looked up by its name. (The lookup compared the type number only, which was 0: every name
+    // became DF_ASCII.)
+    { Published=True }
+    Procedure Test_UtilColumnTypeToInteger_Looks_Up_The_Name
+        Send AssertIAreEqual DF_BCD (UtilColumnTypeToInteger(ghoDbUpdateFunctionLibrary, DATAFLEX_ID, EN_DbTypeDataFlex, "Numeric")) "Numeric."
+        Send AssertIAreEqual DF_DATE (UtilColumnTypeToInteger(ghoDbUpdateFunctionLibrary, DATAFLEX_ID, EN_DbTypeDataFlex, "date")) "Date, in small letters."
+    End_Procedure
+
+    // A text column of the DUF types takes a length, a date column does not: bCanEditSize means what its name
+    // says in the hand-written type tables too. (There it meant "fixed", so DF_ASCII_DUF 35 lost its 35.)
+    { Published=True }
+    Procedure Test_A_DUF_Text_Type_Takes_A_Length
+        Send AssertFalse (UtilColumnTypeFixed(ghoDbUpdateFunctionLibrary, MSSQLDRV_ID, EN_DbTypeMSSQL, DF_ASCII_DUF)) "ASCII takes a length."
+        Send Assert (UtilColumnTypeFixed(ghoDbUpdateFunctionLibrary, MSSQLDRV_ID, EN_DbTypeMSSQL, DF_DATE_DUF)) "Date does not."
+    End_Procedure
+
+    // LogError puts back the report mode it found: a caller's quiet section stays quiet. (It set "report" in any
+    // case.)
+    { Published=True }
+    Procedure Test_LogError_Keeps_A_Quiet_Section_Quiet
+        Integer iMode
+        Set Error_Report_Mode of ghoDbUpdateFunctionLibrary to DUF_ERROR_NO_REPORT
+        Send LogError of ghoDbUpdateFunctionLibrary "A line" False
+        Get Error_Report_Mode of ghoDbUpdateFunctionLibrary to iMode
+        Set Error_Report_Mode of ghoDbUpdateFunctionLibrary to DUF_ERROR_REPORT
+        Send AssertIAreEqual DUF_ERROR_NO_REPORT iMode "Still no report."
+    End_Procedure
 End_Object

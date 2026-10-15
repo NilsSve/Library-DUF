@@ -1789,8 +1789,9 @@ Class cBaseDbUpdateFuncLib is a cObject
             Get _SqlFindKeyWord CI_SQLDBO to sSchema
         End
 
+        // Both in capitals. (An uppercased name was looked through for the schema as it was.)
         Move (Uppercase(sTableName)) to sVal
-        If (not(sVal contains (sSchema + "."))) Begin
+        If (not(sVal contains (Uppercase(sSchema) + "."))) Begin
             If (iDbType = EN_dbTypeDB2) Begin
                 Move (Lowercase(sSchema) + "." + sTableName) to sTableName
             End
@@ -1814,7 +1815,8 @@ Class cBaseDbUpdateFuncLib is a cObject
         Move "" to sRetval
         Get psDriverID to sDriverID
         Get _SqlUtilEnumerateColumns sDriverID sTableName to asColumnNamesArray
-        Move (SearchArray(sTableName, asColumnNamesArray, Desktop, (RefFunc(DFSTRICMP)))) to iIndex
+        // The column is looked for. (The table name was: nothing was ever found.)
+        Move (SearchArray(sColumnName, asColumnNamesArray, Desktop, (RefFunc(DFSTRICMP)))) to iIndex
         If (iIndex <> -1) Begin
             Move asColumnNamesArray[iIndex] to sRetval
         End
@@ -2135,6 +2137,8 @@ Class cBaseDbUpdateFuncLib is a cObject
         Get _UtilDeleteCacheFile sTableName to bOK
         Get _SqlUtilEnumerateIndexes sTableName sDriverID to asIndexArray
 
+        // The result is that of writing the file and its restructure. (It was the result of the cache file.)
+        Move False to Err
         Get Seq_Open_Output_Channel (sDataPath + sPhysicalFileName) to iCh
         If (iCh < 0) Begin 
             Error DFERR_PROGRAM "No free channel for creating output file. (Routine: _SqlUtilCreateIntFile)"
@@ -2197,7 +2201,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         // Wait a sec for Windows to finish writing the file:
 //        Sleep 1
 
-        Function_Return (bOK = True)
+        Function_Return (Err = False)
     End_Function 
     
     // Simplier version of the _SqlUtilCreateIntFile. It can be used if there might be something wrong with the .int file and it needs
@@ -2233,22 +2237,25 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return True
     End_Function
 
+    // Removes the cache file (.cch) of a table from the first data folder. True when it is gone - also when there
+    // was none. (It answered the result of vDeleteFile, which is 0 when the file is gone: the other way round.)
     Function _UtilDeleteCacheFile String sTableName Returns Boolean
-        String sDataPath sDriverID
-        Boolean bOK
-        Integer iPos
+        String sDataPath
+        Integer iPos iRetval
+        Boolean bExists
 
         If (sTableName contains ".") Begin
             Move (Pos(".", sTableName)) to iPos
             Move (Mid(sTableName, Length(sTableName), (iPos +1))) to sTableName
         End
 
-        Get psDriverID to sDriverID
         Get psDataPathFirstPart to sDataPath
-        // First delete the cache file:
-        Get vDeleteFile (sDataPath + sTableName + ".cch") to bOK
-
-        Function_Return bOK
+        Get vFilePathExists (sDataPath + sTableName + ".cch") to bExists
+        If (bExists = False) Begin
+            Function_Return True
+        End
+        Get vDeleteFile (sDataPath + sTableName + ".cch") to iRetval
+        Function_Return (iRetval = 0)
     End_Function
 
     // Collects all tables from the SQL Database backend and sets the pasSQLTables property.
@@ -2658,6 +2665,8 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     // DataFlex Embedded Database Data Types:
     // Helper function for _UtilEnumerateColumnTypes
+    // bCanEditSize: True when the size of a column of that type can be set, as in the driver type tables. (Date and
+    // DateTime had True, the others False: the meaning the other way round.)
     Function _UtilEnumerateDataFlexTypes Returns tColumnType[]
         tColumnType[] ColumnType
         Integer i
@@ -2667,6 +2676,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         Move DF_ASCII           to ColumnType[i].iDataFlexType
         Move "ASCII"            to ColumnType[i].sDataFlexType
         Move "254"              to ColumnType[i].sPrecision
+        Move True               to ColumnType[i].bCanEditSize
         Increment i
 
         Move DF_BCD             to ColumnType[i].iSQLType
@@ -2674,6 +2684,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         Move DF_BCD             to ColumnType[i].iDataFlexType
         Move "Numeric"          to ColumnType[i].sDataFlexType
         Move "14.8"             to ColumnType[i].sPrecision
+        Move True               to ColumnType[i].bCanEditSize
         Increment i
 
         Move DF_DATE            to ColumnType[i].iSQLType
@@ -2681,7 +2692,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         Move DF_DATE            to ColumnType[i].iDataFlexType
         Move "Date"             to ColumnType[i].sDataFlexType
         Move "6.0"              to ColumnType[i].sPrecision
-        Move True               to ColumnType[i].bCanEditSize
+        Move False              to ColumnType[i].bCanEditSize
         Increment i
 
         Move DF_TEXT            to ColumnType[i].iSQLType
@@ -2689,6 +2700,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         Move DF_TEXT            to ColumnType[i].iDataFlexType
         Move "Text"             to ColumnType[i].sDataFlexType
         Move "16384"            to ColumnType[i].sPrecision
+        Move True               to ColumnType[i].bCanEditSize
         Increment i
 
         Move DF_BINARY          to ColumnType[i].iSQLType
@@ -2696,6 +2708,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         Move DF_BINARY          to ColumnType[i].iDataFlexType
         Move "Binary"           to ColumnType[i].sDataFlexType
         Move "16384"            to ColumnType[i].sPrecision
+        Move True               to ColumnType[i].bCanEditSize
         Increment i
 
         Move DF_DATETIME        to ColumnType[i].iSQLType
@@ -2703,7 +2716,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         Move DF_DATETIME        to ColumnType[i].iDataFlexType
         Move "DateTime"         to ColumnType[i].sDataFlexType
         Move "23"               to ColumnType[i].sPrecision
-        Move True               to ColumnType[i].bCanEditSize
+        Move False              to ColumnType[i].bCanEditSize
         Increment i
 
         Move DF_OVERLAP         to ColumnType[i].iSQLType
@@ -3158,6 +3171,25 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return aColumnType
     End_Function
 
+    // The entry of a type list for a type number (bByNumber True) or for a type name in any case; -1 when the list
+    // has none.
+    Function _UtilColumnTypeFind tColumnType[] ColumnTypeArray Integer iType String sType Boolean bByNumber Returns Integer
+        Integer iCount
+
+        Move (Uppercase(sType)) to sType
+        For iCount from 0 to (SizeOfArray(ColumnTypeArray) - 1)
+            If (bByNumber = True) Begin
+                If (ColumnTypeArray[iCount].iSQLType = iType) Begin
+                    Function_Return iCount
+                End
+            End
+            Else If (Uppercase(ColumnTypeArray[iCount].sSQLType) = sType) Begin
+                Function_Return iCount
+            End
+        Loop
+        Function_Return -1
+    End_Function
+
     // Internal usage. Use the UtilColumnTypeXXX functions instead.
     Function _UtilColumnType String sDriverID Integer iDbType Integer iType String sType Boolean bIntegerInputType Returns tColumnType
         Integer iValue iSize iCount iStart iItem
@@ -3177,14 +3209,13 @@ Class cBaseDbUpdateFuncLib is a cObject
             Function_Return RetvalType
         End
 
+        // By the type number, or by the type name in any case. (SearchArray on the struct compared the number only,
+        // and a lookup by name passed 0: every name became the type with number 0.)
         Get _UtilEnumerateColumnTypes sDriverID iDbType to ColumnTypeArray
-        Move iType to RetvalType.iSQLType
-        Move sType to RetvalType.sSQLType 
-        Move (SearchArray(RetvalType, ColumnTypeArray)) to iItem
-        
+        Get _UtilColumnTypeFind ColumnTypeArray iType sType bIntegerInputType to iItem
         If (iItem = -1) Begin
             Get _UtilEnumerateDataFlexTypes to ColumnTypeArray
-            Move (SearchArray(RetvalType, ColumnTypeArray)) to iItem
+            Get _UtilColumnTypeFind ColumnTypeArray iType sType bIntegerInputType to iItem
         End
         If (iItem <> -1) Begin
             Move ColumnTypeArray[iItem].sSQLType       to RetvalType.sSQLType
@@ -3259,7 +3290,7 @@ Class cBaseDbUpdateFuncLib is a cObject
                 Move "ASCII"     to ColumnType.sDataFlexType
                 Move sDataType   to ColumnType.sSQLType
                 Move DF_ASCII    to ColumnType.iSQLType
-                Move False       to ColumnType.bCanEditSize
+                Move True        to ColumnType.bCanEditSize
                 Case Break
 
             // DF_BINARY
@@ -3274,7 +3305,7 @@ Class cBaseDbUpdateFuncLib is a cObject
                 Move "Binary"    to ColumnType.sDataFlexType
                 Move sDataType   to ColumnType.sSQLType
                 Move DF_BINARY   to ColumnType.iSQLType
-                Move False       to ColumnType.bCanEditSize
+                Move True        to ColumnType.bCanEditSize
                 Case Break
 
             // DF_DATE
@@ -3289,7 +3320,7 @@ Class cBaseDbUpdateFuncLib is a cObject
                 Move "Date"      to ColumnType.sDataFlexType
                 Move sDataType   to ColumnType.sSQLType
                 Move DF_DATE     to ColumnType.iSQLType
-                Move True        to ColumnType.bCanEditSize
+                Move False       to ColumnType.bCanEditSize
                 Case Break
 
             // DF_DATETIME
@@ -3304,7 +3335,7 @@ Class cBaseDbUpdateFuncLib is a cObject
                 Move "DateTime"  to ColumnType.sDataFlexType
                 Move sDataType   to ColumnType.sSQLType
                 Move DF_DATETIME to ColumnType.iSQLType
-                Move True        to ColumnType.bCanEditSize
+                Move False       to ColumnType.bCanEditSize
                 Case Break
 
             // DF_NUMERIC
@@ -3323,7 +3354,7 @@ Class cBaseDbUpdateFuncLib is a cObject
                 Move "Numeric"   to ColumnType.sDataFlexType
                 Move "Numeric"   to ColumnType.sSQLType
                 Move SQL_NUMERIC to ColumnType.iSQLType
-                Move False       to ColumnType.bCanEditSize
+                Move True        to ColumnType.bCanEditSize
                 Case Break
 
             // DF_TEXT
@@ -3338,7 +3369,7 @@ Class cBaseDbUpdateFuncLib is a cObject
                 Move "Text"      to ColumnType.sDataFlexType
                 Move sDataType   to ColumnType.sSQLType
                 Move DF_TEXT     to ColumnType.iSQLType
-                Move False       to ColumnType.bCanEditSize
+                Move True        to ColumnType.bCanEditSize
                 Case Break
 
             Case Else
@@ -3780,7 +3811,7 @@ Class cBaseDbUpdateFuncLib is a cObject
                             Get paSQLQueryMessages of ghoDbUpdateHandler to asSQLQueryMessages
                         End
                         for jCount from 1 to iMsgs
-                            Get SqlGetMessage of hoStmt i to sMessage
+                            Get SqlGetMessage of hoStmt jCount to sMessage
                             Get RemoveComponentIdentifier of hoStmt sMessage to sMessage
                             If (bShowProgress = True) Begin
                                 If (Active_State(ghoStatusPanel)) Begin
@@ -3982,7 +4013,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
         Get Error_Report_Mode to iErrorMode
         If (iErrorMode = DUF_ERROR_NO_REPORT) Begin
-            Set Private.pbProcessingError to False
+            Set pbProcessingError to False
             Procedure_Return
         End
 
@@ -4053,14 +4084,14 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return bFound
     End_Function
 
-    // Checks that the RootName points to a .dat file and that the .dat file exists on disk.
+    // Checks that the RootName points to a .dat file and that the .dat file exists in a folder of the data path.
+    // (The whole data path was taken for one folder name: with two folders no file was found.)
     Function _DatFileExists Handle hTable Returns Boolean
         Boolean bExists
-        String sDataPath sRootName sNoDriverRootname
+        String sRootName sNoDriverRootname
         Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
         Get _TableNameOnly sRootName to sNoDriverRootname
-        Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
-        File_Exist (sDataPath + "\" + sNoDriverRootname + ".dat") bExists
+        Get _UtilEmbeddedTableFileExists sNoDriverRootname to bExists
         Function_Return bExists
     End_Function
     
@@ -4073,22 +4104,30 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return bFound
     End_Function
 
-    // Checks to see if the .int file actually exists in the Data folder.
+    // Checks to see if the .int file actually exists in a folder of the data path. (The whole data path was taken
+    // for one folder name.)
     Function _IntFileExists Handle hTable Returns Boolean
-        Boolean bExists bIsIntFile
-        String sDataPath sIntFileName
-        Integer iPos
-        
+        Boolean bExists
+        String sDataPath sIntFileName sFolder
+        Integer iPos iPaths iPath
+
         Move False to bExists
-        Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
         Get_Attribute DF_FILE_ROOT_NAME of hTable to sIntFileName
         Get _TableNameOnly sIntFileName to sIntFileName
         Move (Pos(".int", Lowercase(sIntFileName))) to iPos
         If (iPos = 0) Begin
             Move (sIntFileName + ".int") to sIntFileName
         End
-        File_Exist (sDataPath + "\" + sIntFileName) bExists
-        Function_Return bExists    
+        Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
+        Get CountOfPaths of (phoWorkspace(ghoApplication)) sDataPath to iPaths
+        For iPath from 1 to iPaths
+            Get PathAtIndex of (phoWorkspace(ghoApplication)) sDataPath iPath to sFolder
+            Get vFolderFormat sFolder to sFolder
+            If (bExists = False) Begin
+                Get vFilePathExists (sFolder + sIntFileName) to bExists
+            End
+        Loop
+        Function_Return bExists
     End_Function
         
     // Returns True if the hTable's RootName has a driver <> DataFlex
@@ -4321,10 +4360,10 @@ Class cBaseDbUpdateFuncLib is a cObject
             Move (bIsAliasSQL = bIsMasterSQL) to bOK
         End
         
-        // Checks that the .int file exists in the Data folder
-        If (bIsIntFile = True) Begin
-            Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
-            File_Exist (sDataPath + "\" + sNoDriverRootnameAlias) bOK
+        // Checks that the .int file exists in the Data folder - after the master checks, which it must not overwrite,
+        // and by the name with ".int". (It replaced their verdict, and looked for the name without ".int".)
+        If (bOK = True and bIsIntFile = True) Begin
+            Get _IntFileExists hTable to bOK
         End
 
         If (bOK = False) Begin
@@ -4362,14 +4401,17 @@ Class cBaseDbUpdateFuncLib is a cObject
     Function phoLogFile Returns Handle
         Handle hoLogFile   
         Boolean bErr
+        Integer iMode
         
         Move Err to bErr
         Move 0 to hoLogFile
+        // The mode it found is put back: a caller's quiet section stays quiet. (It set "report" in any case.)
+        Get Error_Report_Mode to iMode
         Set Error_Report_Mode to DUF_ERROR_NO_REPORT  
         Send Ignore_Error of Error_Object_Id DFERR_BAD_MESSAGE
         Delegate Get phoLogFile to hoLogFile
         Send Trap_Error of Error_Object_Id DFERR_BAD_MESSAGE
-        Set Error_Report_Mode to DUF_ERROR_REPORT
+        Set Error_Report_Mode to iMode
         Move bErr to Err
         
         Function_Return hoLogFile
@@ -4377,10 +4419,12 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pnCurrentVersionUpdate Returns Number
         Number nCurrentVersionUpdate
+        Integer iMode
 
+        Get Error_Report_Mode to iMode
         Set Error_Report_Mode to DUF_ERROR_NO_REPORT
         Delegate Get pnCurrentVersionUpdate to nCurrentVersionUpdate
-        Set Error_Report_Mode to DUF_ERROR_REPORT
+        Set Error_Report_Mode to iMode
 
         Function_Return nCurrentVersionUpdate
     End_Function
@@ -4388,6 +4432,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     Procedure LogError String sText Boolean bError
         Handle hoLogFile
         Number nCurrentVersionUpdate
+        Integer iMode
 
         Get phoLogFile to hoLogFile
         If (hoLogFile = 0) Begin
@@ -4395,9 +4440,10 @@ Class cBaseDbUpdateFuncLib is a cObject
         End
         Get pnCurrentVersionUpdate to nCurrentVersionUpdate
 
+        Get Error_Report_Mode to iMode
         Set Error_Report_Mode to DUF_ERROR_NO_REPORT
         Send LogError of hoLogFile nCurrentVersionUpdate 0 sText 0 bError
-        Set Error_Report_Mode to DUF_ERROR_REPORT
+        Set Error_Report_Mode to iMode
     End_Procedure
 
     Function pbContinueOnError Returns Boolean
@@ -4495,6 +4541,9 @@ Class cBaseDbUpdateFuncLib is a cObject
     // Sample: Get _UtilChangeSourceCodeLine "C:\DataFlex 18.2 Examples\Order Entry\Data\Order.int" "SERVER_NAME SERVER=(local)\SQLEXPRESS1" "SERVER_NAME DFCONNID=ChinookDb"
     // Pass "True" for the bShowResult if you want to see the result while it works. Showln will then be used for output
     // Returns True if no errors occured.
+    // The file is written only when a line changed, and without the empty read at its end. True when it ran without
+    // an error, whether a line changed or not. (It answered "a line changed" - a caller took "nothing to change"
+    // for a failure - and wrote the file back every time, one blank line longer.)
     Function _UtilChangeSourceCodeLine String sFileName String sChangeFrom String sChangeTo Boolean bShowResult Returns Boolean
         Integer iCh iRow iItems iCount
         String sValue sRow
@@ -4554,6 +4603,15 @@ Class cBaseDbUpdateFuncLib is a cObject
             Increment iRow
         Loop
         Send Seq_Close_Channel iCh
+        If (bFileChange = False) Begin
+            Function_Return True
+        End
+        // The read after the last line gives an empty line: it is no line of the file.
+        If (iRow > 0) Begin
+            If (sFileArray[iRow - 1] = "") Begin
+                Move (ResizeArray(sFileArray, (iRow - 1))) to sFileArray
+            End
+        End
 
 //        Sleep 1 // Wait for Windows to close the file
 
@@ -4570,7 +4628,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         Loop
         Send Seq_Close_Channel iCh
 
-        Function_Return bFileChange
+        Function_Return True
     End_Function
 
     // This message creates an error log in the "Home" folder named "SQLErrorLog.txt",
@@ -4713,10 +4771,9 @@ Class cBaseDbUpdateFuncLib is a cObject
             Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
             Move (not(sRootName contains ":")) to bIsEmbedded
         End
+        // In any folder of the data path. (The whole data path was taken for one folder name.)
         If (bIsEmbedded = True) Begin
-            Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
-            Get vFolderFormat sDataPath to sDataPath
-            Get vFilePathExists (sDataPath + sRootName + ".dat") to bIsEmbedded
+            Get _UtilEmbeddedTableFileExists sRootName to bIsEmbedded
         End
 
         Function_Return bIsEmbedded
