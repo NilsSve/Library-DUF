@@ -9,7 +9,7 @@ AND parent_column_id = (
     where object_id = object_id('TABLE_NAME_XXX')
 	and name = 'COLUMN_NAME_XXX'
 )
-set @sql = N'alter table TABLE_NAME_XXX drop constraint ' + @default
+set @sql = N'alter table ' + quotename(N'TABLE_NAME_XXX') + N' drop constraint ' + quotename(@default)
 exec sp_executesql @sql
 ALTER TABLE [TABLE_NAME_XXX]
-DROP COLUMN COLUMN_NAME_XXX 
+DROP COLUMN [COLUMN_NAME_XXX] 

@@ -802,7 +802,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Integer iDbType iLength iDecimals iDriver
         String sStmt sAlterTable sAddColumn sVal sDataType sLengthAndDecimals sColumnValue
         String sDriverID sNotNull sOrgTableName
-        Boolean bOK bInitializeValue bRetval bFixed bDriverIgnoreErrorState
+        Boolean bOK bInitializeValue bRetval bFixed bDriverIgnoreErrorState bValueOK
         Handle hTable
 
         Move sTableName to sOrgTableName
@@ -860,15 +860,17 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         // By the table's name: the table need not be in Filelist.cfg. (Through a free slot, whose name is "", the
         // statement was "UPDATE  SET ...", and the value was not written.)
+        Move True to bValueOK
         If (bInitializeValue = True and Err = False) Begin
-            Get SqlColumnUpdateValueByTableName sOrgTableName sColumnName sColumnValue to bRetval
+            Get SqlColumnUpdateValueByTableName sOrgTableName sColumnName sColumnValue to bValueOK
         End
 
         If (Err = False) Begin
             Get SqlUtilAdjustAuxFiles hTable sTableName sColumnName to bOK
         End
 
-        Move (not(Err)) to bRetval
+        // A first value that was not written makes it no success. (The answer of the value step was thrown away.)
+        Move (not(Err) and bValueOK) to bRetval
 
         // We also need to remove the cache-file since the table has been changed
         Get _UtilDeleteCacheFile sTableName to bOK
@@ -910,10 +912,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         // If MySQL and DAW's ODBC driver is used we need to do it slightly different.
         If (iDbType = EN_DbTypeMySQL) Begin
             Get _SqlFindKeyWord CI_SQL_SAFE_UPDATES to sSqlSafe_Updates
-            Move (sSet * sSqlSafe_Updates + "=0;" * sUpdate * sTableName * sSet * sColumnName + "='" + sColumnValue + "'") to sStmt
+            Move (sSet * sSqlSafe_Updates + "=0;" * sUpdate * sTableName * sSet * SqlQuotedName(Self, iDbType, sColumnName) + "='" + sColumnValue + "'") to sStmt
         End
         Else Begin
-            Move (sNoCountOn * sUpdate * sTableName * sSet * sColumnName + "='" + sColumnValue + "'") to sStmt
+            // The column name in brackets for MS SQL, as in the ADD. (A name with a blank got its column, not its value.)
+            Move (sNoCountOn * sUpdate * sTableName * sSet * SqlQuotedName(Self, iDbType, sColumnName) + "='" + sColumnValue + "'") to sStmt
         End
 
         Send SqlUtilExecuteQuery sStmt sDriverID
@@ -980,6 +983,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get _SqlFindKeyWord CI_SQLAlterTable  to sAlterTable
         Get _SqlFindKeyWord CI_SQLAlterColumn to sAlterColumn
         Get SQLUtilDefaultNullValue sDriverID iDbType iDataType to sNotNull
+        // MS SQL takes no DEFAULT in ALTER COLUMN: the NULL rule only, and the column keeps the default it has. (Every
+        // change was refused: "Incorrect syntax near the keyword 'DEFAULT'".)
+        If (iDbType = EN_DbTypeMSSQL) Begin
+            Get _SqlFindKeyWord CI_SQLNotNull to sNotNull
+        End
 
         Get UtilColumnTypeFixed sDriverID iDbType iDataType to bFixed
         If (bFixed = False) Begin
