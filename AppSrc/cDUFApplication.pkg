@@ -25,10 +25,8 @@ Class cDUFApplication is a cRDCApplication
     End_Procedure
 
     Procedure OnCreate
-        Integer eOpened iRetval
         Handle hoCmdLine hoIniFile
         String sArgument sPath sWsFile sFileList
-        Boolean bExists
 
         Get phoCommandLine to hoCmdLine
         Get Argument of hoCmdLine 1 to sArgument
@@ -109,7 +107,7 @@ Class cDUFApplication is a cRDCApplication
         String sPath sSQLConnectionsIniName sDataPath sHome sDriverID sServer sOrgOpenPath
         Boolean bExists bEmbedded bIsSQLDriver bErr bOK bDFConnId
         tSQLConnection SQLConnection
-        Integer iRetval iDriverID iErrorObject iCurrErrorObject
+        Integer iRetval iErrorObject iCurrErrorObject
         
         Move False to bDFConnId
         Move Err to bErr 

@@ -20,7 +20,6 @@ Use cDbUpdateFunctionLibrary.h.pkg
 Class cDbUpdateFunctionLibrary_Mixin is a Mixin
 
     Procedure CreateDbUpdateLibraryProperties
-        Handle hoSQLManagerMT
 
         { Visibility=Private }
         Property String private.psUseDatabase ""
@@ -37,7 +36,6 @@ Class cDbUpdateFunctionLibrary_Mixin is a Mixin
         Property Handle phoSQLManager      (Create(Self,RefClass(cSQLHandleManager)))
 
         { Visibility=Private }
-        Property Handle phoSQLManagerMT
 
         { Visibility=Private }
         Property Handle phoMSSQLHandler    (Create(Self,RefClass(cDUFMSSQLHandler)))

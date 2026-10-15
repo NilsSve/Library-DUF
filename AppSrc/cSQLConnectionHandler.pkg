@@ -26,11 +26,9 @@ Use cSQLConnectionIniFile.pkg
 Use cDbUpdateDatabaseDriver.pkg
 Use vWin32fh.pkg
 
-// The cConnection class is the new SQL connections class for DF 19.
-// If an object of the cConnection class hasn't been instantiated we use a "dummy" class in its place.
+// The cConnection class is the SQL connections class of DataFlex 19 and later.
 #IFNDEF get_ComparetConnectionById
     Use cConnection.pkg
-//    Use cConnectionDUF.pkg
 #ENDIF
 
 // We're making references to this object handle so we need it defined
@@ -136,7 +134,6 @@ Class cSQLConnectionHandler is a cObject
         // When starting a program we might not have a connection id yet. No driver id is the DataFlex driver, as
         // psDriverID says: no login either.
         If (SQLConnection.sDriverID = DATAFLEX_ID or SQLConnection.sDriverID = "") Begin
-//        If (SQLConnection.sConnectionID = "" or SQLConnection.sDriverID = DATAFLEX_ID) Begin
             Procedure_Return
         End
 
@@ -167,10 +164,9 @@ Class cSQLConnectionHandler is a cObject
 
     // Reads the driver .int file and sets class properties of the cDbUpdateFunctionLibrary accordingly.
     Procedure SetupDriverDefaults String sDriverID
-        String sAttributeValue sServer
+        String sAttributeValue
         Integer iDriverID
         Boolean bNULL bSQLDriver
-        Handle hDatabase
         
         Get IsSQLDriver sDriverID to bSQLDriver
         If (bSQLDriver = False) Begin
@@ -187,9 +183,6 @@ Class cSQLConnectionHandler is a cObject
         End
         
         // ToDo: Testing!
-//        Get psServer of ghoDbUpdateFunctionLibrary to sServer
-//        Get SqlUtilDatabaseHandle of ghoDbUpdateFunctionLibrary sDriverID sServer to hDatabase
-//        Set_Attribute DF_DATABASE_IGNORE_WARNINGS of iDriverID hDatabase to True 
 
         // Driver default values for various data types:
         Get_Attribute DF_DRIVER_DEFAULT_DEFAULT_ASCII of iDriverID      to sAttributeValue
@@ -917,14 +910,6 @@ Class cSQLConnectionHandler is a cObject
         Function_Return iRetval
     End_Function
 
-//    Procedure CreateConnParamsFromConnectionString String sDriverID String sConnectionString
-//        tSQLConnection SQLConnection
-//
-//        Set psDriverID to sDriverID
-//        Get DeComposeConnectionString sDriverID sConnectionString to SQLConnection
-//        Send CreateSQLConnection SQLConnection False
-//    End_Procedure
-
     // This is needed when e.g. the connection id we have specified in the program code
     // also exists in e.g. the MSSQLDRV.ini file (can either be local in the Data folder
     // or the one in the DataFlex Bin folder.)
@@ -1075,9 +1060,7 @@ Class cSQLConnectionHandler is a cObject
             Error DFERR_PROGRAM ("The database driver could not be loaded! Connection to database failed." * sDriverID)
             Function_Return False
         End           
-        #IF (!@ > 182)
-            Set_Attribute DF_DRIVER_LOGIN_ON_OPEN of iDriver to True
-        #ENDIF
+        Set_Attribute DF_DRIVER_LOGIN_ON_OPEN of iDriver to True
         
         Get Create (RefClass(cCLIHandler)) to hoCLI
         Set psDriverID of hoCLI            to sDriverID
@@ -1129,7 +1112,9 @@ Class cSQLConnectionHandler is a cObject
     
     #Include ParseKeyWord.pkg
 
-    // To update the SQLSettings.ini file with updated connection data (SQLConnection struct data).
+    // To update the SQLSettings.ini file with updated connection data (SQLConnection struct data). The name is
+    // older than the function: it deletes nothing, it writes the passed connection ID's data into the ini file
+    // and the connection.
     Function DeleteIniFileConnection String sConnectionID Returns Boolean
         Handle hoIniFile
         Integer iIndex

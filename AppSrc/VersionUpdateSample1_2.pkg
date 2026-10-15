@@ -12,13 +12,16 @@
 // All of that functionality has been imported to the cDbUpdateVersion class,
 // for easy access.
 // Aka you don't need to write lines like:
-//   Get ColumnAdd of ghoDbUpdateFunctionLibrary Sys.File_Number "NewColumnName" DF_ASCII 10 0 to bOK
-//   thus leaving out the "of ghoDataBaseFunctionObject" bit.
+//   Get ApiColumnAdd of ghoDbUpdateFunctionLibrary Sys.File_Number "NewColumnName" DF_ASCII 10 0 to bOK
+//   thus leaving out the "of ghoDbUpdateFunctionLibrary" bit.
+Declare_Datafile Customer
 Declare_Datafile OrdSys
 Procedure OnUpdate
     Boolean bOK
 
-    Get ApiTableAttachToSQLTable Customer.File_Number MSSQLDRV_ID True to bOK
-    Get SqlColumnAdd MSSQLDRV_ID OrdSys.File_Number "NewColumnName" SQL_VARCHAR 30 0 to bOK
+    // A table that exists on the SQL server already: an .int file for it, and the Filelist entry points to it.
+    Get ApiTableAttachToSql Customer.File_Number True to bOK
+    // A column for an SQL table: name, DataFlex type, length, decimals.
+    Get SqlColumnAdd OrdSys.File_Number "NewColumnName" DF_ASCII_DUF 30 0 to bOK
 
 End_Procedure

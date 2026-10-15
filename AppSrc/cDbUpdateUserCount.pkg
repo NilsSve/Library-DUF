@@ -165,14 +165,6 @@ Class cDbUpdateUserCount is a cObject
         Property Boolean pbLockHeld False
     End_Procedure
 
-    Function IsProgramRunning Returns Boolean
-        tUserCount UserCount
-
-        Get CheckUserCount to UserCount
-
-        Function_Return (UserCount.iUserCount > 1)
-    End_Function
-
     // Returns the full path of the Application (no trailing "\")
     Function ApplicationPath Returns String
         String sApplicationFileName sPath
@@ -242,52 +234,12 @@ Class cDbUpdateUserCount is a cObject
         Function_Return dwCurrPos
     End_Function
 
-    Function ReadUserCountFile Handle hFile Returns Boolean
-        Integer iReturnValue                               
-        Boolean bOK
-        String  sBuffer
-        Pointer pBuffer
-        String  sSize
-        Pointer pSize
-
-        Move (Repeat((Character(0)),5)) to sBuffer
-        Move (AddressOf(sBuffer)) to pBuffer
-
-        Move (Repeat((Character(0)),4)) to sSize
-        Move (AddressOf(sSize)) to pSize
-
-        Move (Win32_ReadFile(hFile, pBuffer, 1, pSize, 0)) to iReturnValue
-        If (iReturnValue = 0) Begin
-            Move False to bOK
-        End
-        Else Begin
-            Move True to bOK
-        End                 
-        Function_Return bOK
-    End_Function
-
     Function LockUserCountFile Handle hFile dWord dwFilePos Returns Integer
         Integer iReturnValue
 
         Move (Win32_LockFile(hFile, dwFilePos, 0, 1, 0)) to iReturnValue
         Function_Return iReturnValue
     End_Function
-
-    Procedure DoCheckUserCount
-        tUserCount UserCount
-
-        Get CheckUserCount to UserCount
-        // If all is fine, we're done.
-        If (UserCount.iError = 0) Begin
-            Procedure_Return
-        End
-
-        Send UserError (CS_UserCountError * String(UserCount.iError) + "\n" + UserCount.sErrorTxt)
-
-        If (UserCount.iUserCount = CI_UserCountMaxUsers) Begin
-            Abort
-        End
-    End_Procedure
 
     Function CheckUserCount Returns tUserCount
         Handle  hFile

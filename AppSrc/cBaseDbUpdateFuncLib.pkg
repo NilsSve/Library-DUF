@@ -67,14 +67,15 @@ Class cBaseDbUpdateFuncLib is a cObject
         String sGoodCharacters sChar
         Integer iCount iLength
 
-        Move True to bIsDate
+        // Every character is a digit, a dash or a slash; nothing is no date. (The text was cut down to 12
+        // characters on every round, so what stood after character 13 was never looked at, and "" was a date.)
         Move "0123456789-/" to sGoodCharacters
         Move (Length(sDate)) to iLength
+        Move (iLength > 0) to bIsDate
         For iCount from 1 to iLength
-            Move (Left(sDate, 1)) to sChar
-            Move (Mid(sDate, 12, 2)) to sDate
-            Move (sGoodCharacters contains sChar) to bIsDate
-            If (bIsDate = False) Begin
+            Move (Mid(sDate, 1, iCount)) to sChar
+            If (not(sGoodCharacters contains sChar)) Begin
+                Move False to bIsDate
                 Move iLength to iCount
             End
         Loop
@@ -389,7 +390,6 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="Convert to SQL" InitialValue="Default" }
     Procedure Set psSchema String sValue
-        tSQLConnection SQLConnection
         If (ghoSQLConnectionHandler = 0) Begin
             Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
             Procedure_Return
@@ -890,25 +890,6 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return iRetval
     End_Function
 
-    // Returns the index for the passed sTableName
-    // Returns >= 0 if successful. It is e.g. needed to get the SchemaName for a table.
-    Function _SqlUtilEnumerateTableIndex String sTableName String sDriverID Returns Integer
-        Integer iIndex iSize iCount iItem
-        String[] asTablesArray
-        String sDatabase sSchema sVal sConnectionString
-
-        Move -1 to iIndex
-        Get psConnectionString to sConnectionString
-        Get psDatabase to sDatabase
-        Get psSchema   to sSchema
-        Get _SqlUtilEnumerateTables sDriverID sDatabase sSchema to asTablesArray
-        Move (SearchArray(sTableName, asTablesArray, Desktop, (RefFunc(DFSTRICMP)))) to iItem
-        If (iItem <> -1) Begin
-            Move iItem to iIndex
-        End
-        Function_Return iIndex
-    End_Function
-
     // Returns all schemas as a string array for the passed driver id.
     Function SqlUtilEnumerateSchemas String sDriverID Returns String[]
         String[] sReturnArray
@@ -935,8 +916,8 @@ Class cBaseDbUpdateFuncLib is a cObject
     // Returns a string array with all tables for the current database.
     Function _SqlUtilEnumerateTables String sDriverID String sDatabase String sSchema Returns String[]
         String[] asReturnArray
-        String sConnectionString sSelect
-        Integer iSize iCount iDbType
+        String sConnectionString
+        Integer iDbType
         Boolean bOK
 
         If (sDriverID = DATAFLEX_ID) Begin
@@ -1091,7 +1072,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
         Get _SqlCheckCurrentDriver sDriverID to bOK
         If (bOK = False) Begin
-            Error DFERR_PROGRAM ("Unsupported driver. A list of table columns could not be retrieved for:" * sDriverID + ".")
+            Error DFERR_PROGRAM ("Unsupported driver. A list of table indexes could not be retrieved for:" * sDriverID + ".")
             Function_Return asReturnArray
         End
 
@@ -1138,7 +1119,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
         Get _SqlCheckCurrentDriver sDriverID to bOK
         If (bOK = False) Begin
-            Error DFERR_PROGRAM ("Unsupported driver. A list of table columns could not be retrieved for:" * sDriverID + ".")
+            Error DFERR_PROGRAM ("Unsupported driver. A list of table relations could not be retrieved for:" * sDriverID + ".")
             Function_Return sRelationsArray
         End
 
@@ -1228,7 +1209,8 @@ Class cBaseDbUpdateFuncLib is a cObject
                     Readln channel iCh sFileName
                     Get ParseFileExtension sFileName to sExt
                     If (Uppercase(sExt) = "INT") Begin
-                        If (not(Uppercase(sFileName) contains "MSSQLDRV" and Uppercase(sFileName) contains "DB2_DRV" and Uppercase(sFileName) contains "ODBC_DRV")) Begin
+                        // None of the three. ("and" where "or" was meant: no name holds all three, so none was left out.)
+                        If (not(Uppercase(sFileName) contains "MSSQLDRV" or Uppercase(sFileName) contains "DB2_DRV" or Uppercase(sFileName) contains "ODBC_DRV")) Begin
                             Move sFileName to sFilesData[SizeOfArray(sFilesData)]
                         End
                     End
@@ -1241,11 +1223,10 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     // Only done for MSSQLDRV_ID so far...
     Function _SqlEnumerateDatabaseCollations String sDriverID Returns tSQLCollation[]
-        String sSQL sConnectionID sConnectionString sSelect sName sPre
+        String sSQL sConnectionID sConnectionString sSelect sName
         String sDescription sFrom sSys sValue sDescr sPrevious
         Handle hStmt hoSQLManager hoSQLConnect
         Integer iFetchResult iRows iColumn iPos iRow
-        tSQLConnection SQLConnection
         tSQLCollation[] aCollations
         
         If (sDriverID = "") Begin
@@ -1420,29 +1401,6 @@ Class cBaseDbUpdateFuncLib is a cObject
     End_Function
 
     { Visibility=Private }
-    Function _SqlDatabaseSourcesArrayODBC Returns String[]
-        String[] sReturnArray
-        String sDataSource
-        Handle hoSQLHandler
-        Integer iItem
-
-        Get phoODBCSQLHandler to hoSQLHandler
-        Send Ignore_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
-
-        Send SeedDataSources of hoSQLHandler
-
-        Repeat
-            Get DataSources of hoSQLHandler to sDataSource
-            If (Trim(sDataSource) <> "" and not(sDataSource contains "*.")) Begin
-                Move (Trim(sDataSource)) to sReturnArray[iItem]
-                Increment iItem
-            End
-        Until (sDataSource = "")
-
-        Send Trap_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
-
-        Function_Return sReturnArray
-    End_Function
 
     Function _SqlDatabasesArrayODBC Returns tSQLIntTableInfo[]
         String[] sDataSources
@@ -1554,87 +1512,6 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return sReturnArray
     End_Function
 
-    // We might have a split Sql script where the info about which database to use is
-    // put on top of the Sql script, we then need to save it to be able to retrieve it later and
-    // insert it for scriplets to come after the first one.
-    Function _SqlFormatStatement String sStmt Returns String
-        String sUseDatabase sTmp sUseKeyWord sCreateViewKeyWord sDBOKeyWord sNoCountKeyWord sDriverID
-        Integer iStart iEnd iDbType
-        Boolean bOK
-
-        Get piDbType to iDbType
-        Get psDriverID to sDriverID
-        Get _SqlFindKeyWord CI_SQLUse          to sUseKeyWord
-        Get _SqlFindKeyWord CI_SQLSetNoCountOn to sNoCountKeyWord
-        Get _SqlFindKeyWord CI_SQLCreateView   to sCreateViewKeyWord
-        Get _SqlFindKeyWord CI_SQLDBO          to sDBOKeyWord
-        Move (Replaces(" ", sStmt, "")) to sTmp
-        If (Uppercase(sTmp) contains (sUseKeyWord +"[")) Begin
-            Move (Pos("[", (Uppercase(sTmp)))) to iStart
-            Move (Pos("]", sTmp)) to iEnd
-            Move (Mid(sTmp, (iEnd -iStart +1), iStart)) to sUseDatabase
-            Move (sUseKeyWord * sUseDatabase + " ") to sUseDatabase
-            Set Private.psUseDatabase to sUseDatabase
-        End
-        Else Begin
-            Move (Uppercase(sStmt)) to sTmp
-
-            // A "Create View" statement _must_ be the very first words in a Sql statement.
-            If (not(sTmp contains sCreateViewKeyWord)) Begin
-                Get Private.psUseDatabase to sUseDatabase
-                Move (Insert(sUseDatabase, sStmt, 1)) to sStmt
-            End
-
-            // This is a bit special to place here but was done so because it was easier that way.
-            // We will get an error when trying to create a view if it already exists.
-            // So to avoid such errors; we first remove it & then recreate it.
-            Else If (sTmp contains sCreateViewKeyWord) Begin
-                // Make sure we only have one space between statements/words.
-                Move (Replaces("  ", sTmp, " ")) to sTmp
-                Move (Replace(sCreateViewKeyWord, sTmp, "")) to sTmp
-                Move (Trim(sTmp)) to sTmp
-                Move (Pos(" ", sTmp)) to iEnd
-                Move (Left(sTmp, iEnd)) to sTmp
-                If ((not(sTmp contains ("[" + sDBOKeyWord + "]."))) and (not(sTmp contains (sDBOKeyWord + ".")))) Begin
-                    Move (sDBOKeyWord + "." + Trim(sTmp)) to sTmp
-                End
-                Move (Trim(sTmp)) to sTmp
-                // Remove data view as it already exists!
-                Get _SqlViewRemove sDriverID sTmp to bOK
-            End
-        End
-
-        Function_Return sStmt
-    End_Function
-
-    // First deletes the data cache file and then drops the passed Sql data view.
-    Function _SqlViewRemove String sDataView Returns Boolean
-        String sDriverID sSQLString sDropViewKeyWord
-        Integer iRetval
-        Boolean bOK
-
-        Get psDriverID to sDriverID
-        Get _UtilDeleteCacheFile sDataView to iRetval
-
-        Get _SqlFindKeyWord CI_SQLDropView to sDropViewKeyWord
-        Move (sDropViewKeyWord * String(sDataView)) to sSQLString
-        Set psSQLStatementString to sSQLString
-
-        // As we don't check if the view exist or not, it might happen
-        // that it doesn't and that would through an error, so guard for that eventuality (just ignore it).
-        Move False to Err
-        Set Error_Report_Mode to DUF_ERROR_NO_REPORT
-        Send SqlUtilExecuteQuery sSQLString sDriverID
-        Set Error_Report_Mode to DUF_ERROR_REPORT
-        Move 0 to LastErr
-
-        // We also need to remove the cache-file since the table has been changed
-        Get _UtilDeleteCacheFile sDataView to bOK
-        Send ResetFillSQLTables
-
-        Function_Return (Err = False)
-    End_Function
-
     // Returns the proper Sql language key word(s) for the passed SQL key-word constant
     Function _SqlFindKeyWord Integer iSQLKeywordConstant Returns String
         String sRetval
@@ -1724,25 +1601,6 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return sRetval
     End_Function
 
-    // Helper function to create a SQL statement like;
-    // "SELECT * FROM SYS.INDEXES WHERE NAME = MyIndexName AND OBJECT_ID = OBJECT_ID([MySchmaName].[MyTableName])"
-    // Used for checking if an index exists.
-    Function _SqlQueryIfIndexExists String sSchemaName String sTableName String sIndexName Returns String
-        String sRetval sSelect sFrom sSysIndexes sWhere sObjectID sAnd sName
-
-        Get _SqlFindKeyWord CI_SQLSelect to sSelect
-        Get _SqlFindKeyWord CI_SQLFrom to sFrom
-        Get _SqlFindKeyWord CI_SQLSysIndexes to sSysIndexes
-        Get _SqlFindKeyWord CI_SQLWhere to sWhere
-        Get _SqlFindKeyWord CI_SQLObjectID to sObjectID
-        Get _SqlFindKeyWord CI_SQLAND to sAnd
-        Get _SqlFindKeyWord CI_SQLName to sName
-
-        Move (sSelect * String("*") * sFrom * sSysIndexes * sWhere * sName * "=" * sIndexName * sAnd * sObjectID * "=([" + sSchemaName + "].[" + sTableName + "])") to sRetval
-
-        Function_Return sRetval
-    End_Function
-
     // Formats a columns iLenght & iDecimal parameters as SQL expects them in a string.
     // E.g. (4,2), where 4 is the iLength and 2 the iDecimals param.
     Function _SqlFormatLengthAndDecimalAsString Integer iLength Integer iDecimals Returns String
@@ -1780,26 +1638,6 @@ Class cBaseDbUpdateFuncLib is a cObject
         End
 
         Function_Return True
-    End_Function
-
-    // Checks that the length parameter has been passed correctly.
-    // This is only of concern for certain SQL data types.
-    Function _SqlCheckLengthParamForDataType Integer iDataType Integer iLen Returns Boolean
-        Integer iLength
-        Boolean bOK bCheckTypeLength
-
-        If (num_arguments > 1) Begin
-            Move iLen to iLength
-        End
-        Move (iDataType = SQL_DECIMAL   or iDataType = SQL_NUMERIC or iDataType = SQL_FLOAT   or iDataType = SQL_INTEGER or;
-              iDataType = SQL_VARBINARY or iDataType = SQL_BINARY  or iDataType = SQL_VARCHAR or iDataType = SQL_CHAR or;
-              iDataType = SQL_BIGINT    or iDataType = SQL_REAL) to bCheckTypeLength
-
-        If (bCheckTypeLength = True) Begin
-            Move (iLength > 0) to bOK
-        End
-
-        Function_Return (bOK = True)
     End_Function
 
     Function _SqlProperTableName String sTableName Returns String
@@ -1904,7 +1742,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     // Used with Embedded SQL statement calls.
     // If the spelling or fieldname doesn't exist, the return value is "" (blank).
     Function _SqlFindColumnName String sTableName String sColumnName Returns String
-        String sRetval sValue sDriverID
+        String sRetval sDriverID
         String[] asColumnNamesArray
         Integer iIndex 
 
@@ -1927,7 +1765,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         Move "" to sRetval
         Get psDriverID to sDriverID
         Get _SqlUtilEnumerateColumns sDriverID sTableName to asColumnNamesArray
-        If (iColumn > -1 and iColumn <= SizeOfArray(asColumnNamesArray)) Begin
+        If (iColumn > -1 and iColumn < SizeOfArray(asColumnNamesArray)) Begin
             Move asColumnNamesArray[iColumn] to sRetval
         End
 
@@ -1965,7 +1803,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         String[] asSQLTables
         String sTable sTableType sSchema sDefSchema sComment sTableKeyWord sSysKeyWord sConnectionString
         Handle hoSQLHandler
-        Integer iCount iSize iItem iPos
+        Integer iCount iSize iItem
         Boolean bOK
         tSQLConnection SQLConnection
 
@@ -1992,15 +1830,6 @@ Class cBaseDbUpdateFuncLib is a cObject
         Send Ignore_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
         Move SQLConnection.sConnectionString to sConnectionString
         // 2020-03-14 This was not correct when testing a MS-SQL ODBC driver connection from CMOS.
-//        If (SQLConnection.sDriverID = ODBC_DRV_ID) Begin
-//            If (Uppercase(sConnectionString) contains CS_SQLIniDSNKeyword) Begin
-//                Move (Pos(";", sConnectionString)) to iPos
-//                If (iPos > 0) Begin
-//                    Move (Left(sConnectionString, (iPos - 1))) to sConnectionString
-//                    Move (Trim(sConnectionString)) to sConnectionString
-//                End
-//            End
-//        End
 
         Get EnumerateTables of hoSQLHandler sConnectionString to iSize
         Move False to Err
@@ -2034,51 +1863,8 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return asSQLTables
     End_Function
 
-    Function _SqlProcedureArrayDAW String sStmt String sArgument Returns String[]
-        String[] sReturnArray
-        String sValue
-        Handle hoSQLHandler hoSQLConnect hStmt
-        Integer iRetval iCols iFetchResult
-        tSQLConnection SQLConnection
-
-        Get phoSQLManager to hoSQLHandler
-        Get pSQLConnection of ghoSQLConnectionHandler to SQLConnection
-        Get SqlConnect of hoSQLHandler SQLConnection.sDriverID SQLConnection.sConnectionString to hoSQLConnect
-
-        If (hoSQLConnect <> 0) Begin
-            Get SqlOpen of hoSQLConnect to hStmt
-            If (hStmt <> 0) Begin
-                Send SqlSetProcedurename of hStmt sStmt
-                If (sArgument <> "") Begin
-                    Send SqlSetArgument  of hStmt 1 sArgument
-                End
-
-                Send SqlCall             of hStmt
-                Get SqlReturnValue       of hStmt to iRetval
-                If (iRetval = 0) Begin
-                    Repeat
-                        Get SQLGetStmtAttribute of hStmt SqlSTMTATTRIB_COLUMNCOUNT to iCols
-                        If (iCols > 0) Begin
-                            Repeat
-                                Get SqlFetch of hStmt to iFetchResult
-                                If (iFetchResult <> 0) Begin
-                                    Get SqlColumnValue of hStmt 1 to sValue
-                                    Move (Trim(sValue)) to sReturnArray[SizeOfArray(sReturnArray)]
-                                End
-                            Until (iFetchResult = 0)
-                        End
-                        Get SqlNextResultSet of hStmt to iRetval
-                    Until (iRetval = 0)
-                    Send SqlClose of hStmt
-                End
-            End
-            Send SqlDisconnect of hoSQLConnect
-        End
-        Function_Return sReturnArray
-    End_Function
-
     Function _SqlUtilUpdateIntFile Integer hTable Returns Boolean
-        String sOrgFormat sNewFormat sRootName sTableName sPhysicalFileName sDriverID sDataPath
+        String sOrgFormat sNewFormat sRootName sTableName sDriverID
         Boolean bOpened bOK
 
         // ToDo: This needs further investigation but for now we just skip CodeMast & CodeType .int files update...
@@ -2086,9 +1872,6 @@ Class cBaseDbUpdateFuncLib is a cObject
         // which makes the program unable to run because they can't be opened.
         // Also note that there is another helper function "UtilTableCreateCodeMastCodeTypeIntFiles" to create
         // proper .int files for the two tables.
-//        If (Uppercase(sTableName) = "CODETYPE" or Uppercase(sTableName) = "CODEMAST") Begin
-//            Function_Return True
-//        End
 
         Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
         Get _TableNameOnly sRootName to sTableName
@@ -2097,7 +1880,6 @@ Class cBaseDbUpdateFuncLib is a cObject
         Get AutoConnectionIDLogin to bOK
 
         // It seems this can be called to quickly; causing a 13001 error "Cannot open cache file for write"
-//        Sleep 1  
         Get _UtilDeleteCacheFile sTableName to bOK
         Get_Attribute DF_FILE_OPENED of hTable to bOpened
         If (bOpened = False) Begin
@@ -2189,7 +1971,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         Boolean bOK bExists bUseConnectionID bOpen 
         String sDataPath sRootName sLogicalName sPhysicalFileName sConnectionString sTableName sSchemaName sANSI_OEM 
         String[] asIndexArray
-        Integer iCount iCh iSize iPos
+        Integer iCount iCh iSize iRetval
         Handle hTableOrg
 
         Move (Trim(sConnectionID) <> "") to bUseConnectionID
@@ -2223,11 +2005,11 @@ Class cBaseDbUpdateFuncLib is a cObject
             // If the .int file already exists; we rename it to "FileName" + ".bak"
             Get vFilePathExists (sDataPath + sPhysicalFileName) to bExists
             If (bExists = True) Begin
-                Get vRenameFile (sDataPath + sPhysicalFileName) (sDataPath + sPhysicalFileName + ".bak") to bOK
+                Get vRenameFile (sDataPath + sPhysicalFileName) (sDataPath + sPhysicalFileName + ".bak") to iRetval
             End
         End 
         Else Begin
-            Get vDeleteFile (sDataPath + sPhysicalFileName) to bOK
+            Get vDeleteFile (sDataPath + sPhysicalFileName) to iRetval
         End
 
         Get _UtilDeleteCacheFile sTableName to bOK
@@ -2295,7 +2077,6 @@ Class cBaseDbUpdateFuncLib is a cObject
         End
 
         // Wait a sec for Windows to finish writing the file:
-//        Sleep 1
 
         Function_Return (Err = False)
     End_Function 
@@ -2303,7 +2084,6 @@ Class cBaseDbUpdateFuncLib is a cObject
     // Simplier version of the _SqlUtilCreateIntFile. It can be used if there might be something wrong with the .int file and it needs
     // to be refreshed by the driver. 
     Function _SqlUtilRefreshIntFile Handle hTable String sDriverID String sConnectionID Boolean bAnsi Boolean bSysFile Returns Boolean        
-        String sOrgFormat sNewFormat
         Boolean bErr
         Integer iLastErr iErrLine
         
@@ -2358,7 +2138,6 @@ Class cBaseDbUpdateFuncLib is a cObject
     Procedure UtilFillSQLTables
         String[] asSQLTables
         String sDataBase
-        Integer iSize iCount
 
         Get psDatabase to sDataBase
         If (sDataBase = "") Begin
@@ -2379,7 +2158,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         tFilelist[] Tables
         String sRootName sLogicalName sDisplayName sDriver sNoDriverRootname
         Handle hTable
-        Integer iItem iCount iLastErr iErrLine
+        Integer iItem iLastErr iErrLine
         Boolean bIsSystem bIsAlias bOpened bErr
         
         Move 0 to iItem
@@ -2451,9 +2230,9 @@ Class cBaseDbUpdateFuncLib is a cObject
     // Finds the corresponding Master table for the passed Alias handle
     Function UtilAliasToMasterTableHandle Handle hTable Returns Handle
         Handle hMasterTable
-        String sDriver sRootNameAlias sNoDriverRootnameAlias
+        String sRootNameAlias sNoDriverRootnameAlias
         Boolean bIsAlias bFound bIsIntTable
-        Integer iSize iCount iItem 
+        Integer iItem
         tFilelistLogicalName[] FilelistLogicalTables
         tFilelistLogicalName FileListTable
         
@@ -2482,7 +2261,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return hMasterTable
     End_Function
      
-    Function pFilelistLogicalTables Returns tFilelistLogicalName
+    Function pFilelistLogicalTables Returns tFilelistLogicalName[]
         tFilelistLogicalName[] FilelistLogicalTables
         tFilelist[] FileListTables
         Integer iSize iCount
@@ -2667,7 +2446,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     // if it is an SQL table
     Function _UtilTableExists Handle hTable Returns Boolean
         Boolean bExists bIsSQLTable
-        String sDataPath sRootName
+        String sRootName
 
         Get _UtilTableNumberIsInUse hTable to bExists
         If (bExists = False) Begin
@@ -2697,7 +2476,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     // if embedded database, that the .dat file exists on disk.
     Function _UtilTableExists_Ex Handle hTable Returns Boolean
         Boolean bExists bIsSQLTable
-        String sDataPath sRootName
+        String sRootName
 
         Get _UtilTableNumberIsInUse hTable to bExists
         If (bExists = False) Begin
@@ -2743,7 +2522,8 @@ Class cBaseDbUpdateFuncLib is a cObject
     End_Function
 
     // Returns number of tables in filelist.cfg.
-    Function _UtilNumberOfFileListTables Returns Boolean
+    // The number of Filelist entries in use. (It was declared Returns Boolean; the number came through as it was.)
+    Function _UtilNumberOfFileListTables Returns Integer
         Handle hTable
         Integer iCount
 
@@ -2829,176 +2609,6 @@ Class cBaseDbUpdateFuncLib is a cObject
         Integer i
 
         #Include DB2_DRV_DriverDef.inc
-//        Move SQL_DBCLOB         to ColumnType[i].iSQLType
-//        Move "DBCLOB"           to ColumnType[i].sSQLType
-//        Move DF_TEXT            to ColumnType[i].iDataFlexType
-//        Move "Text"             to ColumnType[i].sDataFlexType
-//        Move "16384"            to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_BIGINT         to ColumnType[i].iSQLType
-//        Move "BIGINT"           to ColumnType[i].sSQLType
-//        Move DF_BCD             to ColumnType[i].iDataFlexType
-//        Move "Numeric"          to ColumnType[i].sDataFlexType
-//        Move "14.0"             to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_BLOB           to ColumnType[i].iSQLType
-//        Move "BLOB"             to ColumnType[i].sSQLType
-//        Move DF_BINARY          to ColumnType[i].iDataFlexType
-//        Move "BINARY"           to ColumnType[i].sDataFlexType
-//        Move "16384"            to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_CHAR           to ColumnType[i].iSQLType
-//        Move "CHAR"             to ColumnType[i].sSQLType
-//        Move DF_ASCII           to ColumnType[i].iDataFlexType
-//        Move "ASCII"            to ColumnType[i].sDataFlexType
-//        Move "254"              to ColumnType[i].sPrecision
-//        Increment i
-//
-//        // ToDo: We need to change the sType when using this!
-//        Move SQL_CHARBIT            to ColumnType[i].iSQLType
-//        Move "CHAR FOR BIT DATA"    to ColumnType[i].sSQLType
-//        Move DF_BINARY              to ColumnType[i].iDataFlexType
-//        Move "Binary"               to ColumnType[i].sDataFlexType
-//        Move "254"                  to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_DATE           to ColumnType[i].iSQLType
-//        Move "DATE"             to ColumnType[i].sSQLType
-//        Move DF_DATE            to ColumnType[i].iDataFlexType
-//        Move "Date"             to ColumnType[i].sDataFlexType
-//        Move "6.0"              to ColumnType[i].sPrecision
-//        Move True               to ColumnType[i].bCanEditSize
-//        Increment i
-//
-//        Move SQL_CLOB           to ColumnType[i].iSQLType
-//        Move "CLOB"             to ColumnType[i].sSQLType
-//        Move DF_TEXT            to ColumnType[i].iDataFlexType
-//        Move "Text"             to ColumnType[i].sDataFlexType
-//        Move "16384"            to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_DECIMAL        to ColumnType[i].iSQLType
-//        Move "DECIMAL"          to ColumnType[i].sSQLType
-//        Move DF_BCD             to ColumnType[i].iDataFlexType
-//        Move "Numeric"          to ColumnType[i].sDataFlexType
-//        Move "14.8"             to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_DOUBLE         to ColumnType[i].iSQLType
-//        Move "DOUBLE"           to ColumnType[i].sSQLType
-//        Move DF_BCD             to ColumnType[i].iDataFlexType
-//        Move "Numeric"          to ColumnType[i].sDataFlexType
-//        Move "14.8"             to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_FLOAT          to ColumnType[i].iSQLType
-//        Move "FLOAT"            to ColumnType[i].sSQLType
-//        Move DF_BCD             to ColumnType[i].iDataFlexType
-//        Move "Numeric"          to ColumnType[i].sDataFlexType
-//        Move "14.8"             to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_GRAPHIC        to ColumnType[i].iSQLType
-//        Move "GRAPHIC"          to ColumnType[i].sSQLType
-//        Move DF_ASCII           to ColumnType[i].iDataFlexType
-//        Move "ASCII"            to ColumnType[i].sDataFlexType
-//        Move "255"              to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_INTEGER        to ColumnType[i].iSQLType
-//        Move "INTEGER"          to ColumnType[i].sSQLType
-//        Move DF_BCD             to ColumnType[i].iDataFlexType
-//        Move "Numeric"          to ColumnType[i].sDataFlexType
-//        Move "9.0"              to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_LONGVARCHAR    to ColumnType[i].iSQLType
-//        Move "LONG VARCHAR"     to ColumnType[i].sSQLType
-//        Move DF_TEXT            to ColumnType[i].iDataFlexType
-//        Move "TEXT"             to ColumnType[i].sDataFlexType
-//        Move "32000"            to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_LONGVARCHARBIT to ColumnType[i].iSQLType
-//        Move "LONG VARCHAR BIT" to ColumnType[i].sSQLType
-//        Move DF_TEXT            to ColumnType[i].iDataFlexType
-//        Move "TEXT"             to ColumnType[i].sDataFlexType
-//        Move "32000"            to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_LONGVARGRAPHIC to ColumnType[i].iSQLType
-//        Move "LONG VARGRAPHIC"  to ColumnType[i].sSQLType
-//        Move DF_TEXT            to ColumnType[i].iDataFlexType
-//        Move "TEXT"             to ColumnType[i].sDataFlexType
-//        Move "32000"            to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_NUMERIC        to ColumnType[i].iSQLType
-//        Move "NUMERIC"          to ColumnType[i].sSQLType
-//        Move DF_BCD             to ColumnType[i].iDataFlexType
-//        Move "Numeric"          to ColumnType[i].sDataFlexType
-//        Move "14.8"             to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_REAL           to ColumnType[i].iSQLType
-//        Move "REAL"             to ColumnType[i].sSQLType
-//        Move DF_BCD             to ColumnType[i].iDataFlexType
-//        Move "Numeric"          to ColumnType[i].sDataFlexType
-//        Move "14.8"             to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_SMALLINT       to ColumnType[i].iSQLType
-//        Move "SMALLINT"         to ColumnType[i].sSQLType
-//        Move DF_BCD             to ColumnType[i].iDataFlexType
-//        Move "NUMERIC"          to ColumnType[i].sDataFlexType
-//        Move "5.0"              to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_TIME           to ColumnType[i].iSQLType
-//        Move "TIME"             to ColumnType[i].sSQLType
-//        Move DF_ASCII           to ColumnType[i].iDataFlexType
-//        Move "ASCII"            to ColumnType[i].sDataFlexType
-//        Move "19.0"             to ColumnType[i].sPrecision
-//        Move True               to ColumnType[i].bCanEditSize
-//        Increment i
-//
-//        Move SQL_TIMESTAMP      to ColumnType[i].iSQLType
-//        Move "TIMESTAMP"        to ColumnType[i].sSQLType
-//        Move DF_DATETIME        to ColumnType[i].iDataFlexType
-//        Move "DATETIME"         to ColumnType[i].sDataFlexType
-//        Move "23.6"             to ColumnType[i].sPrecision
-//        Move True               to ColumnType[i].bCanEditSize
-//        Increment i
-//
-//        Move SQL_VARCHAR        to ColumnType[i].iSQLType
-//        Move "VARCHAR"          to ColumnType[i].sSQLType
-//        Move DF_TEXT            to ColumnType[i].iDataFlexType
-//        Move "TEXT"             to ColumnType[i].sDataFlexType
-//        Move "16384"            to ColumnType[i].sPrecision
-//        Increment i
-//
-//        // ToDo: We need to change the sType when using this!
-//        Move SQL_VARCHARBIT         to ColumnType[i].iSQLType
-//        Move "VARCHAR FOR BIT DATA" to ColumnType[i].sSQLType
-//        Move DF_TEXT                to ColumnType[i].iDataFlexType
-//        Move "TEXT"                 to ColumnType[i].sDataFlexType
-//        Move "16384"                to ColumnType[i].sPrecision
-//        Increment i
-//
-//        Move SQL_VARGRAPHIC     to ColumnType[i].iSQLType
-//        Move "VARGRAPHIC"       to ColumnType[i].sSQLType
-//        Move DF_TEXT            to ColumnType[i].iDataFlexType
-//        Move "TEXT"             to ColumnType[i].sDataFlexType
-//        Move "16384"            to ColumnType[i].sPrecision
-//
-//        Move SQL_XML            to ColumnType[i].iSQLType
-//        Move "XML"              to ColumnType[i].sSQLType
-//        Move DF_TEXT            to ColumnType[i].iDataFlexType
-//        Move "TEXT"             to ColumnType[i].sDataFlexType
-//        Move "16384"            to ColumnType[i].sPrecision
 
         Function_Return aColumnType
     End_Function
@@ -3011,256 +2621,6 @@ Class cBaseDbUpdateFuncLib is a cObject
 
         If (sDriverID = MSSQLDRV_ID) Begin
             #Include MSSQLDRV_DriverDef.inc
-
-//            Move SQL_BIGINT         to ColumnType[i].iSQLType
-//            Move "bigint"           to ColumnType[i].sSQLType
-//            Move DF_BCD             to ColumnType[i].iDataFlexType
-//            Move "Numeric"          to ColumnType[i].sDataFlexType
-//            Move "14.0"             to ColumnType[i].sPrecision
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_BINARY         to ColumnType[i].iSQLType
-//            Move "binary"           to ColumnType[i].sSQLType
-//            Move DF_BINARY          to ColumnType[i].iDataFlexType
-//            Move "Binary"           to ColumnType[i].sDataFlexType
-//            Move "8000"             to ColumnType[i].sPrecision
-//            Increment i
-//
-//            Move SQL_BIT            to ColumnType[i].iSQLType
-//            Move "bit"              to ColumnType[i].sSQLType
-//            Move DF_ASCII           to ColumnType[i].iDataFlexType
-//            Move "ASCII"            to ColumnType[i].sDataFlexType
-//            Move "1.0"              to ColumnType[i].sPrecision // In SQL allows "1, 0, or NULL"
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_CHAR           to ColumnType[i].iSQLType
-//            Move "char"             to ColumnType[i].sSQLType
-//            Move DF_TEXT            to ColumnType[i].iDataFlexType
-//            Move "TEXT"             to ColumnType[i].sDataFlexType
-//            Move "8000"             to ColumnType[i].sPrecision
-//            Increment i
-//
-//            Move SQL_DATE           to ColumnType[i].iSQLType
-//            Move "date"             to ColumnType[i].sSQLType
-//            Move DF_DATE            to ColumnType[i].iDataFlexType
-//            Move "Date"             to ColumnType[i].sDataFlexType
-//            Move "6.0"              to ColumnType[i].sPrecision
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_DATETIME       to ColumnType[i].iSQLType
-//            Move "datetime"         to ColumnType[i].sSQLType
-//            Move DF_DATETIME        to ColumnType[i].iDataFlexType
-//            Move "DateTime"         to ColumnType[i].sDataFlexType
-//            Move "23.3"             to ColumnType[i].sPrecision
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_TYPE_TIMESTAMP2 to ColumnType[i].iSQLType
-//            Move "datetime2"         to ColumnType[i].sSQLType
-//            Move DF_DATETIME         to ColumnType[i].iDataFlexType
-//            Move "DateTime"          to ColumnType[i].sDataFlexType
-//            Move "23.6"              to ColumnType[i].sPrecision
-//            Move True                to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_SS_TIMESTAMPOFFSET to ColumnType[i].iSQLType
-//            Move "datetimeoffset"       to ColumnType[i].sSQLType
-//            Move DF_DATETIME            to ColumnType[i].iDataFlexType
-//            Move "DateTime"             to ColumnType[i].sDataFlexType
-//            Move "34.0"                 to ColumnType[i].sPrecision
-//            Move True                   to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_DECIMAL        to ColumnType[i].iSQLType
-//            Move "decimal"          to ColumnType[i].sSQLType
-//            Move DF_BCD             to ColumnType[i].iDataFlexType
-//            Move "Numeric"          to ColumnType[i].sDataFlexType
-//            Move "14.8"             to ColumnType[i].sPrecision
-//            Increment i
-//
-//            Move SQL_FLOAT          to ColumnType[i].iSQLType
-//            Move "float"            to ColumnType[i].sSQLType
-//            Move DF_BCD             to ColumnType[i].iDataFlexType
-//            Move "Numeric"          to ColumnType[i].sDataFlexType
-//            Move "14.8"             to ColumnType[i].sPrecision
-//            Increment i
-//
-//            Move SQL_INTEGER        to ColumnType[i].iSQLType
-//            Move "int"              to ColumnType[i].sSQLType
-//            Move DF_BCD             to ColumnType[i].iDataFlexType
-//            Move "Numeric"          to ColumnType[i].sDataFlexType
-//            Move "8.0"              to ColumnType[i].sPrecision
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_TYPE_MONEY     to ColumnType[i].iSQLType
-//            Move "money"            to ColumnType[i].sSQLType
-//            Move DF_BCD             to ColumnType[i].iDataFlexType
-//            Move "Numeric"          to ColumnType[i].sDataFlexType
-//            Move "15.4"             to ColumnType[i].sPrecision // Studio 18.0 (!)
-//            Increment i
-//
-//            Move SQL_WCHAR          to ColumnType[i].iSQLType
-//            Move "nchar"            to ColumnType[i].sSQLType
-//            Move DF_TEXT            to ColumnType[i].iDataFlexType
-//            Move "TEXT"             to ColumnType[i].sDataFlexType
-//            Move "4000"             to ColumnType[i].sPrecision
-//            Increment i
-//
-//            Move SQL_WLONGVARCHAR   to ColumnType[i].iSQLType
-//            Move "ntext"            to ColumnType[i].sSQLType
-//            Move DF_TEXT            to ColumnType[i].iDataFlexType
-//            Move "TEXT"             to ColumnType[i].sDataFlexType
-//            Move "16384"            to ColumnType[i].sPrecision
-//            Increment i
-//
-//            Move SQL_NUMERIC        to ColumnType[i].iSQLType
-//            Move "numeric"          to ColumnType[i].sSQLType
-//            Move DF_BCD             to ColumnType[i].iDataFlexType
-//            Move "Numeric"          to ColumnType[i].sDataFlexType
-//            Move "14.8"             to ColumnType[i].sPrecision
-//            Increment i
-//
-//            Move SQL_WVARCHAR       to ColumnType[i].iSQLType
-//            Move "nvarchar"         to ColumnType[i].sSQLType
-//            Move DF_TEXT            to ColumnType[i].iDataFlexType
-//            Move "Text"             to ColumnType[i].sDataFlexType
-//            Move "4000"             to ColumnType[i].sPrecision
-//            Increment i
-//
-//            Move SQL_VARCHARMAX     to ColumnType[i].iSQLType
-//            Move "nvarchar(max)"    to ColumnType[i].sSQLType
-//            Move DF_TEXT            to ColumnType[i].iDataFlexType
-//            Move "TEXT"             to ColumnType[i].sDataFlexType
-//            Move "16384"            to ColumnType[i].sPrecision
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_REAL           to ColumnType[i].iSQLType
-//            Move "real"             to ColumnType[i].sSQLType
-//            Move DF_BCD             to ColumnType[i].iDataFlexType
-//            Move "NUMERIC"          to ColumnType[i].sDataFlexType
-//            Move "14.8"             to ColumnType[i].sPrecision
-//            Increment i
-//
-//            Move SQL_TYPE_SMALLDATETIME to ColumnType[i].iSQLType
-//            Move "smalldatetime"        to ColumnType[i].sSQLType
-//            Move DF_DATETIME            to ColumnType[i].iDataFlexType
-//            Move "DATETIME"             to ColumnType[i].sDataFlexType
-//            Move "23.0"                 to ColumnType[i].sPrecision
-//            Move True                   to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_SMALLINT       to ColumnType[i].iSQLType
-//            Move "smallint"         to ColumnType[i].sSQLType
-//            Move DF_BCD             to ColumnType[i].iDataFlexType
-//            Move "NUMERIC"          to ColumnType[i].sDataFlexType
-//            Move "4.0"              to ColumnType[i].sPrecision
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_TYPE_SMALLMONEY to ColumnType[i].iSQLType
-//            Move "smallmoney"        to ColumnType[i].sSQLType
-//            Move DF_BCD              to ColumnType[i].iDataFlexType
-//            Move "NUMERIC"           to ColumnType[i].sDataFlexType
-//            Move "10.0"              to ColumnType[i].sPrecision
-//            Increment i
-//
-//            Move SQL_TEXT           to ColumnType[i].iSQLType
-//            Move "text"             to ColumnType[i].sSQLType
-//            Move DF_TEXT            to ColumnType[i].iDataFlexType
-//            Move "TEXT"             to ColumnType[i].sDataFlexType
-//            Move "8000"             to ColumnType[i].sPrecision
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_TIME           to ColumnType[i].iSQLType
-//            Move "time"             to ColumnType[i].sSQLType
-//            Move DF_ASCII           to ColumnType[i].iDataFlexType
-//            Move "ASCII"            to ColumnType[i].sDataFlexType
-//            Move "19.0"             to ColumnType[i].sPrecision
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_TINYINT        to ColumnType[i].iSQLType
-//            Move "tinyint"          to ColumnType[i].sSQLType
-//            Move DF_BCD             to ColumnType[i].iDataFlexType
-//            Move "NUMERIC"          to ColumnType[i].sDataFlexType
-//            Move "2.0"              to ColumnType[i].sPrecision
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_GUID           to ColumnType[i].iSQLType
-//            Move "uniqueidentifier" to ColumnType[i].sSQLType
-//            Move DF_ASCII           to ColumnType[i].iDataFlexType
-//            Move "ASCII"            to ColumnType[i].sDataFlexType
-//            Move "36"               to ColumnType[i].sPrecision
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_VARBINARY      to ColumnType[i].iSQLType
-//            Move "varbinary"        to ColumnType[i].sSQLType
-//            Move DF_BINARY          to ColumnType[i].iDataFlexType
-//            Move "BINARY"           to ColumnType[i].sDataFlexType
-//            Move "16384"            to ColumnType[i].sPrecision
-//            Increment i
-//
-//            Move SQL_LONGVARBINARY  to ColumnType[i].iSQLType
-//            Move "varbinary(max)"   to ColumnType[i].sSQLType
-//            Move DF_BINARY          to ColumnType[i].iDataFlexType
-//            Move "BINARY"           to ColumnType[i].sDataFlexType
-//            Move "16384"            to ColumnType[i].sPrecision
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_VARCHAR        to ColumnType[i].iSQLType
-//            Move "varchar"          to ColumnType[i].sSQLType
-//            Move DF_TEXT            to ColumnType[i].iDataFlexType // ToDo: Under 255 = ASCII type! How to deal with this?
-//            Move "TEXT"             to ColumnType[i].sDataFlexType
-//            Move "8000"             to ColumnType[i].sPrecision
-//            Increment i
-//
-//            Move SQL_LONGVARCHAR    to ColumnType[i].iSQLType
-//            Move "varchar(max)"     to ColumnType[i].sSQLType
-//            Move DF_TEXT            to ColumnType[i].iDataFlexType
-//            Move "TEXT"             to ColumnType[i].sDataFlexType
-//            Move "16384"            to ColumnType[i].sPrecision
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_SS_XML         to ColumnType[i].iSQLType
-//            Move "xml"              to ColumnType[i].sSQLType
-//            Move DF_TEXT            to ColumnType[i].iDataFlexType
-//            Move "TEXT"             to ColumnType[i].sDataFlexType
-//            Move "16384"            to ColumnType[i].sPrecision
-//            Increment i
-//
-//            Move SQL_TYPE_DATE      to ColumnType[i].iSQLType
-//            Move "DATE"             to ColumnType[i].sSQLType
-//            Move DF_DATE            to ColumnType[i].iDataFlexType
-//            Move "date"             to ColumnType[i].sDataFlexType
-//            Move "6.0"              to ColumnType[i].sPrecision
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_TYPE_TIME      to ColumnType[i].iSQLType
-//            Move "time"             to ColumnType[i].sSQLType
-//            Move DF_ASCII           to ColumnType[i].iDataFlexType
-//            Move "ASCII"            to ColumnType[i].sDataFlexType
-//            Move "8.7"              to ColumnType[i].sPrecision
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
-//
-//            Move SQL_TYPE_TIMESTAMP to ColumnType[i].iSQLType
-//            Move "datetime"         to ColumnType[i].sSQLType
-//            Move DF_DATETIME        to ColumnType[i].iDataFlexType
-//            Move "DateTime"         to ColumnType[i].sDataFlexType
-//            Move "23.6"             to ColumnType[i].sPrecision
-//            Move True               to ColumnType[i].bCanEditSize
-//            Increment i
 
         End
 
@@ -3288,10 +2648,9 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     // Internal usage. Use the UtilColumnTypeXXX functions instead.
     Function _UtilColumnType String sDriverID Integer iDbType Integer iType String sType Boolean bIntegerInputType Returns tColumnType
-        Integer iValue iSize iCount iStart iItem
+        Integer iStart iItem
         tColumnType[] ColumnTypeArray
         tColumnType RetvalType
-        String sValue
         Boolean bFrameworkDataFlexType
 
         Move "Undefined" to RetvalType.sSQLType
@@ -3569,21 +2928,6 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return aCurrent
     End_Function
 
-    Function _UtilIndexAppendSegmentFieldNames tAPIIndexSegment[] APIIndexSegment Returns String
-        String sRetval sFieldName
-        Integer iCount iSize
-
-        Move (SizeOfArray(APIIndexSegment)) to iSize
-        Decrement iSize
-        For iCount from 0 to iSize
-            Move APIIndexSegment[iCount].sFieldName to sFieldName
-            Move (sRetval * (String(sFieldName))) to sRetval
-        Loop
-        Move (Trim(sRetval)) to sRetval
-
-        Function_Return sRetval
-    End_Function
-
     // *** Miscellaneous other functions ***
     // Some of which can be used by both "Sqlxxx" and "Apixxx" functions.
     //
@@ -3784,7 +3128,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     Function _SqlUtilExecuteEmbeddedScript tSQLScriptArray SQLScriptArray String sDriverID Boolean bCreateScriptFile String sMemFileName Boolean bShowProgr Returns Boolean
         String sSQLVal sStmt sCR sGOKeyWord sNoCountKeyWord sMessage sExportFile sLineUpper
         Handle hoSql hoSQLConnect hoStmt hoError
-        Integer i iMsgs iRows jRows iRowType iCount jCount iChunkCounter iChunkMax iCh iNextSet iMessage iPos
+        Integer iMsgs iRows jRows iRowType iCount jCount iChunkCounter iChunkMax iCh iNextSet iMessage iPos
         String[] asMsg 
         String[][] asSQLQueryMessages
         DateTime dtQueryExecStart dtQueryExecEnd
@@ -3881,7 +3225,6 @@ Class cBaseDbUpdateFuncLib is a cObject
                         
                         // *** Execute script lines: ***
                         Send SqlExecDirect of hoStmt sStmt
-//                        Get SQLFetchResultsetValues of hoStmt to asSQLQueryMessages
                         
                         If (bCreateScriptFile = True) Begin
                             Writeln channel iCh sStmt 
@@ -4016,22 +3359,6 @@ Class cBaseDbUpdateFuncLib is a cObject
         Get _SqlUtilExecuteEmbeddedScript SQLScriptArray sDriverID False "" to bOK
 
         Function_Return (bOK = True)
-    End_Function
-
-    Function _StrToFieldNumber Integer iFile String sField Returns Integer
-        Integer iMax iPos
-        String sName
-
-        Move (Lowercase(sField)) to sField
-        Get_Attribute DF_FILE_NUMBER_FIELDS of iFile to iMax
-        For iPos from 0 to iMax
-            Get_Attribute DF_FIELD_NAME of iFile iPos to sName
-            Move (Lowercase(sName)) to sName
-            If (sName = sField) Begin
-                Function_Return iPos
-            End
-        Loop
-        Function_Return -1
     End_Function
 
     // Checks if the passed connection id exists in the CLI interface.
@@ -4232,7 +3559,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     // Returns True if the hTable's RootName has a driver <> DataFlex
     Function _IsSQLEntry Handle hTable Returns Boolean
         Boolean bFound bIsIntFile
-        String sLogicalName sRootName sNoDriverRootname sDriver
+        String sRootName sNoDriverRootname sDriver
         
         Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
         Get _DriverIDFromRootName sRootName to sDriver
@@ -4245,7 +3572,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     // This is used in place of the DF_FILE_OPENED table attribute, because
     // the table then needs to be open, which takes time.
     Function _IsAliasTable Handle hTable Returns Boolean
-        Boolean bFound bIsIntTable
+        Boolean bFound
         String sLogicalName sRootName sNoDriverRootname
         
         Get_Attribute DF_FILE_LOGICAL_NAME of hTable to sLogicalName
@@ -4354,7 +3681,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     Function _CountFileListMasterTables Returns Integer
         String sRootName sLogicalName sDriver sNoDriverRootname
         Handle hTable
-        Integer iSize iItems
+        Integer iItems
         Boolean bIsAlias bIsIntTable
         
         Move 0 to iItems
@@ -4401,7 +3728,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     Function _CountFileListAliasErrors Returns tFilelist[]
         Integer iCount iItem
         Handle hTable
-        Boolean bIsAlias bOK
+        Boolean bIsAlias
         String sRootName
         tFilelist[] FileListArray
         
@@ -4433,8 +3760,8 @@ Class cBaseDbUpdateFuncLib is a cObject
     //  2. If an Alias, checks if the RootName points to a valid Table
     Function _FindAliasEntryError Handle hTable Returns Integer
         Handle hMasterTable
-        String sDataPath sDriver sLogicalNameAlias sRootNameAlias sNoDriverRootnameAlias sLogicalNameMaster sRootNameMaster sNoDriverRootnameMaster
-        Boolean bOK bFound bIsAlias bIsAliasSQL bIsMasterSQL bIsIntFile
+        String sLogicalNameAlias sRootNameAlias sNoDriverRootnameAlias
+        Boolean bOK bIsAlias bIsAliasSQL bIsMasterSQL bIsIntFile
         Integer iRetval
         
         Get _IsAliasTable hTable to bIsAlias
@@ -4553,41 +3880,6 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return bContinueOnError
     End_Function
 
-#IF (!@ < 180)
-    // Message not available in pre DF18 versions:
-    // Splits a string into an array of strings using the given delimiter.
-    //
-    // Params:
-    //     sString     The string to split.
-    //     sDel        The delimiter (like "," or "|")
-    // Returns:
-    //     Array of strings (not including the delimiters itself.
-    Function StrSplitToArray String sString String sDel Returns String[]
-        String[] asResult
-        Integer iStart iEnd iDel
-
-        If (sString <> "") Begin
-            Move 1 to iStart
-            Move (Length(sDel)) to iDel
-            Move (Pos(sDel, sString, iStart)) to iEnd
-
-            If (iEnd > 0) Begin
-                While (iEnd > 0)
-                    Move (Mid(sString,  iEnd - iStart, iStart)) to asResult[SizeOfArray(asResult)]
-
-                    Move (iEnd + iDel) to iStart
-                    Move (Pos(sDel, sString, iStart)) to iEnd
-                Loop
-                Move (Right(sString,  Length(sString) - iStart + 1)) to asResult[SizeOfArray(asResult)]
-            End
-            Else Begin
-                Move sString to asResult[0]
-            End
-        End
-
-        Function_Return asResult
-    End_Function
-#ENDIF
 
     Function _UtilUpdateTAGFile String sFullTAGFileName String sColumnName Returns Boolean
         Integer iChIn iChOut // iCount
@@ -4643,8 +3935,8 @@ Class cBaseDbUpdateFuncLib is a cObject
     // The file is written only when a line changed, and without the empty read at its end. True when it ran without
     // an error, whether a line changed or not. (It answered "a line changed" - a caller took "nothing to change"
     // for a failure - and wrote the file back every time, one blank line longer.)
-    Function _UtilChangeSourceCodeLine String sFileName String sChangeFrom String sChangeTo Boolean bShowResult Returns Boolean
-        Integer iCh iRow iItems iCount
+    Function _UtilChangeSourceCodeLineCount String sFileName String sChangeFrom String sChangeTo Boolean bShowResult Returns Integer
+        Integer iCh iRow iItems iCount iChanges
         String sValue sRow
         String[] sFileArray
         Boolean bExists bIsActive bFileChange
@@ -4667,12 +3959,12 @@ Class cBaseDbUpdateFuncLib is a cObject
                     Showln "File does not exist: " sFileName
                 End
             End
-            Function_Return False
+            Function_Return -1
         End
 
         Get Seq_Open_Input_Channel sFileName to iCh
         If (iCh < 1) Begin
-            Function_Return False
+            Function_Return -1
         End
 
         If (bShowResult = True) Begin
@@ -4693,17 +3985,19 @@ Class cBaseDbUpdateFuncLib is a cObject
 
         While (not(SeqEof))
             Readln channel iCh sRow
-            If (Uppercase(sRow) contains Uppercase(sChangeFrom)) Begin
+            // A line that is the new line already is no change.
+            If (Uppercase(sRow) contains Uppercase(sChangeFrom) and sRow <> sChangeTo) Begin
                 // Change the whole line to the new connection id:
-                Move sChangeTo to sRow 
+                Move sChangeTo to sRow
                 Move True to bFileChange
+                Increment iChanges
             End
             Move sRow to sFileArray[iRow]
             Increment iRow
         Loop
         Send Seq_Close_Channel iCh
         If (bFileChange = False) Begin
-            Function_Return True
+            Function_Return 0
         End
         // The read after the last line gives an empty line: it is no line of the file.
         If (iRow > 0) Begin
@@ -4712,11 +4006,9 @@ Class cBaseDbUpdateFuncLib is a cObject
             End
         End
 
-//        Sleep 1 // Wait for Windows to close the file
-
         Get Seq_Open_Output_Channel sFileName to iCh
         If (iCh < 1) Begin
-            Function_Return False
+            Function_Return -1
         End
         Move (SizeOfArray(sFileArray)) to iItems
         Decrement iItems
@@ -4727,7 +4019,14 @@ Class cBaseDbUpdateFuncLib is a cObject
         Loop
         Send Seq_Close_Channel iCh
 
-        Function_Return True
+        Function_Return iChanges
+    End_Function
+    // True when it ran without an error - a line changed or not. The number of changed lines:
+    // _UtilChangeSourceCodeLineCount.
+    Function _UtilChangeSourceCodeLine String sFileName String sChangeFrom String sChangeTo Boolean bShowResult Returns Boolean
+        Integer iChanges
+        Get _UtilChangeSourceCodeLineCount sFileName sChangeFrom sChangeTo bShowResult to iChanges
+        Function_Return (iChanges >= 0)
     End_Function
 
     // This message creates an error log in the "Home" folder named "SQLErrorLog.txt",
@@ -4736,7 +4035,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     //       Instead the cDbUpdateLogFile's WriteErrorLog & ShowErrorLog are used.
     Procedure _UtilShowErrorList
         tSqlErrorArray aSqlErrorArray
-        Integer iRows iCount iCh iErrorNum
+        Integer iRows iCount iCh iErrorNum iErrors
         String sPath sFileName sErrorTxt sStatement
 
         Get psHome of (phoWorkspace(ghoApplication)) to sPath
@@ -4745,6 +4044,7 @@ Class cBaseDbUpdateFuncLib is a cObject
         Get Seq_Open_Output_Channel (sPath + sFileName) to iCh
             Get paSqlErrorArray to aSqlErrorArray
             Move (SizeOfArray(aSqlErrorArray.sSqlErrorArray)) to iRows
+            Move iRows to iErrors
             If (iRows > 0) Begin
                 Decrement iRows
                 for iCount from 0 to iRows
@@ -4757,7 +4057,8 @@ Class cBaseDbUpdateFuncLib is a cObject
             End
         Send Seq_Close_Channel iCh
 
-        If (iRows > 0) Begin
+        // The count before the Decrement above. (With exactly one error the log was not opened.)
+        If (iErrors > 0) Begin
             Runprogram Shell Background (sPath + sFileName)
         End
     End_Procedure
@@ -4811,7 +4112,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     // Checks if a table exists as an SQL table. Returns = True if it does.
     Function _SqlUtilCheckIfTableNameExists String sTableName String sDriverID Returns Boolean
-        String sDatabase sSchema sVal
+        String sDatabase sSchema
         Boolean bExists
         String[] asTablesArray
         Integer iItem
@@ -4834,7 +4135,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     // Checks if a table exists as an SQL table. Returns = True if it does.
     // This alternative is much faster as it first enumerates all SQL tables
     Function _SqlUtilCheckIfTableNameExists_Ex String sTableName String sDriverID Returns Boolean
-        String sDatabase sSchema sVal
+        String sDatabase sSchema
         Boolean bExists
         String[] asTablesArray
         Integer iItem
@@ -4858,7 +4159,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     // that the embedded .dat file exists on disk.
     Function _UtilTableIsEmbedded Handle hTable Returns Boolean
         Boolean bExists bIsEmbedded
-        String sDataPath sRootName
+        String sRootName
 
         Get _UtilTableNumberIsInUse hTable to bExists
         If (bExists = False) Begin

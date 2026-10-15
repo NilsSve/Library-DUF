@@ -100,6 +100,8 @@ Object oDbUpdateFunctionLibrary_Tests is a cTestFixture
         Send AssertSAreEqual "MSSQLDRV" sDriver "What stands in front of the colon is the driver."
         Get _DriverIDFromRootName of ghoDbUpdateFunctionLibrary "Customer" to sDriver
         Send AssertSAreEqual DATAFLEX_ID sDriver "No colon: the embedded database."
+        Get _DriverIDFromRootName of ghoDbUpdateFunctionLibrary (DFBTRDRV_ID + ":Customer") to sDriver
+        Send AssertSAreEqual DFBTRDRV_ID sDriver "The Pervasive driver as well."
     End_Procedure
 
     { Published=True }
@@ -123,6 +125,21 @@ Object oDbUpdateFunctionLibrary_Tests is a cTestFixture
         Send Assert bIs "Digits and slashes."
         Get IsDate of ghoDbUpdateFunctionLibrary "2026-10-1x" to bIs
         Send AssertFalse bIs "A letter makes it no date."
+    End_Procedure
+
+    // IsDate looks at every character, and nothing is no date. (Past character 13 nothing was looked at, and an
+    // empty text was a date.)
+    { Published=True }
+    Procedure Test_IsDate_Looks_At_Every_Character
+        Boolean bIs
+        Get IsDate of ghoDbUpdateFunctionLibrary "" to bIs
+        Send AssertFalse bIs "Nothing is no date."
+        Get IsDate of ghoDbUpdateFunctionLibrary "2026/10/11/2026/1x" to bIs
+        Send AssertFalse bIs "A letter at the end."
+        Get IsDate of ghoDbUpdateFunctionLibrary "2026-10-11 12:00" to bIs
+        Send AssertFalse bIs "A time is no part of a date."
+        Get IsDate of ghoDbUpdateFunctionLibrary "11/10/2026" to bIs
+        Send Assert bIs "A date is still a date."
     End_Procedure
 
     // -1 means "the same". Otherwise the answer is the first segment that differs, counted from 0.

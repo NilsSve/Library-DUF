@@ -320,12 +320,8 @@ Class cDbUpdateLogFile is a cObject
             End
             Writeln channel iCh sText
             If (aDbUpdateErrorArray[iCount].sOrgErrorText <> "") Begin
+                // In the code page of the other lines. (It was turned into ANSI: national characters came out wrong.)
                 Move ("   (" + aDbUpdateErrorArray[iCount].sOrgErrorText + ")") to sOrgErrorText
-#IF (!@ > 191)
-                Move (Utf8ToAnsi(sOrgErrorText)) to sOrgErrorText       
-#ELSE
-                Move (ToANSI(sOrgErrorText)) to sOrgErrorText
-#ENDIF
                 Writeln channel iCh sOrgErrorText
             End
             If (sText contains CS_SuccessfulUpdate) Begin

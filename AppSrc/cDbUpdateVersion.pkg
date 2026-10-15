@@ -566,33 +566,6 @@ Class cDbUpdateVersion is a cObject
         Function_Return bOK
     End_Function
 
-//    Function ApiTableMoveAllToBackupFolder Returns Boolean
-//        Boolean bOK bExists
-//        String sDataPath sBackupFolder
-//        
-//        Set Message_Text of ghoStatusPanel to "Moving Embedded (*.dat) files to Backup folder."
-//        Move CS_DUFBackupDataFolder to sBackupFolder
-//        Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
-//        Get vFolderFormat sDataPath to sDataPath
-//        
-//        Get vFilePathExists (sDataPath + sBackupFolder) to bExists
-//        If (bExists = False) Begin
-//            Get vCreateDirectory (sDataPath + sBackupFolder) to bOK
-//            Get vFilePathExists (sDataPath + sBackupFolder) to bExists
-//            If (bExists = False) Begin
-//                Error DFERR_PROGRAM ("Could not create the the backup data folder to move all *.dat and *.k?? files to. You need to move them somewhere manually.")
-//                Function_Return False
-//            End                                                                                                                                            
-//            Get vMoveFile (sDataPath + "*.dat") (sDataPath + sBackupFolder) to bOK
-//            Get vMoveFile (sDataPath + "*.hdr") (sDataPath + sBackupFolder) to bOK
-//            Get vMoveFile (sDataPath + "*.k??") (sDataPath + sBackupFolder) to bOK
-//            Get vMoveFile (sDataPath + "*.vld") (sDataPath + sBackupFolder) to bOK
-//        End
-//        
-//        Set Message_Text of ghoStatusPanel to ""
-//        Function_Return bOK
-//    End_Function
-//
     // This is automatically called after the OnUpdate
     // event has been executed. It will automatically update the
     // version database field/column with the "pnVersionNumber"

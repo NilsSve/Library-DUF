@@ -238,4 +238,35 @@ Object oSQLConnectionIniFile_Tests is a cTestFixture
             Send AssertIAreEqual eMandatory aRead[0].eEncryptOption "Its Encrypt option is Mandatory again."
         End
     End_Procedure
+    // DeleteIniFileConnection takes the connection with that ID out of the file; the others stay. (The class had
+    // two functions of that name; the one that was used put a copy of the connection in front.)
+    { Published=True }
+    Procedure Test_A_Deleted_Connection_Is_Gone
+        Handle ho
+        tSQLConnection[] aConnections
+        Boolean bOK bNone
+
+        Get IniFileIn "A" to ho
+        Move "DUFFIRST"  to aConnections[0].sConnectionID
+        Move ODBC_DRV_ID to aConnections[0].sDriverID
+        Move "DUFDSN1"   to aConnections[0].sServer
+        Move True        to aConnections[0].bEnabled
+        Move "DUFSECOND" to aConnections[1].sConnectionID
+        Move ODBC_DRV_ID to aConnections[1].sDriverID
+        Move "DUFDSN2"   to aConnections[1].sServer
+        Move False       to aConnections[1].bEnabled
+        Get WriteIniFileConnections of ho aConnections to bOK
+        Send Assert bOK "The two connections are written."
+        Get DeleteIniFileConnection of ho "DUFSECOND" to bOK
+        Get DeleteIniFileConnection of ho "DUFNOSUCHID" to bNone
+        Get ReadIniFileConnections of ho to aConnections
+        Send Destroy of ho
+        EraseFile (TestWorkspace(Self, "A") + "Programs\" + CS_SQLIniFileName)
+        Send Assert bOK "The delete answers True."
+        Send AssertFalse bNone "An ID that is not in the file: False."
+        Send AssertIAreEqual 1 (SizeOfArray(aConnections)) "One connection is left."
+        If (SizeOfArray(aConnections) = 1) Begin
+            Send AssertSAreEqual "DUFFIRST" aConnections[0].sConnectionID "The one that was not deleted."
+        End
+    End_Procedure
 End_Object

@@ -83,13 +83,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         If (sDriverID = ODBC_DRV_ID) Begin
             // If an ODBC data source (DSN) we cannot pass the UID & PWD; so strip them from the connection string.
             // ToDo: 2018-08-11 I think this is wrong and the uid & pw should be there.
-//            If (Uppercase(sConnectionString) contains CS_SQLIniDSNKeyword) Begin
-//                Move (Pos(";", sConnectionString)) to iPos
-//                If (iPos > 0) Begin
-//                    Move (Left(sConnectionString, (iPos - 1))) to sConnectionString
-//                    Move (Trim(sConnectionString)) to sConnectionString
-//                End
-//            End
         End
 
         Send Ignore_Error of Error_Object_Id CLIERR_LOGIN_UNSUCCESSFUL
@@ -154,9 +147,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
             Case (iDbType = EN_DbTypeMySQL and sDriverID = ODBC_DRV_ID)
                 // ToDo: How should this be set/checked?
-//                If (Lowercase(Left(sCollation, 3)) <> "utf") Begin
-//                    Set psCollation to "utf8"
-//                End
                 SQLIncludeScriptFile ..\Scripts\CreateMySQLDatabase.sql as CreateMySQLDatabase.sql
                 Get _SqlUtilCreateMySQLDatabaseByScript "CreateMySQLDatabase.sql" sDatabase to bOK
                 Case Break
@@ -205,11 +195,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Integer iDbType
 
         If (sDatabase = "") Begin
-            Error DFERR_PROGRAM "The database name was not passed as a parameter to the 'SqlUtilBackupDatabaseToDisk' function"
+            Error DFERR_PROGRAM "The database name was not passed as a parameter to the 'SqlDatabaseBackupToDisk' function"
             Function_Return False
         End
         If (sBackupName = "") Begin
-            Error DFERR_PROGRAM "The database backup name was not passed as a parameter to the 'SqlUtilBackupDatabaseToDisk' function"
+            Error DFERR_PROGRAM "The database backup name was not passed as a parameter to the 'SqlDatabaseBackupToDisk' function"
             Function_Return False
         End
 
@@ -238,7 +228,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 SQLIncludeScriptFile ..\Scripts\BackupMSSQLDatabase.sql as BackupMSSQLDatabase.sql
                 SQLIncludeScriptFile ..\Scripts\GetPercentageBackupCompletionMSSQL.sql as GetPercentageBackupCompletionMSSQL.sql
                 Get _SqlUtilReadResource  "BackupMSSQLDatabase.sql" sDriverID False to SQLScriptArray
-//                Get _SqlUtilReadResource "GetPercentageBackupCompletionMSSQL.sql" sDriverID False to SQLScriptArrayPercentReady
 
                 Move SQLScriptArray.sSQLScriptArray[0] to sStatement
                 Move (Replaces("DATABASE_NAME_XXX", sStatement, sDatabase))   to sStatement
@@ -254,7 +243,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return bOK
     End_Function
 
-    // Drops an SQL database. It first checks that nobody is using the database.
+    // Drops an SQL database. The script sets it to SINGLE_USER WITH ROLLBACK IMMEDIATE first: sessions that are
+    // connected are ended, and what they have not saved is rolled back. (It said it checked that nobody used it.)
     Function SqlDatabaseDrop String sDatabase Boolean bShowProg Returns Boolean
         Boolean bShowProgress bOK
         String sStatement sDriverID
@@ -298,7 +288,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         tSQLConnection SQLConnection
 
         If (sDatabase = "") Begin
-            Error DFERR_PROGRAM "The database name was not passed as a parameter to the 'SqlUtilDatabaseCollation' function"
+            Error DFERR_PROGRAM "The database name was not passed as a parameter to the 'SqlDatabaseCollationQuery' function"
             Function_Return ""
         End
 
@@ -347,11 +337,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Please take a backup copy of the database first, then make sure *no* users
     // are using the database!
     Function SqlDatabaseCollationChange String sDatabase String sCollation Boolean bCreateScriptFile Boolean bBackup Boolean bSilent Returns Boolean
-        String sStatement sDriverID sRetval
+        String sDriverID sRetval
         Integer iDbType iSize iCount
         Boolean bOK
         tSQLScriptArray SQLScriptArray
-        tSQLConnection SQLConnection
         Boolean bScriptFile bMakeBackup bQuiet
 
         If (sDatabase = "") Begin
@@ -422,16 +411,15 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     Function SqlDatabaseCollationSetNew String sDatabase String sSQLCollation Returns Boolean
         String sDriverID sSQL sConnectionID sConnectionString sSet sWith // sSQL1 
         String sAlterDatabaseKeyWord sCollateKeyWord sSQLCollationCheck sSingle_User sMulti_User sRollback sImmediate
-        Handle hConnection hStmt hoSQLManager
         Integer iDbType // iFetchResult
 
         If (sDatabase = "") Begin
-            Error DFERR_PROGRAM "The database name was not passed as a parameter to the 'SqlDatabaseCollationChange' function"
+            Error DFERR_PROGRAM "The database name was not passed as a parameter to the 'SqlDatabaseCollationSetNew' function"
             Function_Return False
         End
 
         If (sSQLCollation = "") Begin
-            Error DFERR_PROGRAM "The SQL Collation name was not passed as a parameter to the 'SqlDatabaseCollationChange' function"
+            Error DFERR_PROGRAM "The SQL Collation name was not passed as a parameter to the 'SqlDatabaseCollationSetNew' function"
             Function_Return False
         End
 
@@ -502,7 +490,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Handle hToTable
         Boolean bOK bExists bOpened bCopyData
         String sDriverID sPhysicalName sRootName sDisplayName
-        tSQLConnection SQLConnection
         Integer iPos iMaxRecords
 
         Get psDriverID to sDriverID
@@ -635,15 +622,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return (Err = False)
     End_Function
     
-    // ToDo: 2019-09-23 This needs to be finilized 
-    // It resets SQL constraints after a Structure_End, if necessary.
-    Function SqlTableRecreateConstraints Handle hTable Returns Boolean
-        Boolean bOK                                                            
-        String sStatement
-        Move "ALTER TABLE [dbo].[THREADS] ADD  DEFAULT ((0)) FOR [SEGMENTS]" to sStatement
-        Function_Return bOK
-    End_Function
-    
     // First deletes the data cache file and then drops the passed SQL table.
     // Note: The table needs to exist in filelist.cfg, and it must be possible to open it,
     //       else try using the SqlTableRemoveByTableName message.
@@ -681,7 +659,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // First deletes the data cache file and then drops the passed data table.
     Function SqlTableRemoveByTableName String sTableName Returns Boolean
-        String sSQLString sPath sDropTable sVal sSchema sDriverID
+        String sSQLString sPath sDropTable sDriverID
         Integer iRetval iDbType
         Boolean bOK
 
@@ -788,7 +766,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return False
     End_Function
 
-    // Sample: Get SqlColumnAdd MyTable.File_Number "NewColumnName" True "InitValue" DF_ASCII_DUF 35
+    // Sample: Get SqlColumnAdd MyTable.File_Number "NewColumnName" DF_ASCII_DUF 35 0 True "InitValue"
     Function SqlColumnAdd Integer hTable String sColumnName Integer iDataType Integer iLen Integer iDec Boolean bInitVal String sColVal Returns Boolean
         Integer iLength iDecimals
         String sColumnValue
@@ -1423,7 +1401,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // *** Main message for executing an SQL script that has been compiled into the program as a resource ***
     // Use the SQLIncludeScriptFile command to include an SQL script into the program.
-    // Returns False if no error occured.
+    // Returns True if no error occured.
     Function SqlUtilExecuteResource String sMemFileName String sDriverID Boolean bCreateScriptFile Boolean bShowProgr Returns Boolean
         Boolean bOK bShowProgress
         tSQLScriptArray SQLScriptArray
@@ -1533,10 +1511,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Pass the full path to the data folder and the name of the connection id (string value).
     // Pass a True for the bShowResult parameter to show work in progress (showln's).
     Function SqlUtilChangeIntFilesToConnectionIDs String sDataPath String sConnectionID Boolean bShowResult Returns String[] 
-        String sFileName sDriverID sDriverFile sConnectionString sPath
+        String sFileName
         String[] asFilesData asFileChanges
-        Boolean bOK bCancel bChange
-        Integer iSize iCount
+        Boolean bCancel
+        Integer iSize iCount iChange
 
         Get SqlUtilEnumerateIntFiles sDataPath to asFilesData
         Move (SizeOfArray(asFilesData))    to iSize
@@ -1547,7 +1525,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 End
             End
             Send Info_Box CS_DUF_NoIntFilesFound
-            Function_Return 0
+            Function_Return asFileChanges
         End
 
         Move (Trim(sConnectionID)) to sConnectionID
@@ -1556,9 +1534,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         For iCount from 0 to iSize
             Move asFilesData[iCount] to sFileName
             If (Lowercase(sFileName) <> "mssqldrv.int" and Lowercase(sFileName) <> "db2_drv.int" and Lowercase(sFileName) <> "odbc_drv.int") Begin
-                // This makes sure that we also can change an existing connection id to something new:
-                Get _UtilChangeSourceCodeLine (sDataPath + sFileName) (CS_SERVER_NAME * CS_SERVER) (CS_SERVER_NAME * CS_DFCONNID + "=" + sConnectionID) bShowResult to bChange
-                If (bChange = True) Begin
+                // Every SERVER_NAME line: a server, or another connection ID. Only a file that changed is listed.
+                // (Only "SERVER_NAME SERVER" lines were changed, and every file was listed.)
+                Get _UtilChangeSourceCodeLineCount (sDataPath + sFileName) CS_SERVER_NAME (CS_SERVER_NAME * CS_DFCONNID + "=" + sConnectionID) bShowResult to iChange
+                If (iChange > 0) Begin
                     Move sFileName to asFileChanges[SizeOfArray(asFileChanges)]
                 End
                 If (ghoStatusPanel <> 0) Begin
@@ -1574,30 +1553,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Loop
 
          // ToDo: Not sure at all we want to do this automatically:
-//        Get psDriverID to sDriverID
-//         // Finally also change the driver file e.g. MSSQLDRV.int file in the Data folder in case it has a "DFconnectionID xxxxID,SERVER..."
-//        Move "" to sFileName
-//        If (sDriverID = MSSQLDRV_ID) Begin
-//            Move "MSSQLDrv.int" to sFileName
-//        End
-//        If (sDriverID = DB2_DRV_ID) Begin
-//            Move "DB2_Drv.int" to sFileName
-//        End
-//        If (sDriverID = ODBC_DRV_ID) Begin
-//            Move "ODBC_Drv.int" to sFileName
-//        End
-//        If (sFileName <> "") Begin
-//            Move "" to sDriverFile
-//            Get_File_Path sFileName to sDriverFile
-//            Get ParseFolderName sDriverFile to sPath
-//            If (sDataPath <> sPath) Begin
-//                Move "" to sDriverFile
-//            End
-//            If (sDriverFile <> "") Begin
-//                Get psConnectionString to sConnectionString
-//                Get _UtilChangeSourceCodeLine sDriverFile CS_SQLConnectionIDText (CS_SQLConnectionIDText * String(sConnectionID) + "," * String(sConnectionString) * String(",0")) bShowResult to bOK
-//            End
-//        End     
         
         Function_Return asFileChanges
     End_Function
@@ -1694,18 +1649,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Loop
 
         Function_Return sTableSpelledCorrectly
-    End_Function
-
-    // ToDo: This index name function needs to be finished...
-    Function SqlUtilCheckIfIndexNameExists Handle hTable String sIndexName Returns Boolean
-        String sSchema sTableName sDriverID
-        Boolean bExists
-
-        Get psDriverID to sDriverID
-        Get psSchema to sSchema
-        Get UtilTableHandleToString hTable to sTableName
-
-        Function_Return bExists
     End_Function
 
     // Checks if a column/field name exists in a SQL table definition
@@ -1955,29 +1898,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Until (hTable = 0)
     End_Procedure
-
-//    Function SqlUtilSchemaName Handle hTable Returns String
-//        String sRetval sDriverID
-//        String sTableName
-//        Integer iDbType iIndex
-//        Boolean bOK
-//
-//        Get psDriverID to sDriverID
-//        Get _SqlCheckCurrentDriver sDriverID to bOK
-//        If (hTable = 0 or bOK = False) Begin
-//            Function_Return ""
-//        End
-//
-//        Move False to Err
-//        Get UtilTableHandleToString hTable to sTableName
-//        Get piDbType to iDbType
-//        Get _SqlUtilEnumerateTableIndex sTableName sDriverID to iIndex
-//        If (iIndex = -1) Begin
-//            Function_Return ""
-//        End
-//
-//        Function_Return sRetval
-//    End_Function
 
     // Checks if the passed Table;
     // 1) Already has a Filelist entry that points to SQL and
@@ -2330,7 +2250,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Case Break
 
             Case Else
-//                Error DFERR_PROGRAM "Unsupported DriverID passed to SqlUtilEnumerateDatabases function"
         Case End
 
         Function_Return asReturnArray
@@ -2422,17 +2341,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         //
         // We don't want to change the display name if it starts with an ampersand ("@"),
         // because then the table should not be visible to users.
-//        Move (Pos("@", sDisplayName)) to iPos
-//        If (iPos <> 1) Begin
-//            If (sDisplayName contains ".") Begin
-//                Move (Pos(".", sDisplayName)) to iPos
-//                Move (Mid(sDisplayName, 200 ,(iPos + 1))) to sDisplayName
-//                Move (sSchema + "." + sDisplayName)       to sDisplayName
-//            End
-//            If (not(Lowercase(sDisplayName) contains Lowercase(sSchema + "."))) Begin
-//                Move (Lowercase(sSchema) + "." + sDisplayName) to sDisplayName
-//            End
-//        End
 
         If (bIsAlias = False) Begin
             Get OpenTableExclusive hTable to bOpened
@@ -2507,12 +2415,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
 
         // ToDo: Add to all table change functions!
-        #IF (!@ > 182)
-            Get _UtilTableIsSql hTable to bIsSQLTable
-            If (bIsSQLTable = True) Begin
-                Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
-            End
-        #ENDIF
+        Get _UtilTableIsSql hTable to bIsSQLTable
+        If (bIsSQLTable = True) Begin
+            Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
+        End
 
         Set Private.phCurrentTable to hTable
         Structure_Start hTable
@@ -2539,7 +2445,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // To use a filelist slot for the passed FileName, TableName & DisplayName,
     // or to change the filelist slot names.
     Function ApiTableChangeFileListSlot String sRootName String sLogicalName String sDisplayName Handle hTable String sDriverID Returns Boolean
-        String sFileListName
         
         Move False to Err
 
@@ -2556,15 +2461,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
 
         If (sDriverID <> DATAFLEX_ID) Begin
-//            Set_Attribute DF_FILE_ROOT_NAME of hTable to (sDriverID + ":" + sRootName)
             Move (sDriverID + ":" + sRootName) to sRootName
         End
-//        Else Begin
-//            Set_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
-//        End
-//
-//        Set_Attribute DF_FILE_LOGICAL_NAME  of hTable to sLogicalName
-//        Set_Attribute DF_FILE_DISPLAY_NAME  of hTable to sDisplayName
 
         Set_Attribute DF_FILE_ROOT_NAME     of hTable to sRootName
         Set_Attribute DF_FILE_LOGICAL_NAME  of hTable to sLogicalName
@@ -2604,12 +2502,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Function_Return False
         End
 
-        #IF (!@ > 182)
-            Get _UtilTableIsSql hTable to bIsSQLTable
-            If (bIsSQLTable = True) Begin
-                Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
-            End
-        #ENDIF
+        Get _UtilTableIsSql hTable to bIsSQLTable
+        If (bIsSQLTable = True) Begin
+            Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
+        End
 
         Set Private.phCurrentTable to hTable
         Structure_Start hTable
@@ -2741,13 +2637,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         If (bOK = False) Begin
             Get _SqlUtilCheckIfTableNameExists sLogicalName sDriverID to bExists
             If (bExists = True) Begin
-//                Get SQLUtilGUIDTempTableName sLogicalName to sGUIDName
-//                Get SqlTableRename hTable sLogicalName sGUIDName to bOK
                 // The text for both branches. (It was made in the first one only: the error had no text.)
                 Move ("WARNING! Function: ApiTableConvertToSQL_Ex. The table" * sLogicalName * "pointed to an embedded table in Filelist.cfg that already existed as an SQL table! The table was NOT converted to SQL but instead ATTACHED to the existing SQL table.") to sWarning
                 Get phoLogFile to hoLogFile
                 If (hoLogFile <> 0) Begin          
-//                    Move ("WARNING! Function: ApiTableConvertToSQL_Ex. The table" * sLogicalName * "pointed to an embedded table in Filelist.cfg that already existed as an SQL table! The existing SQL table was renamed to:" * String(sGUIDName) * "and then converted again.") to sWarning
                     Send LogError sWarning False
                 End
                 Else Begin
@@ -2775,9 +2668,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move (If(bToAnsi = True, CS_ANSI_Txt, CS_OEM_Txt)) to sANSI_OEM
 
         Get IsDAWSQLDriver sDriverID to bDAWDriver
-//        If (bUseConnectionID = True) Begin
-//            Move False to bUseConnectionID
-//        End
 
         Get pSQLConnection of ghoSQLConnectionHandler to SQLConnection
         Move SQLConnection.sSchema           to sSchema
@@ -2921,7 +2811,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get AutoConnectionIDLogin to bOK
         If (sDriverID = DATAFLEX_ID) Begin
             Send IncreaseSortBufferSize
-//            Send SetAllIndexesToBatch hToTable
         End
 
         Move False to Err
@@ -3042,7 +2931,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // i.e. DF_FILE_TABLE_CHARACTER_FORMAT {"OEM"|"ANSI"}
     Function ApiTableCreate Handle hTable String sRootName String sDisplayName String sLogicalName Boolean bUseConnectionID Boolean bANSI Boolean bRecnum tAPIColumn[] aColumnIn Returns Boolean
         Handle hFile
-        String sConnectionID sPhysicalFile sANSI_OEM sVal sSchema sOriginalDriverID sDriverID sTableName
+        String sConnectionID sPhysicalFile sANSI_OEM sVal sSchema sDriverID sTableName
         Integer iIdentityType iDataType iDbType iCount iSize
         Boolean bOk bExists bSqlDriver bDeleteDummy bExistsInFilelist bSysFile
         tSQLConnection SQLConnection
@@ -3176,9 +3065,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Move (sRootName + ".int") to sPhysicalFile
             End
             Move (Uppercase(sDisplayName)) to sVal
-//            If (not(sVal contains (sSchema + "."))) Begin
-//                Move (Lowercase(sSchema) + "." + sTableName) to sDisplayName
-//            End
         End
         Move False to Err
         Move 0 to hFile
@@ -3260,10 +3146,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Boolean bExists
 
         // Do nothing if MSSQL Driver.
-//        Get IsMSSQLDriver to bExists
-//        If (bExists = True) Begin
-//            Procedure_Return
-//        End
 
         Get psDataPathFirstPart to sDataPath
         Get vFilePathExists (sDataPath + sFileName + ".dat") to bExists
@@ -3385,6 +3267,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // Removes the passed table name completely from disk, filelist (& Sql Server if an Sql-driver)
     Function ApiTableRemove Handle hTable Returns Boolean
+        Integer iRetval
         String sTableName sDriverID sRootName
         Boolean bOk bDriverTable bStillThere
         String sDataPath
@@ -3417,9 +3300,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
 
         If (sDriverID <> DATAFLEX_ID) Begin
-//            Get SqlTableRemoveByTableName sTableName to bOk  // We don't have to do this because the database is already removed by 'delete_db' above
             Get psDataPathFirstPart to sDataPath
-            Get vDeleteFile (sDataPath + sTableName + ".int") to bOk
+            Get vDeleteFile (sDataPath + sTableName + ".int") to iRetval
         End
         // Also remove table from filelist.cfg in case the physical file didn't exist.
         If (hTable <> 0) Begin
@@ -3538,9 +3420,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Move (sDriverID + ":" + sRootName) to sRootName
 
             // The Studio no longer adds the schema to the DISPLAY_NAME, so commented out.
-//            If (not(sDisplayName contains ".")) Begin
-//                Move (sSchema + "." + sDisplayName) to sDisplayName
-//            End
         End
 
         Set_Attribute DF_FILE_ROOT_NAME     of hTable to sRootName
@@ -3583,12 +3462,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Handle hTable
         String sDriverIDFrom sDriverIDTo sLogicalNameTo
         Integer iDbType
-        Boolean bOk bOpened bApiTableUpdateAuto bLogicalNameOK bSysfile bIsVersionTable
+        Boolean bOk bOpened bApiTableUpdateAuto bLogicalNameOK bIsVersionTable
         Boolean bUseConnectionID bToANSI bRecnum bCopyData bCompareDate_DateTime bCompareIndexAscending bCompareIndexUppercase bTableExists
         Boolean bIsSame bFilelistError bIsAliasFrom bIsSQLTableFrom bIsSQLTableTo
-        tSQLConnection SQLConnection
         tAPITable      APITableFrom APITableTo
-        tColumnType    ColumnType
         tAPIColumnCompare[]   aAPIColumnCompare
         tAPIIndexCompare[]    aAPIIndexCompare
         tAPIRelationCompare[] aAPIRelationCompare
@@ -4091,7 +3968,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             If (bIsSqlTable = True) Begin
                 If (aColumns[iCount].bIsSQLType = True) Begin
                     Get UtilSQLColumnTypeToDataFlexType sDriverID iDbType iType aColumns[iCount].iLength to iDataFlexType
-//                    Set_Attribute DF_FIELD_TYPE          of hTable iColumn to iDataFlexType
                     Set_Attribute DF_FIELD_NATIVE_TYPE   of hTable iColumn to iType
                     Set_Attribute DF_FIELD_NULL_ALLOWED  of hTable iColumn to aColumns[iCount].bAllowNULL
 
@@ -4131,10 +4007,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
                 // If we have an identity table - we must create a primary_key table.
                 If (bIsSqlTable = True) Begin
-                    #IF (!@ > 180)
-                        Set_Attribute DF_INDEX_SQL_PRIMARY_KEY of hTable iIndex to True
-                        Set_Attribute DF_FIELD_IS_IDENTITY of hTable iColumn to True
-                    #ENDIF
+                    Set_Attribute DF_INDEX_SQL_PRIMARY_KEY of hTable iIndex to True
+                    Set_Attribute DF_FIELD_IS_IDENTITY of hTable iColumn to True
                 End
             End
         Loop
@@ -4210,9 +4084,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Changes a field type, length and precision for the passed table number and field name
     Function ApiColumnChangeByColumnNumber String sDriverIDFrom Handle hTable Boolean bIsSQLTableFrom Boolean bIsSQLTableTo String sFieldNameFrom Integer iColumn Integer iTypeFrom Integer iLengthFrom Integer iPrec Integer iOpt Returns Boolean
         Integer iPrecFrom iTypeTo iLengthTo iPrecTo iDbType iOptionFrom iOptionTo iDataFlexType iIndex iDataFlexTypeTo
-        Boolean bOK bCompareDate_DateTime bSkip bRecnumTable bIsSameDataType
+        Boolean bOK bCompareDate_DateTime bRecnumTable bIsSameDataType
         String sFieldNameTo sDriverIDTo
-        tColumnType ColumnType
 
         Get pbCompareDate_DateTime to bCompareDate_DateTime
         Get piDbType to iDbType
@@ -4240,9 +4113,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get_Attribute DF_FIELD_NAME                 of hTable iColumn to sFieldNameTo
 
         If (bIsSQLTableTo = True) Begin
-            #IF (!@ > 170)
-                Get_Attribute DF_FIELD_NATIVE_TYPE  of hTable iColumn to iTypeTo
-            #ENDIF
+            Get_Attribute DF_FIELD_NATIVE_TYPE  of hTable iColumn to iTypeTo
         End
         Else Begin
             Get_Attribute DF_FIELD_TYPE             of hTable iColumn to iTypeTo
@@ -4252,11 +4123,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get_Attribute DF_FIELD_PRECISION            of hTable iColumn to iPrecTo
         // An embedded table has no identity column: the attribute is read for an SQL table only.
         Move 0                                                        to iOptionTo
-        #IF (!@ > 180)
-            If (bIsSQLTableTo = True) Begin
-                Get_Attribute DF_FIELD_IS_IDENTITY  of hTable iColumn to iOptionTo
-            End
-        #ENDIF
+        If (bIsSQLTableTo = True) Begin
+            Get_Attribute DF_FIELD_IS_IDENTITY  of hTable iColumn to iOptionTo
+        End
 
         // The DataFlex type the column gets: the FROM type, or for an SQL type its DataFlex type. The types are
         // compared as DataFlex types, and as native types too when both sides are SQL. Date and DateTime count as
@@ -4297,9 +4166,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Set_Attribute DF_FIELD_TYPE             of hTable iColumn to iDataFlexType
                 // A native type comes from an SQL column only.
                 If (bIsSQLTableTo = True and bIsSQLTableFrom = True) Begin
-                    #IF (!@ > 170)
-                        Set_Attribute DF_FIELD_NATIVE_TYPE of hTable iColumn to iTypeFrom
-                    #ENDIF
+                    Set_Attribute DF_FIELD_NATIVE_TYPE of hTable iColumn to iTypeFrom
                 End
             End
 
@@ -4327,13 +4194,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 End
                 Set_Attribute DF_INDEX_SEGMENT_FIELD       of hTable iIndex 1 to iColumn
                 Set_Attribute DF_FILE_PRIMARY_INDEX        of hTable          to iIndex
-                #IF (!@ > 180)
-                    Set_Attribute DF_FIELD_IS_IDENTITY     of hTable iColumn  to True
-                #ENDIF
+                Set_Attribute DF_FIELD_IS_IDENTITY     of hTable iColumn  to True
                 If (bIsSQLTableTo = True) Begin
-                    #IF (!@ > 180)
-                        Set_Attribute DF_INDEX_SQL_PRIMARY_KEY of hTable iIndex   to True
-                    #ENDIF
+                    Set_Attribute DF_INDEX_SQL_PRIMARY_KEY of hTable iIndex   to True
                 End
             End
             Set Action_Text of ghoStatusPanel to "Restructures table..."
@@ -4573,8 +4436,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     Function UtilColumnsInsert String sDriverIDFrom Handle hTable tAPIColumnCompare[] aAPIColumnsToInsert Returns Boolean
         Integer iSize iCount
         Boolean bOK
-        tAPIColumn[] aColumnsTo
-        tAPIColumnCompare[] aAPIColumnCompare
 
         Move (SizeOfArray(aAPIColumnsToInsert)) to iSize
         If (iSize = 0) Begin
@@ -4701,13 +4562,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
               aAPIColumnCompare.iLengthFrom    = aAPIColumnCompare.iLengthTo      and ;
               aAPIColumnCompare.iPrecisionFrom = aAPIColumnCompare.iPrecisionTo   and ;
               aAPIColumnCompare.iOptionsFrom   = aAPIColumnCompare.iOptionsTo) to bShouldRename
-//        If (bShouldRename = False) Begin
-//            Function_Return False
-//        End
-//
-//        If (sFieldNameFrom contains sFieldNameTo) Begin
-//            Function_Return True
-//        End
 
         Function_Return bShouldRename
     End_Function
@@ -5011,8 +4865,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     Function UtilColumnsRename Handle hTable tAPIColumnCompare[] aAPIColumnsToRename Returns Boolean
         Integer iSize iCount
         Boolean bOK
-        tAPIColumn[] aColumnsTo
-        tAPIColumnCompare[] aAPIColumnCompare
 
         Move (SizeOfArray(aAPIColumnsToRename)) to iSize
         If (iSize = 0) Begin
@@ -5128,12 +4980,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Integer iCount iColumns iColumn iTypeFrom iTypeTo iDataFlexType iIndex iLengthFrom iLengthTo iPrecisionFrom iPrecisionTo iOptionFrom iOptionTo iDbType
         Integer iCount2 iColumn2
         Handle hFile
-        Boolean bFieldExistsFrom bFieldExistsTo bIsSQLDriver bIsSame bOK bSkip
-        Boolean bRecnum bIsSQLTableTo bRecnumTable bIsOpen bSkipTypeChange bIsDateType bMismatch
+        Boolean bFieldExistsFrom bFieldExistsTo bIsSQLDriver bIsSame bOK
+        Boolean bIsSQLTableTo bRecnumTable bIsOpen bSkipTypeChange bIsDateType bMismatch
         String sFieldNameFrom sFieldNameTo sDriverIDTo sDefaultValue sRemove
         Integer iRemoved iMaxRemove iRenamedFirst
-        tAPIColumnCompare[] aAPIColumnCompare aApiInsertColumns aAPIMoveColumns aAPIRenameColumns aAPIRemoveColumns aAPIRenameFirst
-        tColumnType ColumnType
+        tAPIColumnCompare[] aAPIColumnCompare aApiInsertColumns aAPIMoveColumns aAPIRenameColumns aAPIRenameFirst
 
         Move False to Err
         Close hTable
@@ -5373,11 +5224,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
                             Set_Attribute DF_INDEX_SEGMENT_FIELD   of hFile iIndex 1 to iColumn
                             Set_Attribute DF_FILE_PRIMARY_INDEX    of hFile          to iIndex
-                            #IF (!@ > 180)
-                                // Note: The order here is crucial!
-                                Set_Attribute DF_INDEX_SQL_PRIMARY_KEY of hFile iIndex to True
-                                Set_Attribute DF_FIELD_IS_IDENTITY of hFile iColumn    to True
-                            #ENDIF
+                            // Note: The order here is crucial!
+                            Set_Attribute DF_INDEX_SQL_PRIMARY_KEY of hFile iIndex to True
+                            Set_Attribute DF_FIELD_IS_IDENTITY of hFile iColumn    to True
                         End
                     End
                     Else Begin
@@ -5429,7 +5278,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Note: the "-1" can be left out as this function is overloaded to make it easier to call.
     // Note: This doesn't set Descending attributes - Use function IndexChangeDirection to do that.
     Function ApiIndexCreate Handle hTable Integer iIndex Integer iSegments Integer iSgmnt1 Integer iSgmnt2 Integer iSgmnt3 Integer iSgmnt4 Integer iSgmnt5 Integer iSgmnt6 Integer iSgmnt7 Integer iSgmnt8 Integer iSgmnt9 Integer iSgmnt10 Returns Boolean
-        Integer iTableNo iSegment1 iSegment2 iSegment3 iSegment4 iSegment5 iSegment6 iSegment7 iSegment8 iSegment9 iSegment10  iIndexSegments
+        Integer iSegment1 iSegment2 iSegment3 iSegment4 iSegment5 iSegment6 iSegment7 iSegment8 iSegment9 iSegment10 iIndexSegments
         String sDriverID
         Boolean bOK bExists bIsSQLTable
 
@@ -5440,12 +5289,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
         Get_Attribute DF_FILE_DRIVER of hTable to sDriverID
 
-        #IF (!@ > 182)
-            Get _UtilTableIsSql hTable to bIsSQLTable
-            If (bIsSQLTable = True) Begin
-                Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
-            End
-        #ENDIF
+        Get _UtilTableIsSql hTable to bIsSQLTable
+        If (bIsSQLTable = True) Begin
+            Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
+        End
 
         Get_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable iIndex to iIndexSegments
         Move (iIndexSegments > 0) to bExists
@@ -5495,40 +5342,16 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Move iSgmnt10 to iSegment10
         End
 
-        Move False to Err
-        Move hTable to iTableNo
-        Set Error_Report_Mode to DUF_ERROR_NO_REPORT
-        Send Ignore_Error of Error_Object_Id DFERR_BAD_PARAMETER
-        Send Ignore_Error of Error_Object_Id DFERR_NON_FATAL_RESTRUCTURE_ERROR
-
-        // We start by deleting the index, if it exists.
-        If (bExists = True) Begin
-            Structure_Start hTable sDriverID
-                Delete_Index iTableNo iIndex
-                Set Action_Text of ghoStatusPanel to "Restructures table..."
-            Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
-        End
-
-        Set Error_Report_Mode to DUF_ERROR_REPORT
-        Send Trap_Error of Error_Object_Id DFERR_BAD_PARAMETER
-        Send Trap_Error of Error_Object_Id DFERR_NON_FATAL_RESTRUCTURE_ERROR
-        Set Action_Text of ghoStatusPanel to ""
+        // An index that exists returned True above: there is nothing to delete first. (A block that deleted it
+        // could never run.)
         Move False to Err
         Move 0 to LastErr
-
-        // Need to re-open if index deleted.
-        Move iTableNo to hTable
-        Get OpenTableExclusive hTable to bOK
-        If (bOK = False) Begin
-            Function_Return False
-        End
-
         Send Ignore_Error of Error_Object_Id CLIERR_GENERAL_ERROR
         Structure_Start hTable sDriverID
             Create_Index hTable At iIndex
             Set_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable iIndex to iSegments
 
-            If (iSgmnt1 <> -1) Begin
+            If (iSegment1 <> -1) Begin
                 Set_Attribute DF_INDEX_SEGMENT_FIELD of hTable iIndex 1 to iSegment1
             End
             If (iSegment2 <> -1) Begin
@@ -5585,12 +5408,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
 
         Get_Attribute DF_FILE_DRIVER of hTable to sDriverID
-        #IF (!@ > 182)
-            Get _UtilTableIsSql hTable to bIsSQLTable
-            If (bIsSQLTable = True) Begin
-                Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
-            End
-        #ENDIF
+        Get _UtilTableIsSql hTable to bIsSQLTable
+        If (bIsSQLTable = True) Begin
+            Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
+        End
 
         // We start by deleting the index
         Structure_Start hTable sDriverID
@@ -5626,9 +5447,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function APIIndexCreateByFieldNames Handle hTable tAPIIndex APIIndex tAPIIndex[] APIIndexTo tAPIIndexSegment[] aIndexSegments Returns Boolean
-        Integer iCount iSegmentsFrom iFieldFrom iSegmentsTo iSQLIndexType iTableNo
-        String sDriverID sSQLIndexName
-        Boolean bOK bIsSQLTable bIsOpen bIsSQLPrimaryKey bIsSQLClustered bIsSQLTemporaryIndex bExists
+        Integer iCount iSegmentsFrom iFieldFrom iSegmentsTo
+        String sDriverID
+        Boolean bOK bIsSQLTable bIsOpen bExists
 
         Move (SizeOfArray(aIndexSegments)) to iSegmentsFrom
         If (iSegmentsFrom = 0) Begin
@@ -5643,40 +5464,13 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
         Get_Attribute DF_FILE_DRIVER of hTable to sDriverID
         Get _UtilTableIsSql hTable to bIsSQLTable
-        #IF (!@ > 182)
-            If (bIsSQLTable = True) Begin
-                Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
-            End
-        #ENDIF
-
-        Move 0     to iSegmentsTo
-        Move 0     to iSQLIndexType
-        Move ""    to sSQLIndexName
-        Move False to bIsSQLTemporaryIndex
-        Move False to bIsSQLPrimaryKey
-        Move False to bIsSQLClustered
-
-        // I'm not sure we should rename the index at all. It is deleted and re-created below(!)
-//        #IF (!@ > 182)
-//            Get UtilIndexTempRenameSQLName hTable APIIndex.sSQLIndexName sDriverID          to bOK
-//        #ENDIF
-        Get_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable APIIndex.iIndexNumber              to iSegmentsTo
-        Move (iSegmentsTo > 0) to bExists
-        If (bExists = True) Begin
-            If (bIsSQLTable = True and iSegmentsTo > 0) Begin
-                Move APIIndex.sSQLIndexName                                                 to sSQLIndexName
-                #IF (!@ > 170)
-                    #IF (!@ > 182)
-                        Get_Attribute DF_INDEX_SQL_TYPE of hTable APIIndex.iIndexNumber     to iSQLIndexType
-                        Move (iSQLIndexType = DF_INDEX_TEMPORARY)                           to bIsSQLTemporaryIndex
-                    #ENDIF
-                    Get_Attribute DF_INDEX_SQL_PRIMARY_KEY of hTable APIIndex.iIndexNumber  to bIsSQLPrimaryKey
-                    Get_Attribute DF_INDEX_CLUSTERED       of hTable APIIndex.iIndexNumber  to bIsSQLClustered
-                #ENDIF
-            End
+        If (bIsSQLTable = True) Begin
+            Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
         End
 
-        Move hTable to iTableNo
+        Get_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable APIIndex.iIndexNumber to iSegmentsTo
+        Move (iSegmentsTo > 0) to bExists
+
         Move False to Err
         Move 0 to LastErr
 
@@ -5688,14 +5482,12 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             End
             Create_Index hTable At APIIndex.iIndexNumber
 
-            #IF (!@ > 182)
-                If (bIsSQLTable = True) Begin // (DF_INDEX_SQL_TYPE = DF_INDEX_SERVER, DF_INDEX_CLIENT, DF_INDEX_SERVER_ONLY or DF_INDEX_TEMPORARY)
-                    Set_Attribute DF_INDEX_SQL_TYPE        of hTable APIIndex.iIndexNumber to APIIndex.iSQLIndexType
-                    Set_Attribute DF_INDEX_SQL_PRIMARY_KEY of hTable APIIndex.iIndexNumber to APIIndex.bIsSQLPrimaryKey
-                    Set_Attribute DF_INDEX_CLUSTERED       of hTable APIIndex.iIndexNumber to APIIndex.bIsSQLClustered
-                    Set_Attribute DF_INDEX_NAME            of hTable APIIndex.iIndexNumber to APIIndex.sSQLIndexName
-                End
-            #ENDIF
+            If (bIsSQLTable = True) Begin // (DF_INDEX_SQL_TYPE = DF_INDEX_SERVER, DF_INDEX_CLIENT, DF_INDEX_SERVER_ONLY or DF_INDEX_TEMPORARY)
+                Set_Attribute DF_INDEX_SQL_TYPE        of hTable APIIndex.iIndexNumber to APIIndex.iSQLIndexType
+                Set_Attribute DF_INDEX_SQL_PRIMARY_KEY of hTable APIIndex.iIndexNumber to APIIndex.bIsSQLPrimaryKey
+                Set_Attribute DF_INDEX_CLUSTERED       of hTable APIIndex.iIndexNumber to APIIndex.bIsSQLClustered
+                Set_Attribute DF_INDEX_NAME            of hTable APIIndex.iIndexNumber to APIIndex.sSQLIndexName
+            End
 
 		    Set_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable APIIndex.iIndexNumber to iSegmentsFrom
 
@@ -5770,12 +5562,14 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Checks if an SQL Index name for the "FROM" database already exists in the TO database,
     // but with another Index number. We can then not rename the SQL index name for the TO database table.
     Function UtilIndexSQLIndexNameExists Handle hTable Integer iIndexNumberFrom String sSQLIndexNameFrom tAPIIndex[] APIIndexTo Returns Integer
-        Integer iSize iCount
+        Integer iSize iCount iSegments
         Integer iRetVal
 
+        // The answer is the number of another index with the name, or 0. (The segment count was read into the
+        // answer, so a name nobody used answered the number of segments.)
         Move 0 to iRetVal
-        Get_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable iIndexNumberFrom to iRetVal
-        If (iRetVal = 0) Begin
+        Get_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable iIndexNumberFrom to iSegments
+        If (iSegments = 0) Begin
             Function_Return 0
         End
         Move (SizeOfArray(APIIndexTo)) to iSize
@@ -5791,38 +5585,12 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return iRetVal
     End_Function
 
+    // The same as ApiIndexRemoveSegment, which it now calls. (Its own code did nothing for the last segment, and
+    // changed the index outside a Structure_Start ... Structure_End.)
     Function ApiIndexDeleteSegment Handle hTable Integer iIndex Integer iSegment Returns Boolean
-        Integer iNumSegments iCurSegment iSegmentCase iSegmentDirection iSegmentColumn
-        Boolean bIsSQLTable
-        
-        #IF (!@ > 182)
-            Get _UtilTableIsSql hTable to bIsSQLTable
-            If (bIsSQLTable = True) Begin
-                Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
-            End
-        #ENDIF
-
-        Get_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable iIndex to iNumSegments
-        If (iSegment = iNumSegments) Begin
-//            Set_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable iIndex to (iNumSegments - 1)
-        End
-
-        Else If (iSegment > 0 and iSegment < iNumSegments) Begin
-            for iCurSegment from iSegment to (iNumSegments - 1)
-                //*** Move index segment attributes
-                Get_Attribute DF_INDEX_SEGMENT_CASE      of hTable iIndex (iCurSegment + 1) to iSegmentCase
-                Get_Attribute DF_INDEX_SEGMENT_DIRECTION of hTable iIndex (iCurSegment + 1) to iSegmentDirection
-                Get_Attribute DF_INDEX_SEGMENT_FIELD     of hTable iIndex (iCurSegment + 1) to iSegmentColumn
-
-                Set_Attribute DF_INDEX_SEGMENT_CASE      of hTable iIndex iCurSegment to iSegmentCase
-                Set_Attribute DF_INDEX_SEGMENT_DIRECTION of hTable iIndex iCurSegment to iSegmentDirection
-                Set_Attribute DF_INDEX_SEGMENT_FIELD     of hTable iIndex iCurSegment to iSegmentColumn
-            Loop
-
-            Set_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable iIndex to (iNumSegments - 1)
-        End
-
-        Function_Return (Err = False)
+        Boolean bOK
+        Get ApiIndexRemoveSegment hTable iIndex iSegment to bOK
+        Function_Return bOK
     End_Function
 
     Function APIIndexRemoveAllIndexes Handle hTable tAPIIndex[] APIIndex Returns Boolean
@@ -5847,11 +5615,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Get_Attribute DF_FILE_DRIVER of hTable to sDriverID
         Get _UtilTableIsSql hTable to bIsSQLTable
-        #IF (!@ > 182)
-            If (bIsSQLTable = True) Begin
-                Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
-            End
-        #ENDIF
+        If (bIsSQLTable = True) Begin
+            Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
+        End
 
         Move False to Err
         Move 0 to LastErr
@@ -5859,22 +5625,12 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Structure_Start hTable sDriverID
             For iCount from 0 to iSize
-//                Move False to bIsSQLPrimaryKey
-//                #IF (!@ > 180)   // DF 18.1 and up
-//                    Set Error_Report_Mode to DUF_ERROR_NO_REPORT
-//                    Get_Attribute DF_INDEX_SQL_PRIMARY_KEY of hTable APIIndex[iCount].iIndexNumber to bIsSQLPrimaryKey
-//                    Set Error_Report_Mode to DUF_ERROR_REPORT
-//                #ENDIF
                 // We can't delete if this is a primary key index:
-//                If (bIsSQLPrimaryKey = False) Begin
                     Move APIIndex[iCount].iIndexNumber to iIndex
                     Delete_Index hTable iIndex
-//                    Set Error_Report_Mode to DUF_ERROR_REPORT
-//                End
             Loop
             Set Action_Text of ghoStatusPanel to "Restructures table..."
         Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
-//        Move False to Err
         Move 0 to LastErr
 
         Set Action_Text of ghoStatusPanel to ""
@@ -5939,12 +5695,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Function_Return False
         End
         Get_Attribute DF_FILE_DRIVER of hTable to sDriverID
-        #IF (!@ > 182)
-            Get _UtilTableIsSql hTable to bIsSQLTable
-            If (bIsSQLTable = True) Begin
-                Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
-            End
-        #ENDIF
+        Get _UtilTableIsSql hTable to bIsSQLTable
+        If (bIsSQLTable = True) Begin
+            Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
+        End
 
         // Check to see if the index exists or not...
         Get_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable iIndex to iNumSegments
@@ -5965,10 +5719,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // Delete an Index Segment
     Function ApiIndexRemoveSegment Handle hTable Integer iIndex Integer iSegment Returns Boolean
-        Boolean bOK bSQLDriver bIndexTemporary bIsSQLTable
+        Boolean bOK bIndexTemporary bIsSQLTable
         Integer iNumSegments iCurSegment iSegmentCase iSegmentDirection iSegmentColumn
-        Integer iIndexType
-        String sDriverID
 
         Get AutoConnectionIDLogin to bOK
         Move False to Err
@@ -5978,12 +5730,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Function_Return False
         End
 
-        #IF (!@ > 182)
-            Get _UtilTableIsSql hTable to bIsSQLTable
-            If (bIsSQLTable = True) Begin
-                Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
-            End
-        #ENDIF
+        Get _UtilTableIsSql hTable to bIsSQLTable
+        If (bIsSQLTable = True) Begin
+            Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
+        End
 
         // Check to see if the index exists or not...
         Get_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable iIndex to iNumSegments
@@ -6055,12 +5805,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Function_Return False
         End
 
-        #IF (!@ > 182)
-            Get _UtilTableIsSql hTable to bIsSQLTable
-            If (bIsSQLTable = True) Begin
-                Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
-            End
-        #ENDIF
+        Get _UtilTableIsSql hTable to bIsSQLTable
+        If (bIsSQLTable = True) Begin
+            Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
+        End
 
         // Check to see if the index exists or not...
         Get_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable iIndex to iNumSegments
@@ -6118,10 +5866,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move False to bTemporary
         Get _UtilTableIsSql hTable to bIsSQLTable
         If (bIsSQLTable = True) Begin
-            #IF (!@ > 182)
-                Get_Attribute DF_INDEX_SQL_TYPE of hTable iIndex to iSQLIndexType
-                Move (iSQLIndexType = DF_INDEX_TEMPORARY) to bTemporary
-            #ENDIF
+            Get_Attribute DF_INDEX_SQL_TYPE of hTable iIndex to iSQLIndexType
+            Move (iSQLIndexType = DF_INDEX_TEMPORARY) to bTemporary
         End
         Function_Return bTemporary
     End_Function
@@ -6205,8 +5951,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
     
     // Converts an embedded table from 2.3 -> 3.0.
-    // Returns: FALSE only if the table can't be opened or the conversion fails.
-    // It will return a TRUE if successful or the table is an SQL table.
+    // Returns: False only if the conversion fails.
+    // It returns True when it succeeds, and when there is nothing to convert: an SQL table, an alias, a table that
+    // could not be opened.
     Function UtilTableConvertFrom23Format Handle hTable Returns Boolean
         Boolean bOK bIsEmbedded bIsAlias
         String sRevision
@@ -6303,7 +6050,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     
     // Replaces all date values with CS_DUFLowestAllowedDateValue for all tables in Filelist.cfg,
     // _except_ those tables that has been excluded with the "ApiTableDateCorrectionAddException" message.
-    // If the passed bAllowZeroDates = True, date columns that are = 0 will not be changed.
+    // With bFixZeroDates = True, date columns that are 0 are changed as well; with False they stay 0.
     // This is for prepairing embedded tables (*.dat) before an SQL conversion.
     //
     // The root of the problem is the following:
@@ -6388,8 +6135,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Loops through all records for the passed hTable, and checks that all Date values
     // for the passed aDateFields array are OK. Else the Data value is set to CS_DUFLowestAllowedDateValue
     // and the record is saved
-    // If the passed bAllowZeroDates = True, date columns that are = 0 will not be changed.
-    // Note: It first sets all indexes to BATCH and reset them at the end.
+    // With bFixZeroDates = True, date columns that are 0 are changed as well; with False they stay 0.
+    // Note: With bResetIndexesToOnLine = True the indexes are set back to online at the end.
     Function UtilTableCorrectBogusDateValues Handle hTable Integer[] aDateFields Boolean bFixZeroDates Boolean bResetIndexesToOnLine Returns Boolean
         Integer iSize iCount iField iRecord iTotalRecords iDateFormat iDriverIndex iFailed iReportMode
         String sDriverID sDateMin
@@ -6404,9 +6151,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         // Especially considering that this call is probably done at the very
         // beginning of a DUF update.
         If (bOK = False) Begin
-//            Set Private.phCurrentTable to hTable
-//            Error DFERR_PROGRAM "Table exists in Filelist.cfg but not on disk or SQL back-end."
-//            Function_Return False
             Function_Return True
         End
 
@@ -6415,7 +6159,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get_Attribute DF_DATE_FORMAT to iDateFormat
         Set_Attribute DF_DATE_FORMAT to DF_DATE_USA
 
-//        Send SetAllIndexesToBatch hTable True
         Open hTable
         Get_Attribute DF_FILE_OPENED of hTable to bOpened
         If (bOpened = False) Begin
@@ -6750,11 +6493,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Pass a True as first parameter if the ghoStatusPanel is active and progress info should be shown.
     // Pass a second True if this is a comparison and the text should either reflect "FROM" or "TO" database.
     Function UtilTablesStructArrayFill Boolean bStatusPanel Boolean bCompareUtil Boolean bFromTables Returns tAPITable[]
-        tAPITableNameInfo ApiTableNameInfo
         tAPITable[]     aApiTables aApiTablesEmpty
-        tAPIColumn[]    aApiColumns
-        tAPIIndex[]     aApiIndexes
-        tAPIRelation[]  aApiRelations
         Handle hTable
         Integer iCount
         Boolean bUserCancel bOK
@@ -6788,12 +6527,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 // ToDo: Needs to be revised
                 // For some reason tables may be reported as "unopened", while in
                 // fact the open was successful (!)
-//                Get_Attribute DF_FILE_OPENED of hTable to bIsOpen
-//                If (bIsOpen = False) Begin
-//                    Move True to aApiTablesEmpty[0].bError
-//                    Move hTable to aApiTablesEmpty[0].ApiTableInfo.iTableNumber
-//                    Function_Return aApiTablesEmpty
-//                End
 
                 Get_Attribute DF_FILE_LOGICAL_NAME of hTable to sLogicalName
                 Set piPosition of ghoProgressBar to iCount
@@ -6801,7 +6534,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Set Action_Text of ghoStatusPanel to ("Number:" * String(hTable) * String(sLogicalName))
 
                 Get UtilTableStructFill hTable bFromTables to aApiTables[iCount]
-//                Close hTable DF_PERMANENT
                 Increment iCount
             End
 
@@ -6946,10 +6678,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         tAPIColumnCompare[]   aAPIColumnCompare
         tAPIIndexCompare[]    aAPIIndexCompare
         tAPIRelationCompare[] aAPIRelationCompare
-        tAPITableNameInfo ApiTableInfoEmpty ApiTableInfoFrom ApiTableInfoTo
-        tAPIColumn[]   aApiColumnsEmpty aApiColumnsFrom aApiColumnsTo
-        tAPIIndex[]    aApiIndexEmpty aApiIndexFrom aApiIndexTo
-        tAPIRelation[] aApiRelationEmpty aApiRelationFrom aApiRelationTo
+        tAPITableNameInfo ApiTableInfoFrom ApiTableInfoTo
+        tAPIColumn[] aApiColumnsFrom aApiColumnsTo
+        tAPIIndex[] aApiIndexFrom aApiIndexTo
+        tAPIRelation[] aApiRelationFrom aApiRelationTo
 
         Move (SizeOfArray(aAPITableFrom)) to iSizeFrom
         Move (SizeOfArray(aAPITableTo))   to iSizeTo
@@ -7442,7 +7174,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Compare multiple columns. (For 'FROM' & 'TO' tables)
     Function UtilColumnsCompare String sDriverIDFrom String sDriverIDTo Boolean bIsSQLFrom Boolean bIsSQLTo tAPIColumnCompare[] aAPIColumnCompare Boolean bCompareDate_DataTime Returns Boolean
         Boolean bIsSame
-        Integer iCount iColumns iColumn
+        Integer iCount iColumns
 
         Move True to bIsSame
         Move (SizeOfArray(aAPIColumnCompare)) to iColumns
@@ -7463,7 +7195,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Compares a single column (For 'FROM' & 'TO' tables)
     Function UtilColumnCompare String sDriverIDFrom String sDriverIDTo Boolean bIsSQLFrom Boolean bIsSQLTo tAPIColumnCompare APIColumnCompare Boolean bCompareDate_DataTime Returns Boolean
         Integer iFromType iToType iDbType
-        tColumnType ColumnType
         Boolean bIsDateTypeFrom bIsDateTypeTo bNativeTypes bBothDates
 
         If (APIColumnCompare.bCancelFrom = True or APIColumnCompare.bCancelTo = True) Begin
@@ -7536,10 +7267,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function UtilColumnsStructFill Handle hTable Returns tAPIColumn[]
-        Integer iNumColumns iColumn iCount iOptions iDbType iType iCheckFieldNumber iDriverID
+        Integer iNumColumns iColumn iCount iOptions iDbType iType iCheckFieldNumber
         Boolean bIdentityKey bSqlDriver bIsOpen bExists bIsSqlTable bUserCancel
         tAPIColumn[] APIColumns APIColumnsEmpty
-        String sDriverID sRootName sLogicalName sDataType
+        String sDriverID sRootName sLogicalName
 
         Set Error_Report_Mode to DUF_ERROR_NO_REPORT
         Get piDbType to iDbType
@@ -7570,10 +7301,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Function_Return APIColumnsEmpty
             End
         End
-//        Get DriverIndex sDriverID to iDriverID
-//        If (sDriverID = MSSQLDRV_ID) Begin
-//            Set_Attribute DF_DRIVER_MAP_DFDATETIME_TO_SQLTYPE of iDriverId to 'datetime2'
-//        End
 
         Move 0 to iCount
         Get_Attribute DF_FILE_NUMBER_FIELDS of hTable to iNumColumns
@@ -7589,20 +7316,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
             Send Ignore_Error of Error_Object_Id DFERR_UNSUPPORTED_ATTRIBUTE
             If (bIsSqlTable = True) Begin 
-//                If (iType = DF_DATE) Begin
-//                    // Note: This is actually the same as SQL_DATETIME
-//                    Move SQL_DATE to iType
-//                    Move 3 to APIColumns[iCouknt].iPrecision
-//                End
-//                Else If (iType = DF_DATET Get_Attribute DF_FIELD_NATIVE_TYPE of hTable iColumn to iTypeIME) Begin
-//                    // In modern MS-SQL databases SQL_DATETIME will be = to "datetime2".
-//                    // By default MS-SQL will create such a field with 7 (!) decimal places.
-//                    // This is just a waste because DataFlex will truncate that to 3 decimal
-//                    // places. Therefore, we hard-code the precision to be only thee decimals.
-//                    Move SQL_DATETIME to iType
-//                    Move 3 to APIColumns[iCount].iPrecision
-//                End
-//                Move iType                                                to APIColumns[iCount].iType
                 Get_Attribute DF_FIELD_NATIVE_TYPE      of hTable iColumn to APIColumns[iCount].iType
                 Get_Attribute DF_FIELD_NATIVE_TYPE_NAME of hTable iColumn to APIColumns[iCount].sType
                 Get_Attribute DF_FIELD_NULL_ALLOWED     of hTable iColumn to APIColumns[iCount].bAllowNULL
@@ -7620,40 +7333,17 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Move 0 to APIColumns[iCount].iType
             End
             If (bExists = True) Begin
-                #IF (!@ > 170)
-                    Get_Attribute DF_FIELD_IS_IDENTITY of hTable iColumn to bIdentityKey
-                #ENDIF
+                Get_Attribute DF_FIELD_IS_IDENTITY of hTable iColumn to bIdentityKey
             End
             Send Trap_Error of Error_Object_Id DFERR_UNSUPPORTED_ATTRIBUTE
             If (bIdentityKey = True) Begin
                 Move C_tAPIColumn_Identity to APIColumns[iCount].iOptions
             End
 
-//            Else Begin
-//                Move False to Err
-//                Move 0     to LastErr
-//                If (bIsSqlTable = True) Begin
-//                    Get_Attribute DF_FIELD_NATIVE_TYPE of hTable iColumn to APIColumns[iCount].iType
-//                End
-//                Else Begin
-//                    Get_Attribute DF_FIELD_TYPE        of hTable iColumn to APIColumns[iCount].iType
-//                    Get UtilColumnTypeToString sDriverID iDbType APIColumns[iCount].iType to APIColumns[iCount].sType
-//                End
-//                // If the array value is out of bounce it means that this column doesn't exist on the backend.
-//                Move (LastErr <> DFERR_ARRAY_INDEX_OUT_OF_BOUNDS) to bExists
-//                If (bExists = False) Begin
-//                    Move 0 to APIColumns[iCount].iType
-//                End
-//            End
-
             If (bExists = True) Begin
                 Move iColumn to APIColumns[iCount].iFieldNumber
                 Get_Attribute DF_FIELD_NAME        of hTable iColumn to APIColumns[iCount].sFieldName
                 // ToDo: Can't use native_size as it can get way to big and causes "out of memory" problems.
-//                If (bIsSqlTable = True) Begin
-//                    Get_Attribute DF_FIELD_NATIVE_SIZE of hTable iColumn to APIColumns[iCount].iLength
-//                    Get_Attribute DF_FIELD_PRECISION   of hTable iColumn to APIColumns[iCount].iPrecision
-//                End
                 Get_Attribute DF_FIELD_LENGTH      of hTable iColumn to APIColumns[iCount].iLength 
                 If (APIColumns[iCount].iPrecision = 0) Begin
                     Get_Attribute DF_FIELD_PRECISION   of hTable iColumn to APIColumns[iCount].iPrecision
@@ -7694,7 +7384,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     Function UtilColumnCombineFromAndToArrays tAPIColumn[] APIColumnFrom tAPIColumn[] APIColumnTo Returns tAPIIndexCompare[]
         tAPIColumnCompare[] aAPIColumnCompare
         tAPIColumnCompare   APIColumnCompare
-        Integer iSizeFrom iSizeTo iSize iCount iItem
+        Integer iSizeFrom iSizeTo iCount iItem
 
         Move (SizeOfArray(APIColumnFrom)) to iSizeFrom
         Decrement iSizeFrom
@@ -8096,13 +7786,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Get_Attribute DF_FILE_PRIMARY_INDEX of hTable                   to APIIndexes[iCount].iPrimaryIndex
                 If (bIsSQLTable = True) Begin
                     Get_Attribute DF_INDEX_NAME         of hTable iIndex        to APIIndexes[iCount].sSQLIndexName
-                    #IF (!@ > 180)   // DF 18.1 and up
-                        Get_Attribute DF_INDEX_SQL_PRIMARY_KEY of hTable iIndex to APIIndexes[iCount].bIsSQLPrimaryKey
-                        Get_Attribute DF_INDEX_CLUSTERED of hTable iIndex       to APIIndexes[iCount].bIsSQLClustered
-                    #ENDIF
-                    #IF (!@ > 182)  // DF 19.0 and up
-                        Get_Attribute DF_INDEX_SQL_TYPE of hTable iIndex        to APIIndexes[iCount].iSQLIndexType // (DF_INDEX_SQL_TYPE = DF_INDEX_SERVER, DF_INDEX_CLIENT, DF_INDEX_SERVER_ONLY or DF_INDEX_TEMPORARY)
-                    #ENDIF
+                    Get_Attribute DF_INDEX_SQL_PRIMARY_KEY of hTable iIndex to APIIndexes[iCount].bIsSQLPrimaryKey
+                    Get_Attribute DF_INDEX_CLUSTERED of hTable iIndex       to APIIndexes[iCount].bIsSQLClustered
+                    Get_Attribute DF_INDEX_SQL_TYPE of hTable iIndex        to APIIndexes[iCount].iSQLIndexType // (DF_INDEX_SQL_TYPE = DF_INDEX_SERVER, DF_INDEX_CLIENT, DF_INDEX_SERVER_ONLY or DF_INDEX_TEMPORARY)
                 End
 
                 Move 0 to iSegmentCount
@@ -8130,7 +7816,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     Function UtilIndexCombineFromAndToArrays tAPIIndex[] APIIndexFrom tAPIIndex[] APIIndexTo Returns tAPIIndexCompare[]
         tAPIIndexCompare[] aAPIIndexCompare
         tAPIIndexCompare   APIIndexCompare
-        Integer iSizeFrom iSizeTo iSize iCount iItem
+        Integer iSizeFrom iSizeTo iCount iItem
 
         Move (SizeOfArray(APIIndexFrom)) to iSizeFrom
         Move (SizeOfArray(APIIndexTo)) to iSizeTo
@@ -8227,26 +7913,22 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // returns a string with the name.
     Function UtilIndexTypeToString Integer iIndexType Returns String
         String sRetval
-        #IF (!@ >= 190)
-            Case Begin
-                Case (iIndexType = DF_INDEX_CLIENT)
-                    Move "DF_INDEX_CLIENT" to sRetval
-                    Case Break
-                Case (iIndexType = DF_INDEX_SERVER)
-                    Move "DF_INDEX_SERVER" to sRetval
-                    Case Break
-                Case (iIndexType = DF_INDEX_SERVER_ONLY)
-                    Move "DF_INDEX_SERVER_ONLY" to sRetval
-                    Case Break
-                Case (iIndexType = DF_INDEX_TEMPORARY)
-                    Move "DF_INDEX_TEMPORARY" to sRetval
-                    Case Break
-                Case Else
-                    Move "UNKNOWN INDEX TYPE" to sRetval
-            Case End
-        #ELSE
-            Move "UNKNOWN INDEX TYPE" to sRetval
-        #ENDIF
+        Case Begin
+            Case (iIndexType = DF_INDEX_CLIENT)
+                Move "DF_INDEX_CLIENT" to sRetval
+                Case Break
+            Case (iIndexType = DF_INDEX_SERVER)
+                Move "DF_INDEX_SERVER" to sRetval
+                Case Break
+            Case (iIndexType = DF_INDEX_SERVER_ONLY)
+                Move "DF_INDEX_SERVER_ONLY" to sRetval
+                Case Break
+            Case (iIndexType = DF_INDEX_TEMPORARY)
+                Move "DF_INDEX_TEMPORARY" to sRetval
+                Case Break
+            Case Else
+                Move "UNKNOWN INDEX TYPE" to sRetval
+        Case End
         Function_Return sRetval
     End_Function
 
@@ -8386,7 +8068,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         tAPIRelation[] aAPIRelationFromAndTo
         tAPIRelationCompare[] aAPIRelationCompare
         tAPIRelationCompare   APIRelationCompare
-        Integer iSizeFrom iSizeTo iSize iCount iItem
+        Integer iSizeFrom iSizeTo iCount iItem
 
         Move (SizeOfArray(aAPIRelationFrom)) to iSizeFrom
         Move (SizeOfArray(aAPIRelationTo))   to iSizeTo
@@ -8594,7 +8276,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function UtilTableCreateCodeMastCodeTypeIntFiles String sDataPath Returns Boolean
-        Boolean bRecnum bToAnsi
+        Boolean bToAnsi
         Integer iCh
         String sFileName sDriverID sConnectionID sSchemaName sANSI_OEM
 
@@ -8606,7 +8288,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get psDriverID     to sDriverID
         Get psConnectionID to sConnectionID
         Get psSchema       to sSchemaName
-        Get True           to bRecnum
         Get pbToANSI       to bToAnsi
         Move CS_ANSI_Txt to sANSI_OEM
         If (bToAnsi = False) Begin
@@ -8663,7 +8344,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Use function to move *.fd, termlist.*, collate.*, dfcollate.* files to a "Data\Backup" folder,
     // and to remove all *.cch files (DAW SQL driver cache files. They will get recreated when needed.)
     Function UtilMoveMiscFilesToBackupFolder Returns Boolean
-        Boolean bOK bExists
+        Boolean bExists
+        Integer iRetval
         String sDataPath sBackupFolder
 
         Set Message_Text of ghoStatusPanel to "Moving misc. files to Backup folder."
@@ -8672,7 +8354,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Get vFilePathExists (sDataPath + sBackupFolder) to bExists
         If (bExists = False) Begin
-            Get vCreateDirectory (sDataPath + sBackupFolder) to bOK
+            Get vCreateDirectory (sDataPath + sBackupFolder) to iRetval
             Get vFilePathExists (sDataPath + sBackupFolder) to bExists
             If (bExists = False) Begin
                 Error DFERR_PROGRAM ("Could not create the the backup data folder to move all misc. files to. You need to move them somewhere manually.")
@@ -8681,28 +8363,28 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
         // The files move on every run. (The moves stood inside "the folder was not there": a second run moved
         // nothing.)
-        Get vMoveFile (sDataPath + "*.fd")         (sDataPath + sBackupFolder) to bOK  
-        Get vMoveFile (sDataPath + "*.bad")        (sDataPath + sBackupFolder) to bOK  
-        Get vMoveFile (sDataPath + "*.err")        (sDataPath + sBackupFolder) to bOK  
-        Get vMoveFile (sDataPath + "*.bak")        (sDataPath + sBackupFolder) to bOK
-        Get vMoveFile (sDataPath + "*.def")        (sDataPath + sBackupFolder) to bOK
-        Get vMoveFile (sDataPath + "*.fil")        (sDataPath + sBackupFolder) to bOK
-        Get vMoveFile (sDataPath + "*.hlp")        (sDataPath + sBackupFolder) to bOK
-        Get vMoveFile (sDataPath + "*.old")        (sDataPath + sBackupFolder) to bOK           
-        Get vMoveFile (sDataPath + "*.prn")        (sDataPath + sBackupFolder) to bOK           
-        Get vMoveFile (sDataPath + "*.sts")        (sDataPath + sBackupFolder) to bOK           
-        Get vMoveFile (sDataPath + "*.td")         (sDataPath + sBackupFolder) to bOK           
-        Get vMoveFile (sDataPath + "*.log")        (sDataPath + sBackupFolder) to bOK           
-        Get vMoveFile (sDataPath + "*.bat")        (sDataPath + sBackupFolder) to bOK           
-        Get vMoveFile (sDataPath + "*.cmd")        (sDataPath + sBackupFolder) to bOK           
-        Get vMoveFile (sDataPath + "*.zip")        (sDataPath + sBackupFolder) to bOK           
-        Get vMoveFile (sDataPath + "*.abs")        (sDataPath + sBackupFolder) to bOK           
-        Get vMoveFile (sDataPath + "termlist.*")   (sDataPath + sBackupFolder) to bOK
-        Get vMoveFile (sDataPath + "*.dfr")        (sDataPath + sBackupFolder) to bOK
-        Get vMoveFile (sDataPath + "vsutil.cfg")   (sDataPath + sBackupFolder) to bOK
-        Get vMoveFile (sDataPath + "collate.*")    (sDataPath + sBackupFolder) to bOK
-        Get vMoveFile (sDataPath + "df_collate.*") (sDataPath + sBackupFolder) to bOK
-        Get vDeleteFile (sDataPath + "*.cch")                                  to bOK
+        Get vMoveFile (sDataPath + "*.fd")         (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.bad")        (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.err")        (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.bak")        (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.def")        (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.fil")        (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.hlp")        (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.old")        (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.prn")        (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.sts")        (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.td")         (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.log")        (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.bat")        (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.cmd")        (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.zip")        (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.abs")        (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "termlist.*")   (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "*.dfr")        (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "vsutil.cfg")   (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "collate.*")    (sDataPath + sBackupFolder) to iRetval
+        Get vMoveFile (sDataPath + "df_collate.*") (sDataPath + sBackupFolder) to iRetval
+        Get vDeleteFile (sDataPath + "*.cch")                                  to iRetval
 
         Set Message_Text of ghoStatusPanel to ""
         Function_Return True
@@ -8813,7 +8495,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     Procedure Set Df_Database_Default_Default_Date_DUF String sDateValue
         String sDriverID sServer
-        tColumnType RetvalType
         Integer iDbType iDriver
         Handle hDatabase
 
@@ -8833,7 +8514,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     Procedure Set Df_Database_Default_Default_Datetime_DUF String sDateValue
         String sDriverID sServer
-        tColumnType RetvalType
         Integer iDbType iDriver
         Handle hDatabase
 
@@ -9059,7 +8739,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         String sTableNameOrg
         Boolean bOpen bOK
         Integer iQuietMode
-        tSQLConnection SQLConnection
         
         Move False to bOpen
         Move sTableName to sTableNameOrg
@@ -9481,25 +9160,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return iDriver
     End_Function
 
-#IF (!@ < 191)
-    #Replace SQLSERVERUNKNOWNCLIENTNAME "Unknown SQL Server client"
-    #Replace SQLSERVER2000CLIENTNAME "SQL Server (SQL Server 2000 client)"
-    #Replace SQLSERVER2005CLIENTNAME "SQL Native Client (SQL Server 2005 client)"
-    #Replace SQLSERVER2008CLIENTNAME "SQL Server Native Client 10.0 (SQL Server 2008 client)"
-    #Replace SQLSERVER2012CLIENTNAME "SQL Server Native Client 11.0 (SQL Server 2012 client)"
-    #Replace SQLSERVER2014CLIENTNAME "ODBC Driver 11 for SQL Server (SQL Server 2014 client)"
-    #Replace SQLSERVER2016CLIENTNAME "ODBC Driver 13 for SQL Server (SQL Server 2016 client)"
-    #Replace SQLSERVER2017CLIENTNAME "ODBC Driver 17 for SQL Server (SQL Server 2017 client)"
-
-    #Replace SQLSERVER2014CLIENT 12 //   "ODBC Driver 11 for SQL Server"
-    #Replace SQLSERVER2016CLIENT 13 //   "ODBC Driver 13 for SQL Server"
-    #Replace SQLSERVER2017CLIENT 17 //   "ODBC Driver 17 for SQL Server"
-
-    #Replace SQLSERVER2014DRVRSTR "ODBC Driver 11 for SQL Server"
-    #Replace SQLSERVER2016DRVRSTR "ODBC Driver 13 for SQL Server"
-    #Replace SQLSERVER2017DRVRSTR "ODBC Driver 17 for SQL Server"
-#ENDIF
-
+    // These two replace the cMSSQLHandler functions of DataFlex's MSSqldrv.pkg: the package of DataFlex 19.1 and
+    // 20.1 does not know the SQL Server 2019 client (ODBC Driver 18), DUF's own names for it are used.
     Function SqlServerClientVersionName for cMSSQLHandler Integer iClientVersion  Returns String
         String  sSqlServerClientVersionName
         
@@ -9774,8 +9436,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // Scans to see if all tables can be opened exclusivly. I.e. that nobody else is running the application.
     // It does not check Flexerrs, CodeType & CodeMast
-    // Returns: True if nobody else is running
-    //          True if at least one table is open by another process (e.g. another user is running the application)
+    // Returns: True if nobody else is running - the database is NOT in use, whatever the name says
+    //          False if at least one table is open by another process (e.g. another user is running the application)
     // N.B! Only works for Embedded DataFlex Tables! It will _not_ work for Sql tables because; these
     //      tables are not locked as DataFlex tables are.
     Function IsDatabaseInUse Returns Boolean

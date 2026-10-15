@@ -21,9 +21,7 @@
 Use cSQLConnectionIniFile.h.pkg
 Use cDbUpdateDatabaseDriver.pkg
 
-#IF (!@ > 190)
-    Use cLoginEncryption.pkg
-#ENDIF
+Use cLoginEncryption.pkg
 Use seq_chnl.pkg
 
 // The login key of the workspace this program is compiled in: AppSrc\LoginEncryptionKey.inc, the file the
@@ -153,31 +151,10 @@ Class cSQLConnectionIniFile is a cIniFile
         Function_Return (EQ)
     End_Function
 
-    Function NumberOfIniFileConnections Returns Integer
-        Handle hoSections
-        Integer iItems
-
-        Send ReadSections hoSections
-        Move (Item_Count(hoSections)) to iItems
-        Function_Return iItems
-    End_Function
-
     // The normal connection string looks something like this;
     // "SERVER=.\SQLEXPRESS; DATABASE=OrderEntry; TRUSTED_CONNECTION=Yes; ,0"
     // ...but the full connection string looks like this;
     // "DFConnectionId OrderEntry, SERVER=.\SQLEXPRESS; DATABASE=OrderEntry; TRUSTED_CONNECTION=Yes; ,0"
-//    Function SQLIniFileAddConnection String sFullConnectionString Returns Boolean
-//        String sSection
-//        Integer iCount
-//
-//        Move False to Err
-//        Get psIniSectionName to sSection
-//        Get NumberOfIniFileConnections to iCount
-//        Increment iCount
-//        Set IniFileValue sSection (CS_SQLIniSectionName + String(iCount)) to sFullConnectionString
-//
-//        Function_Return (Err = False)
-//    End_Function
 
     Function DeleteAllIniFileConnections Returns Boolean
         Integer iCount
@@ -193,28 +170,6 @@ Class cSQLConnectionIniFile is a cIniFile
             Increment iCount
             Get SectionExists (CS_SQLIniSectionName + String(iCount)) to bExists
         Loop
-        Function_Return (Err = False)
-    End_Function
-
-    Function DeleteIniFileConnection Integer iItem Returns Boolean
-        Integer iCount
-        String sSection
-        Boolean bExists
-
-        Move False to Err
-        Move 1 to iCount
-        Get psIniSectionName to sSection
-        Get KeyExists sSection CS_SQLIniConnectionIdKeyword to bExists
-        While (bExists = True)
-            If (iCount = iItem) Begin
-                Send DeleteSection sSection
-//                Set IniFileValue sSection (CS_SQLIniSectionName + String(iCount)) to ""
-                Move 9999 to iCount // Just some ridiculously high number to get out of the loop as we're done.
-            End
-            Increment iCount
-            Get KeyExists sSection (CS_SQLIniSectionName + String(iCount)) to bExists
-        Loop
-
         Function_Return (Err = False)
     End_Function
 
@@ -261,55 +216,22 @@ Class cSQLConnectionIniFile is a cIniFile
         Function_Return iRetval
     End_Function
 
-    // Checks if the passed sConnectionID exists more than once in the passed struct array.
-    // Used to check that ConnectionID's are unique.
-    Function IsConnectionIDDuplicate String sConnectionID Returns Boolean
-        Integer iCount iSize iItems
-        String sValue
-        Boolean bExists
-        tSQLConnection[] SQLConnectionsArray
-
-        Move 0 to iItems
-        Get ReadIniFileConnections to SQLConnectionsArray
-        Move (SizeOfArray(SQLConnectionsArray)) to iSize
-        Decrement iSize
-        For iCount from 0 to iSize
-            Move SQLConnectionsArray[iCount].sConnectionID to sValue
-            Move (sValue = sConnectionID) to bExists
-            If (bExists) Begin
-                Increment iItems
-            End
-        Loop
-
-        Function_Return (iItems > 1)
-    End_Function
-
-    // To update the SQLConnections.ini file with a new default Connection ID.
+    // Takes the connection with the passed connection ID out of the ini file; the others stay. Returns False when
+    // the ID is not in the file, or the file could not be written. (The class had two functions of this name; the
+    // one that was used put a copy of the connection in front instead.)
     Function DeleteIniFileConnection String sConnectionID Returns Boolean
-        Boolean bOK
-        Integer iSize iCount
         tSQLConnection[] SQLConnectionsArray
-        tSQLConnection SQLConnection
-        String sConnectionString
+        Integer iIndex
+        Boolean bOK
 
-        Move False to Err
-        Get psConnectionString to sConnectionString
-
+        Get IniFileConnectionIDIndex sConnectionID to iIndex
+        If (iIndex = -1) Begin
+            Function_Return False
+        End
         Get ReadIniFileConnections to SQLConnectionsArray
-        Move (SizeOfArray(SQLConnectionsArray)) to iSize
-        Decrement iSize
-        // Set all current connection to inactive.
-        For iCount from 0 to iSize
-            Move False to SQLConnectionsArray[iCount].bEnabled
-        Loop
-
-        Get IniFileConnectionID sConnectionID to SQLConnection
-        Move True              to SQLConnection.bEnabled
-        Move sConnectionString to SQLConnection.sConnectionString
-        Move (InsertInArray(SQLConnectionsArray, 0, SQLConnection)) to SQLConnectionsArray
+        Move (RemoveFromArray(SQLConnectionsArray, (iIndex - 1))) to SQLConnectionsArray
         Get WriteIniFileConnections SQLConnectionsArray to bOK
-
-        Function_Return (bOK = True)
+        Function_Return bOK
     End_Function
 
     // Used for updating an existing connection with new data.

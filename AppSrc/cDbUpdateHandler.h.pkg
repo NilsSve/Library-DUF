@@ -146,10 +146,6 @@ End_Enumeration_List
     Move 0 to ghoDbUpdateHandler
 #ENDIF
 
-// NOTE: If the DbVersion table should _not_ be used and you
-// instead set the "Set Data_File_Field to (RefTable(MyTable)) (RefTable(MyTable.DbUpdateVersion))"
-// in the cDbUpdateHandler object; Add a "Define DUF_Use_DbVersion" to your code,
-// _before_ the "Use cDbUpdateHandler.pkg" line.
-//#IFNDEF DUF_Use_Custom_DbVersion
-//    Declare_Datafile DbVersion
-//#ENDIF
+// NOTE: To keep the database version in a column of a table of the application instead of the DbVersion
+// table, set pbUseCustomDbVersion to True, and piDbVersionFileNumber / piDbVersionFieldNumber to that table and
+// column, in the cDbUpdateHandler object.

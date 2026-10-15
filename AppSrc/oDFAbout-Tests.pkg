@@ -72,9 +72,9 @@ Object oDFAbout_Tests is a cTestFixture
         Get Network_User_Name of Desktop to sUser
         Get_Environment "USERNAME" to sLogon
         Send Assert (sUser <> "") "A name comes back."
-        If (sUser <> "User Unknown") Begin
-            Send Assert (Uppercase(sUser) contains Uppercase(sLogon)) ("It holds the name of the USERNAME variable, it was" * sUser)
-        End
+        // "User Unknown" is the answer of a failed call: the test fails then. (The compare was skipped for it.)
+        Send Assert (sUser <> "User Unknown") "The call did not fail."
+        Send Assert (Uppercase(sUser) contains Uppercase(sLogon)) ("It holds the name of the USERNAME variable, it was" * sUser)
     End_Procedure
 
 End_Object

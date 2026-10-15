@@ -148,7 +148,7 @@ Class cDbUpdateGenericDatabaseDriver is a cObject
         tSQLConnection SQLConnection 
         String sValue sConnectionID sServer sDatabase sUserID sPassword sEncrypt sTrustServerCertificate
         Boolean bTrusted bSilent bOK
-        Integer iPos iSize iCount iClientVersion
+        Integer iClientVersion
 
         Get _SqlCheckCurrentDriver sDriverID to bOK
         If (bOK = False) Begin
@@ -332,7 +332,7 @@ Class cDbUpdateGenericDatabaseDriver is a cObject
         Function_Return (CS_SQLIniDSNKeyword + "=" + sServer)
     End_Function
 
-    // ToDo: NOT FINISHED!
+    // The login of a driver class without a DbLogin of its own: today only the DataFlex driver, which needs none.
     Function DbLogin tSQLConnection SQLConnection Returns Boolean
         Boolean bLoginSuccessful
         String sDriverID
@@ -341,7 +341,6 @@ Class cDbUpdateGenericDatabaseDriver is a cObject
         If (sDriverID = DATAFLEX_ID or sDriverID = "") Begin
             Function_Return True
         End    
-Send Info_Box "To be finished..."        
         Move 0 to LastErr  // Do NOT use the Err flag, it will be set true by the login command although it is successful.
         If (SQLConnection.bTrusted = False and SQLConnection.sDatabase <> "") Begin
             Move (SFormat("SERVER=%1;DATABASE=%2", SQLConnection.sServer, SQLConnection.sDatabase)) to SQLConnection.sServer
@@ -394,30 +393,8 @@ Class cDbUpdateMSSQLDriver is a cDbUpdateGenericDatabaseDriver
     End_Function
 
     Function DbLogin tSQLConnection SQLConnection Returns Boolean
-        Integer iClientVersion
         String sConnectionString
         Boolean bLoginSuccessful
-        
-//        If (SQLConnection.sConnectionString = "")
-//        Move (sConnectionString * "SERVER=" + SQLConnection.sServer) to sConnectionString
-//        If (SQLConnection.sDatabase <> "") Begin
-//            Move (sConnectionString * ";DATABASE=" + SQLConnection.sDatabase) to sConnectionString
-//        End
-//        If (SQLConnection.bTrusted = True) Begin
-//            Move (sConnectionString * ";TRUSTED_CONNECTION=Yes") to sConnectionString
-//        End
-//        Else Begin
-//            Move (sConnectionString * ";UID=" + SQLConnection.sUserID * ";PWD=" + SQLConnection.sPassword) to sConnectionString
-//        End
-//
-//        If (SQLConnection.sDriverID = MSSQLDRV_ID and SQLConnection.iClientVersion = 0) Begin
-//            Get SQLClientVersionInteger MSSQLDRV_ID to SQLConnection.iClientVersion
-//            If (SQLConnection.iClientVersion >= 18) Begin
-//        // ToDo: NEEDS IMPROVEMENT! ****
-//                Append sConnectionString ";Encrypt=Optional;TrustServerCertificate=Yes"
-//                Move (Replaces(" ", sConnectionString, "")) to sConnectionString
-//            End
-//        End  
         
         Get ConstructConnectionString SQLConnection to sConnectionString
         
@@ -430,31 +407,6 @@ Class cDbUpdateMSSQLDriver is a cDbUpdateGenericDatabaseDriver
         Function_Return bLoginSuccessful
     End_Function
 
-//    Function SQLClientVersionInteger String sDriverID Returns Integer
-//        Integer iNumberOfDrivers iCount iDriver iClientVersion
-//        String sDriver
-//        
-//        Move 0 to iDriver
-//        Get_Attribute DF_NUMBER_DRIVERS to iNumberOfDrivers
-//        If (iNumberOfDrivers = 1) Begin
-//            Load_Driver sDriverID
-//            Get_Attribute DF_NUMBER_DRIVERS to iNumberOfDrivers
-//        End
-//        For iCount from 1 to iNumberOfDrivers
-//            Get_Attribute DF_DRIVER_NAME of iCount to sDriver
-//            If (Uppercase(sDriver) = Uppercase(sDriverID)) Begin
-//                Move iCount to iDriver
-//                Move iNumberOfDrivers to iCount // We're done.
-//            End
-//        Loop
-//    
-//        // This info is (at current) only available for the MS SQL driver:
-//        If (iDriver <> 0 and sDriverID = MSSQLDRV_ID) Begin
-//            Get_Attribute DF_DRIVER_SQLSERVER_CLIENT_VERSION of iDriver to iClientVersion
-//        End
-//        Function_Return iClientVersion
-//    End_Function
-    
 End_Class
 
 Class cDbUpdateODBCDriver is a cDbUpdateGenericDatabaseDriver
@@ -490,23 +442,6 @@ Class cDbUpdateDB2Driver is a cDbUpdateGenericDatabaseDriver
         Move False to Err
         Get psDriverID to sDriverID
         Get DSNLoginServer SQLConnection.sServer to SQLConnection.sServer
-        Login SQLConnection.sServer SQLConnection.sUserID SQLConnection.sPassword sDriverID
-
-        Move (not(Err)) to bLoginSuccessful
-        Function_Return bLoginSuccessful
-    End_Function
-End_Class
-
-Class cDbUpdatePSQLDriver is a cDbUpdateGenericDatabaseDriver
-    Function DbLogin tSQLConnection SQLConnection Returns Boolean
-        Boolean bLoginSuccessful
-        String sDriverID
-
-        Move False to Err
-        Get psDriverID to sDriverID
-//        If (not(Uppercase(sServer) contains CS_SQLIniDSNKeyword)) Begin
-//            Move (CS_SQLIniDSNKeyword + "=" + sServer) to sServer
-//        End
         Login SQLConnection.sServer SQLConnection.sUserID SQLConnection.sPassword sDriverID
 
         Move (not(Err)) to bLoginSuccessful

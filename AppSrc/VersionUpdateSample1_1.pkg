@@ -14,16 +14,18 @@ Declare_Datafile SalesP
 Declare_Datafile Users
 Declare_Datafile Vendor
 
+// ApiTableConvertToSQL takes the table only: the driver, the connection ID, ANSI, Recnum and the copy of the data
+// are the properties of the handler (psDriverID, pbUseConnectionID, pbToANSI, pbRecnum, pbCopyData).
 Procedure OnUpdate
     Boolean bOK
 
-    Get ApiTableConvertToSQL Customer.File_Number   MSSQLDRV_ID True True True True to bOK
-    Get ApiTableConvertToSQL Invt.File_Number       MSSQLDRV_ID True True True True to bOK
-    Get ApiTableConvertToSQL OrderDtl.File_Number   MSSQLDRV_ID True True True True to bOK
-    Get ApiTableConvertToSQL OrderHea.File_Number   MSSQLDRV_ID True True True True to bOK
-    Get ApiTableConvertToSQL OrdSys.File_Number     MSSQLDRV_ID True True True True to bOK
-    Get ApiTableConvertToSQL SalesP.File_Number     MSSQLDRV_ID True True True True to bOK
-    Get ApiTableConvertToSQL Users.File_Number      MSSQLDRV_ID True True True True to bOK
-    Get ApiTableConvertToSQL Vendor.File_Number     MSSQLDRV_ID True True True True to bOK
+    Get ApiTableConvertToSQL Customer.File_Number to bOK
+    Get ApiTableConvertToSQL Invt.File_Number     to bOK
+    Get ApiTableConvertToSQL OrderDtl.File_Number to bOK
+    Get ApiTableConvertToSQL OrderHea.File_Number to bOK
+    Get ApiTableConvertToSQL OrdSys.File_Number   to bOK
+    Get ApiTableConvertToSQL SalesP.File_Number   to bOK
+    Get ApiTableConvertToSQL Users.File_Number    to bOK
+    Get ApiTableConvertToSQL Vendor.File_Number   to bOK
 End_Procedure
 

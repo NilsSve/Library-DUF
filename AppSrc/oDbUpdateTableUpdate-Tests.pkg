@@ -1334,4 +1334,114 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Send Assert bExists "The column is found."
         Send Assert bOpen "The table is still open."
     End_Procedure
+    // ApiIndexDeleteSegment removes the last segment of an index too. (That branch was empty.)
+    { Published=True }
+    Procedure Test_ApiIndexDeleteSegment_Removes_The_Last_Segment
+        Handle h
+        Boolean bOK
+        Integer iSegments
+
+        Send MakeBaseTable "DUFTT48" 5 True
+        Get phTable to h
+        Get ApiIndexDeleteSegment of ghoDbUpdateFunctionLibrary h 2 2 to bOK
+        Close h
+        Open h
+        Get_Attribute DF_INDEX_NUMBER_SEGMENTS of h 2 to iSegments
+        Close h
+        Send Assert bOK "The call answers True."
+        Send AssertIAreEqual 1 iSegments "Index 2 had two segments; one is left."
+    End_Procedure
+
+    // UtilIndexSQLIndexNameExists answers 0 when no other index has the name. (It answered the number of segments
+    // of the index it was asked about.)
+    { Published=True }
+    Procedure Test_An_Index_Name_Nobody_Uses_Answers_0
+        Handle h
+        Integer iIndex
+        tAPIIndex[] aNone
+
+        Send MakeBaseTable "DUFTT49" 5 True
+        Get phTable to h
+        Open h
+        Get UtilIndexSQLIndexNameExists of ghoDbUpdateFunctionLibrary h 2 "DUFTT49_NOSUCHNAME" aNone to iIndex
+        Close h
+        Send AssertIAreEqual 0 iIndex "No index has the name."
+    End_Procedure
+
+    // SqlUtilEnumerateIntFiles lists the .int files of a folder without the three driver .int files. (A test with
+    // "and" where "or" was meant left none of them out.)
+    { Published=True }
+    Procedure Test_The_Int_File_List_Leaves_The_Driver_Files_Out
+        String[] asLines asFiles
+        String sFolder
+
+        Get psFolder to sFolder
+        Move "DRIVER_NAME MSSQLDRV" to asLines[0]
+        Send WriteTestFile "DUFTI50.int" asLines
+        Send WriteTestFile "MSSQLDRV.int" asLines
+        Send WriteTestFile "DB2_DRV.int" asLines
+        Send WriteTestFile "ODBC_DRV.int" asLines
+        Get SqlUtilEnumerateIntFiles of ghoDbUpdateFunctionLibrary sFolder to asFiles
+        EraseFile (sFolder + "\DUFTI50.int")
+        EraseFile (sFolder + "\MSSQLDRV.int")
+        EraseFile (sFolder + "\DB2_DRV.int")
+        EraseFile (sFolder + "\ODBC_DRV.int")
+        Send AssertIAreEqual 1 (SizeOfArray(asFiles)) "One .int file that is no driver file."
+        If (SizeOfArray(asFiles) = 1) Begin
+            Send AssertSAreEqual "DUFTI50.INT" (Uppercase(asFiles[0])) "The table's .int file."
+        End
+    End_Procedure
+
+    // SqlUtilChangeIntFilesToConnectionIDs gives every .int file the connection ID: a file with a server and one
+    // with another connection ID; one that has it already is left as it is. The answer lists the files that
+    // changed. (Only a "SERVER_NAME SERVER" line was changed, and every file was listed.)
+    { Published=True }
+    Procedure Test_Connection_IDs_Count_Only_The_Files_That_Changed
+        String[] asLines asChanged
+        String sFolder sLine
+        Integer iCh
+
+        Get psFolder to sFolder
+        Move "DRIVER_NAME MSSQLDRV" to asLines[0]
+        Move "SERVER_NAME SERVER=(local);Trusted_Connection=yes" to asLines[1]
+        Move "DATABASE_NAME DUFTI51" to asLines[2]
+        Send WriteTestFile "DUFTI51.int" asLines
+        Move "SERVER_NAME DFCONNID=DUFCONN1" to asLines[1]
+        Move "DATABASE_NAME DUFTI52" to asLines[2]
+        Send WriteTestFile "DUFTI52.int" asLines
+        Move "SERVER_NAME DFCONNID=DUFCONN2" to asLines[1]
+        Move "DATABASE_NAME DUFTI53" to asLines[2]
+        Send WriteTestFile "DUFTI53.int" asLines
+        Get SqlUtilChangeIntFilesToConnectionIDs of ghoDbUpdateFunctionLibrary sFolder "DUFCONN2" False to asChanged
+
+        Get Seq_New_Channel to iCh
+        Direct_Input channel iCh (sFolder + "\DUFTI52.int")
+        Readln channel iCh sLine
+        Readln channel iCh sLine
+        Close_Input channel iCh
+        Send Seq_Release_Channel iCh
+        EraseFile (sFolder + "\DUFTI51.int")
+        EraseFile (sFolder + "\DUFTI52.int")
+        EraseFile (sFolder + "\DUFTI53.int")
+        Send AssertIAreEqual 2 (SizeOfArray(asChanged)) "Two files changed; the third had the ID already."
+        Send AssertSAreEqual "SERVER_NAME DFCONNID=DUFCONN2" sLine "The other connection ID was changed too."
+    End_Procedure
+    // _UtilNumberOfFileListTables answers the number of Filelist entries in use. (It is declared Returns Integer now;
+    // the number came through the Boolean declaration as it was.)
+    { Published=True }
+    Procedure Test_The_Number_Of_Filelist_Tables_Is_A_Count
+        Handle h
+        Integer iCount iTables
+
+        Move 0 to h
+        Repeat
+            Get_Attribute DF_FILE_NEXT_USED of h to h
+            If (h > 0) Begin
+                Increment iCount
+            End
+        Until (h = 0)
+        Get _UtilNumberOfFileListTables of ghoDbUpdateFunctionLibrary to iTables
+        Send Assert (iCount > 1) "The test Filelist has more than one table."
+        Send AssertIAreEqual iCount iTables "The same count."
+    End_Procedure
 End_Object
