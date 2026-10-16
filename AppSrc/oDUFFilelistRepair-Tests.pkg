@@ -1,0 +1,123 @@
+// oDUFFilelistRepair-Tests.pkg - the functions of the Repair Utility's repair work that need no view: the .int file
+// parts and their merge, the field number of a line, the column names, the data files that go with a data file.
+// An object of cDUFFilelistRepair of the test's own; no file and no database is touched.
+//
+// Only procedures carrying { Published=True } are run as tests.
+
+Use DFUnit\Fixturing\Fixture.pkg
+Use cDUFFilelistRepair.pkg
+
+Object oDUFFilelistRepair_Tests is a cTestFixture
+    Set psTestFixtureName to "cDUFFilelistRepair - the repair work without a view"
+
+    Object oRepair is a cDUFFilelistRepair
+    End_Object
+
+    { Published=True }
+    Procedure Test_The_Field_Number_Of_A_Line
+        Handle ho
+        Move (oRepair(Self)) to ho
+        Send AssertIAreEqual 2 (ExtractFieldNumber(ho, "FIELD_NUMBER 2")) "FIELD_NUMBER 2."
+        Send AssertIAreEqual 12 (ExtractFieldNumber(ho, "  field_number 12")) "In small letters, with blanks in front."
+        Send AssertIAreEqual -1 (ExtractFieldNumber(ho, "INDEX_NUMBER 1")) "Another keyword."
+        Send AssertIAreEqual -1 (ExtractFieldNumber(ho, "FIELD_NUMBER")) "No number."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_The_Column_Names_Lose_Recnum_And_The_Uppercased_Columns
+        String[] asColumns
+        Handle ho
+        Move (oRepair(Self)) to ho
+        Move "Id"     to asColumns[0]
+        Move "U_Name" to asColumns[1]
+        Move "U_Code" to asColumns[2]
+        Move "Name"   to asColumns[3]
+        Move "RECNUM" to asColumns[4]
+        Get SanitizeColumnNames of ho asColumns to asColumns
+        Send AssertIAreEqual 2 (SizeOfArray(asColumns)) "Two columns are left: two uppercased ones in a row go too."
+        Send AssertSAreEqual "Id" asColumns[0] "Id."
+        Send AssertSAreEqual "Name" asColumns[1] "Name."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_An_Attribute_Of_A_Field_Is_Found_Once
+        String[] asData
+        Handle ho
+        Move (oRepair(Self)) to ho
+        Move "FIELD_NUMBER 2" to asData[0]
+        Move "DATETIME"       to asData[1]
+        Move ""               to asData[2]
+        Move "FIELD_NUMBER 3" to asData[3]
+        Move "OTHER"          to asData[4]
+        Send Assert (IsDuplicateAttribute(ho, asData, "FIELD_NUMBER 2", "datetime")) "Field 2 has DATETIME, in any case."
+        Send AssertFalse (IsDuplicateAttribute(ho, asData, "FIELD_NUMBER 3", "DATETIME")) "Field 3 has not."
+        Send AssertFalse (IsDuplicateAttribute(ho, asData, "FIELD_NUMBER 9", "DATETIME")) "Field 9 is not there."
+    End_Procedure
+
+    // CombineArrays: the FIELD_NUMBER blocks of two .int file parts, one block for each field, each line once, in
+    // the order of the field numbers.
+    { Published=True }
+    Procedure Test_Two_Int_File_Parts_Are_Combined_By_Field
+        String[] asOne asTwo asResult
+        String sResult
+        Integer i
+        Handle ho
+        Move (oRepair(Self)) to ho
+        Move "FIELD_NUMBER 3"        to asOne[0]
+        Move "FIELD_INDEX 1"         to asOne[1]
+        Move ""                      to asOne[2]
+        Move "FIELD_NUMBER 1"        to asOne[3]
+        Move "FIELD_RELATED_FILE 5"  to asOne[4]
+        Move ""                      to asOne[5]
+        Move "FIELD_NUMBER 1"        to asTwo[0]
+        Move "FIELD_RELATED_FILE 5"  to asTwo[1]
+        Move "FIELD_RELATED_FIELD 2" to asTwo[2]
+        Move ""                      to asTwo[3]
+        Move "FIELD_NUMBER 2"        to asTwo[4]
+        Move "DATETIME"              to asTwo[5]
+        Get CombineArrays of ho asOne asTwo to asResult
+        For i from 0 to (SizeOfArray(asResult) - 1)
+            Move (sResult + asResult[i] + "|") to sResult
+        Loop
+        Send AssertSAreEqual "FIELD_NUMBER 1|FIELD_RELATED_FILE 5|FIELD_RELATED_FIELD 2||FIELD_NUMBER 2|DATETIME||FIELD_NUMBER 3|FIELD_INDEX 1||" sResult "One block per field, each line once."
+    End_Procedure
+
+    // An .int file is split into its top part (in front of the first field), its index part, and the fields between.
+    { Published=True }
+    Procedure Test_An_Int_File_Is_Split_Into_Its_Parts
+        String[] asIntFile asTop asIndex
+        Handle ho
+        Move (oRepair(Self)) to ho
+        Move "DRIVER_NAME MSSQLDRV" to asIntFile[0]
+        Move "SERVER_NAME x"        to asIntFile[1]
+        Move ""                     to asIntFile[2]
+        Move "FIELD_NUMBER 1"       to asIntFile[3]
+        Move "FIELD_INDEX 1"        to asIntFile[4]
+        Move ""                     to asIntFile[5]
+        Move "INDEX_NUMBER 1"       to asIntFile[6]
+        Move "INDEX_NAME CUST001"   to asIntFile[7]
+        Get IntFileTopPart of ho (&asIntFile) to asTop
+        Get IntFileIndexPart of ho (&asIntFile) to asIndex
+        Send AssertIAreEqual 3 (SizeOfArray(asTop)) "The top part: three lines."
+        Send AssertSAreEqual "SERVER_NAME x" asTop[1] "Its second line."
+        Send AssertIAreEqual 2 (SizeOfArray(asIndex)) "The index part: two lines."
+        Send AssertSAreEqual "INDEX_NAME CUST001" asIndex[1] "Its second line."
+        Send AssertIAreEqual 3 (SizeOfArray(asIntFile)) "The fields are left: three lines."
+        Send AssertSAreEqual "FIELD_NUMBER 1" asIntFile[0] "The first of them."
+    End_Procedure
+
+    // The files of a data file - Customer.dat, Customer.k1, Customer.hdr - go together; Orders.dat stays.
+    { Published=True }
+    Procedure Test_The_Files_Of_A_Data_File_Go_Together
+        String[] asFiles
+        Handle ho
+        Move (oRepair(Self)) to ho
+        Move "Customer.dat" to asFiles[0]
+        Move "Customer.hdr" to asFiles[1]
+        Move "Customer.k1"  to asFiles[2]
+        Move "Orders.dat"   to asFiles[3]
+        Get RemoveArrayDatRelatedFiles of ho asFiles "Customer.dat" to asFiles
+        Send AssertIAreEqual 1 (SizeOfArray(asFiles)) "One file is left."
+        Send AssertSAreEqual "Orders.dat" asFiles[0] "Orders.dat."
+    End_Procedure
+End_Object
