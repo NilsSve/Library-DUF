@@ -85,7 +85,7 @@ Object oDbDriverIntSettings_dg is a ModalPanel
         Decrement iSize
         For iCount from 0 to iSize
             If (Trim(asData[iCount]) <> "" and (Left(asData[iCount], 1) <> ";")) Begin
-                Move asData[iCount] to asReturnData[-1]
+                Move asData[iCount] to asReturnData[SizeOfArray(asReturnData)]
             End
         Loop
         
@@ -148,6 +148,7 @@ Object oDbDriverIntSettings_dg is a ModalPanel
     //       it is assumed the file resides in the Data folder.
     //       Reads a file and returns it as a string array.
     Function ReadFileToArray String sFileName Returns String[]
+        String sReadLine
         String[] asData
         Integer iCh
         String sPath
@@ -171,7 +172,8 @@ Object oDbDriverIntSettings_dg is a ModalPanel
 
         Direct_Input channel iCh sFileName
         While (not(SeqEof))
-            Readln channel iCh asData[-1]
+            Readln channel iCh sReadLine
+            Move sReadLine to asData[SizeOfArray(asData)]
         Loop
         Close_Input channel iCh
         Send Seq_Release_Channel iCh

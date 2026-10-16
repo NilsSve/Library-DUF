@@ -798,11 +798,11 @@ Class cDUFFilelistRepair is a cObject
                         // Note that we can't be sure in whitch order they are in.
                         If (Uppercase(Left(asIntFile[iCount], 14)) = "FIELD_RELATED_") Begin
                             If (sFieldTxt <> "") Begin  
-                                Move ""    to asData[-1]
-                                Move sLine to asData[-1]
+                                Move ""    to asData[SizeOfArray(asData)]
+                                Move sLine to asData[SizeOfArray(asData)]
                                 Move "" to sFieldTxt
                             End
-                            Move asIntFile[iCount] to asData[-1]
+                            Move asIntFile[iCount] to asData[SizeOfArray(asData)]
                         End
                     End
                 Until (Trim(asIntFile[iCount] = "") or iCount >= iSize)
@@ -877,9 +877,9 @@ Class cDUFFilelistRepair is a cObject
             Get FieldNumberToDataTimeText hTable sFieldNoTxt sDriver iDbType to sFieldDateTxt   
             Get IsDuplicateAttribute asIntFileData sFieldNoTxt sFieldDateTxt to bFound
             If (sFieldDateTxt <> "" and bFound = False) Begin
-                Move ""            to asFieldTimeDates[-1]
-                Move sFieldNoTxt   to asFieldTimeDates[-1] 
-                Move sFieldDateTxt to asFieldTimeDates[-1]
+                Move ""            to asFieldTimeDates[SizeOfArray(asFieldTimeDates)]
+                Move sFieldNoTxt   to asFieldTimeDates[SizeOfArray(asFieldTimeDates)] 
+                Move sFieldDateTxt to asFieldTimeDates[SizeOfArray(asFieldTimeDates)]
             End
         Loop
         If (SizeOfArray(asFieldTimeDates) <> 0) Begin
@@ -914,9 +914,9 @@ Class cDUFFilelistRepair is a cObject
                     Move "NEXT_COLUMN_HIDDEN UPPERCASED"      to sFieldHiddenTxt
                     Get IsDuplicateAttribute asIntFileData sFieldNoTxt sFieldHiddenTxt to bFound
                     If (iField <> -1 and bFound = False) Begin
-                        Move ""              to asFieldHidden[-1]
-                        Move sFieldNoTxt     to asFieldHidden[-1]
-                        Move sFieldHiddenTxt to asFieldHidden[-1]
+                        Move ""              to asFieldHidden[SizeOfArray(asFieldHidden)]
+                        Move sFieldNoTxt     to asFieldHidden[SizeOfArray(asFieldHidden)]
+                        Move sFieldHiddenTxt to asFieldHidden[SizeOfArray(asFieldHidden)]
                     End
                 End
             End
@@ -949,7 +949,7 @@ Class cDUFFilelistRepair is a cObject
             If (Left(sLine, 12) = "FIELD_NUMBER") Begin
                 // If we're already in a block, finish the current block
                 If (bInBlock = True) Begin
-                    Move CurrentBlock to aBlocks[-1]
+                    Move CurrentBlock to aBlocks[SizeOfArray(aBlocks)]
                 End
                 Get ExtractFieldNumber sLine to iFieldNumber
     
@@ -962,21 +962,21 @@ Class cDUFFilelistRepair is a cObject
             // End of current block (empty line)
             Else If (sLine = "") Begin
                 If (bInBlock = True) Begin
-                    Move CurrentBlock to aBlocks[-1]
+                    Move CurrentBlock to aBlocks[SizeOfArray(aBlocks)]
                     Move False to bInBlock
                 End
             End
             Else Begin
                 // Add the line to the current block
                 If (bInBlock) Begin
-                    Move sLine to CurrentBlock.asLines[-1]
+                    Move sLine to CurrentBlock.asLines[SizeOfArray(CurrentBlock.asLines)]
                 End
             End
         Loop
     
         // Add the last block (if any)
         If (bInBlock = True) Begin
-            Move CurrentBlock to aBlocks[-1]
+            Move CurrentBlock to aBlocks[SizeOfArray(aBlocks)]
         End
         Function_Return aBlocks
     End_Function
@@ -1023,7 +1023,7 @@ Class cDUFFilelistRepair is a cObject
     
         // If FIELD_NUMBER not found, add the block to the combined array
         If (bFound = False) Begin
-            Move BlockToMerge to aCombinedBlocks[-1]
+            Move BlockToMerge to aCombinedBlocks[SizeOfArray(aCombinedBlocks)]
         End
     
         Function_Return aCombinedBlocks
@@ -1054,7 +1054,7 @@ Class cDUFFilelistRepair is a cObject
     
             // Append the line if it's unique
             If (bIsDuplicate = False) Begin
-                Move aNewLines[iCount] to aMergedLines[-1]
+                Move aNewLines[iCount] to aMergedLines[SizeOfArray(aMergedLines)]
             End
         Loop
     
@@ -1074,15 +1074,15 @@ Class cDUFFilelistRepair is a cObject
         For iCount from 0 to iSize
             // Add the FIELD_NUMBER header
             Move ("FIELD_NUMBER " + String(aBlocks[iCount].iFieldNumber)) to sBlockHeader
-            Move sBlockHeader to sResult[-1]
+            Move sBlockHeader to sResult[SizeOfArray(sResult)]
     
             // Add all lines in the block
             For jCount from 0 to (SizeOfArray(aBlocks[iCount].asLines) - 1)
-                Move aBlocks[iCount].asLines[jCount] to sResult[-1]
+                Move aBlocks[iCount].asLines[jCount] to sResult[SizeOfArray(sResult)]
             Loop
     
             // Add an empty line to separate blocks
-            Move "" to sResult[-1]
+            Move "" to sResult[SizeOfArray(sResult)]
         Loop
     
         Function_Return sResult
@@ -1118,7 +1118,7 @@ Class cDUFFilelistRepair is a cObject
             Move asIntFile[iCount] to sLine    
             Get ExtractFieldNumber sLine to iFieldNumber
             If (iFieldNumber = -1) Begin
-                Move asIntFile[iCount] to asResult[-1]
+                Move asIntFile[iCount] to asResult[SizeOfArray(asResult)]
                 Move (RemoveFromArray(asIntFile, iCount)) to asIntFile
                 Decrement iCount
                 Decrement iSize
@@ -1148,7 +1148,7 @@ Class cDUFFilelistRepair is a cObject
                 Move (Left(sLine, 12) = "INDEX_NUMBER") to bFound
             End
             If (bFound = True) Begin
-                Move asIntFile[iCount] to asResult[-1]
+                Move asIntFile[iCount] to asResult[SizeOfArray(asResult)]
                 Move (RemoveFromArray(asIntFile, iCount)) to asIntFile
                 Decrement iCount
                 Decrement iSize
@@ -1205,6 +1205,7 @@ Class cDUFFilelistRepair is a cObject
     //       it is assumed the file resides in the Data folder.
     //       Reads a file and returns it as a string array.
     Function ReadFileToArray String sFileName Returns String[]
+        String sReadLine
         String[] asData
         Integer iCh
         
@@ -1217,7 +1218,8 @@ Class cDUFFilelistRepair is a cObject
         Get FullDataPathFileName sFileName to sFileName
         Direct_Input channel iCh sFileName
         While (not(SeqEof))
-            Readln channel iCh asData[-1]
+            Readln channel iCh sReadLine
+            Move sReadLine to asData[SizeOfArray(asData)]
         Loop
         Close_Input channel iCh
         Send Seq_Release_Channel iCh
@@ -1548,7 +1550,7 @@ Class cDUFFilelistRepair is a cObject
             Get ParseFileExtension sLine to sExt
             Move (SearchArray(sExt, asExt, Desktop, (RefFunc(DFSTRICMP)))) to iItem
             If (iItem <> -1) Begin
-                Move sLine to asFiles[-1]
+                Move sLine to asFiles[SizeOfArray(asFiles)]
             End
         Until (SeqEof)
         Close_Input channel iCh
@@ -1561,11 +1563,11 @@ Class cDUFFilelistRepair is a cObject
         Integer iSize iCount iItem
         
         // We add these files to the .dat files array as we don't want them to be moved:
-        Move "dbversion.dat" to asDatFilesInUse[-1]
-        Move "flexerrs.dat"  to asDatFilesInUse[-1]
-        Move "dferr001.dat"  to asDatFilesInUse[-1]
-        Move "dferr002.dat"  to asDatFilesInUse[-1]
-        Move "dferr003.dat"  to asDatFilesInUse[-1]  
+        Move "dbversion.dat" to asDatFilesInUse[SizeOfArray(asDatFilesInUse)]
+        Move "flexerrs.dat"  to asDatFilesInUse[SizeOfArray(asDatFilesInUse)]
+        Move "dferr001.dat"  to asDatFilesInUse[SizeOfArray(asDatFilesInUse)]
+        Move "dferr002.dat"  to asDatFilesInUse[SizeOfArray(asDatFilesInUse)]
+        Move "dferr003.dat"  to asDatFilesInUse[SizeOfArray(asDatFilesInUse)]  
         Move (SizeOfArray(asDatFilesInUse)) to iSize
         Decrement iSize
         For iCount from 0 to iSize
@@ -1622,7 +1624,7 @@ Class cDUFFilelistRepair is a cObject
         For iCount from 0 to iSize
             Get _IsIntEntry of ghoDUF FilelistTables[iCount].hTable to bIsIntTable
             If (bIsIntTable = False and FilelistTables[iCount].bIsAlias = False and FilelistTables[iCount].sDriver = DATAFLEX_ID) Begin
-                Move (FilelistTables[iCount].sRootName + ".dat") to asFiles[-1]
+                Move (FilelistTables[iCount].sRootName + ".dat") to asFiles[SizeOfArray(asFiles)]
             End
         Loop
         Function_Return asFiles
