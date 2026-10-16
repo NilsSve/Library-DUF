@@ -745,6 +745,7 @@ Class cDUFFilelistRepair is a cObject
     End_Function
     
     Function RemoveU_Columns Handle hTable String sDriver Returns Boolean
+        String sWorkFolder
         Boolean bErr bOK
         Integer iColumn
         String sNewFieldName
@@ -756,6 +757,7 @@ Class cDUFFilelistRepair is a cObject
         Close hTable DF_PERMANENT
         Open hTable Mode DF_EXCLUSIVE
         Move "DUFTEMP2024" to sNewFieldName
+        Get _StructureWorkFolder of ghoDUF hTable to sWorkFolder
         Structure_Start hTable sDriver
             // This command creates a new column. If {column-num} is omitted or 0,
             // the column will be appended to the end of the existing record 
@@ -764,7 +766,7 @@ Class cDUFFilelistRepair is a cObject
             Set_Attribute DF_FIELD_NAME of hTable iColumn to sNewFieldName
             Set_Attribute DF_FIELD_TYPE of hTable iColumn to DF_DATE
             Delete_Field hTable iColumn            
-        Structure_End hTable DF_STRUCTEND_OPT_FORCE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_FORCE sWorkFolder ghoDbUpdateHandler
 
         Move (not(Err)) to bOK
         Move bErr to Err

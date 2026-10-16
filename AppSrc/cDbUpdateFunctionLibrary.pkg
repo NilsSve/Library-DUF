@@ -492,6 +492,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     //   and then use the ApiTableConvertToSQL method in a second cDbUpdateVersion object.
     // Note: To convert an embedded table to SQL use ApiTableConvertToSQL.
     Function SqlTableConvertToEmbedded Handle hTable Boolean bCpyDat Returns Boolean
+        String sWorkFolder
         Handle hToTable
         Boolean bOK bExists bOpened bCopyData
         String sDriverID sPhysicalName sRootName sDisplayName
@@ -535,6 +536,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Move False to Err
 
+        Get _StructureWorkFolder hToTable to sWorkFolder
         Structure_Start hToTable DATAFLEX_ID
             Structure_Copy hTable to hToTable
 
@@ -545,7 +547,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Set_Attribute DF_FILE_MAX_RECORDS   of hToTable to iMaxRecords
             Set Action_Text of ghoStatusPanel to "Restructures table..."
 
-        Structure_End hToTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hToTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
 
         Set Action_Text of ghoStatusPanel to ""
         Move (not(Err)) to bOK
@@ -1019,6 +1021,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function SqlColumnNullable Handle hTable Integer iColumn Boolean bNullable Returns Boolean
+        String sWorkFolder
         Boolean bOK bErr bCurrentState bOpen bIsSQLDriver
         String sDriverID
 
@@ -1048,10 +1051,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get_Attribute DF_FILE_OPENED of hTable to bOpen
         End
         If (bOpen = True) Begin
+            Get _StructureWorkFolder hTable to sWorkFolder
             Structure_Start hTable sDriverID
                 Set_Attribute DF_FIELD_NULL_ALLOWED of hTable iColumn to bNullable
                 Set Action_Text of ghoStatusPanel to "Restructures table..."
-            Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+            Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
             Set Action_Text of ghoStatusPanel to ""
         End
 
@@ -1627,6 +1631,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function SqlUtilConvertColumnTypesToSQL2008 Handle hTable Returns Boolean
+        String sWorkFolder
         Integer iNumColumns iColumn iDFType iNativeType
         Boolean bOpened bOK
         String sColumnName sNativeTypeName
@@ -1644,6 +1649,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Move False to Err
 
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable
             Get_Attribute DF_FILE_NUMBER_FIELDS of hTable to iNumColumns
 
@@ -1687,7 +1693,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Case End
             Loop
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
 
         Set Action_Text of ghoStatusPanel to ""
         Function_Return (Err = False)
@@ -2234,6 +2240,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Structure_Start ... Structure_End operation when creating a NEW table. Thus it cannot be set when
     // restructuring an existing table.
     Function ApiTableAttachToSql Handle hTable Boolean bUseConnID Returns Boolean
+        String sWorkFolder
         Boolean bExists bOpened bOK bSystemFile bUseConnectionID bIsAlias
         String sDriverID sConnectionID sConnectionString sDisplayName sRootName sLogicalName sPhysicalName sSchema
         Handle hToTable
@@ -2320,6 +2327,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get _SqlUtilCreateIntFile hTable sDriverID sConnectionID True bSystemFile True to bOK
 
         If (bIsAlias = False) Begin
+            Get _StructureWorkFolder hToTable to sWorkFolder
             Structure_Start hToTable sDriverID
                 Set Private.phCurrentTable to hTable
                 If (bUseConnectionID = True) Begin
@@ -2333,7 +2341,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Move False to Err
                 Move 0 to LastErr
                 Set Action_Text of ghoStatusPanel to "Restructures table..."
-            Structure_End hToTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+            Structure_End hToTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
             Set Action_Text of ghoStatusPanel to ""
         End
 
@@ -2359,6 +2367,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     //    Get ApiTableChangeAttribute SysInfo.File_Number DF_FILE_IS_SYSTEM_FILE True to bOK
     //    Get ApiTableChangeAttribute OrderHea.File_Number DF_FILE_REUSE_DELETED DF_FILE_DELETED_NOREUSE to bOK
     Function ApiTableChangeAttribute Handle hTable Integer iAttribute Integer iValue Returns Boolean
+        String sWorkFolder
         Boolean bOK bIsSQLTable
 
         Get AutoConnectionIDLogin to bOK
@@ -2375,10 +2384,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
 
         Set Private.phCurrentTable to hTable
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable
             Set_Attribute iAttribute of hTable to iValue
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
 
         Set Message_Text of ghoStatusPanel to ""
         Set Action_Text  of ghoStatusPanel to ""
@@ -2426,6 +2436,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function ApiTableChangeRecordLength Handle hTable Integer iRecordLength Returns Boolean
+        String sWorkFolder
         Boolean bOK
 
         Get AutoConnectionIDLogin to bOK
@@ -2436,10 +2447,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
 
         Set Private.phCurrentTable to hTable
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable
             Set_Attribute DF_FILE_RECORD_LENGTH of hTable to iRecordLength
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
 
         Set Action_Text of ghoStatusPanel to ""
         Function_Return (Err = False)
@@ -2583,6 +2595,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function ApiTableConvertToSql_Ex Handle hTable String sDriverID Boolean bUseConnectionID Boolean bToAnsi Boolean bRecnum Boolean bCopyData Returns Boolean
+        String sWorkFolder
         Handle hToTable hoLogFile
         Boolean bOK bExists bOpened bDAWDriver bIsAlias
         String sPhysicalName sRootName sLogicalName sDisplayName sConnectionID sConnectionString
@@ -2712,6 +2725,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Move False to Err
 
+        Get _StructureWorkFolder hToTable to sWorkFolder
         Structure_Start hToTable sDriverID
             Structure_Copy hTable to hToTable
             Set_Attribute DF_FILE_PHYSICAL_NAME of hToTable to sPhysicalName
@@ -2721,7 +2735,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             End
 
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hToTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hToTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
         Set Action_Text of ghoStatusPanel to ""
 
         Move (not(Err)) to bOK
@@ -2882,6 +2896,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // The bANSI parameter's default value = True, meaning a table in ANSI format will be created.
     // i.e. DF_FILE_TABLE_CHARACTER_FORMAT {"OEM"|"ANSI"}
     Function ApiTableCreate Handle hTable String sRootName String sDisplayName String sLogicalName Boolean bUseConnectionID Boolean bANSI Boolean bRecnum tAPIColumn[] aColumnIn Returns Boolean
+        String sWorkFolder
         Handle hFile
         String sConnectionID sPhysicalFile sANSI_OEM sVal sSchema sDriverID sTableName
         Integer iIdentityType iDataType iDbType
@@ -3019,6 +3034,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move False to Err
         Move 0 to hFile
 
+        Get _StructureWorkFolder hFile to sWorkFolder
         Structure_Start hFile sDriverID
             If (sDriverID <> DATAFLEX_ID) Begin
                 // The connection ID the login names is the one checked above (SQLConnection.sConnectionID).
@@ -3031,7 +3047,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Set_Attribute DF_FILE_PHYSICAL_NAME of hFile to sPhysicalFile
             Get ApiColumnsAddToTable hFile aColumns True to bOk
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hFile DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hFile DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
         Set Action_Text of ghoStatusPanel to ""
 
         Move (not(Err)) to bOK
@@ -3068,6 +3084,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // ToDo: Needs to be revised
     Procedure ApiTableCreateFromDEF String sPath String sFileName String sTableName String sDisplayName Integer iFilelistSlot
+        String sWorkFolder
         Handle hTable
         String sDEFName sDataPath
         Boolean bExists
@@ -3094,11 +3111,12 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move 0 to hTable
         Move False to Err
 
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable DATAFLEX_ID
             Load_Def sDEFName Onto hTable
             Set_Attribute DF_FILE_PHYSICAL_NAME of hTable to sFileName
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
         Set Action_Text of ghoStatusPanel to ""
 
         Move iFilelistSlot to hTable
@@ -3141,6 +3159,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function ApiTableRelate Handle hTableFrom Handle hTableTo Integer iColumnFrom Integer iColumnTo Returns Boolean
+        String sWorkFolder
         Handle hTable
         Boolean bOK bIsSQLTable
         String sDriverID sRootName
@@ -3177,13 +3196,14 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
         Set Private.phCurrentTable to hTable
 
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable sDriverID
             Set_Attribute DF_FIELD_RELATED_FILE of hTable iColumnFrom to hTableTo
             If (iColumnTo <> 0) Begin
                 Set_Attribute DF_FIELD_RELATED_FIELD of hTable iColumnFrom to iColumnTo
             End
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
         Set Action_Text of ghoStatusPanel to ""
 
         If (hTableTo > 0) Begin
@@ -3245,6 +3265,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function ApiTableRemoveRelation Handle hTableFrom Integer iColumn Returns Boolean
+        String sWorkFolder
         Handle hTable
         Boolean bOK
 
@@ -3253,10 +3274,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Open hTableFrom Mode DF_EXCLUSIVE
         Move hTableFrom to hTable
 
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable
             Set_Attribute DF_FIELD_RELATED_FILE of hTable iColumn to 0
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
         Set Action_Text of ghoStatusPanel to ""
 
         Close hTableFrom
@@ -3517,6 +3539,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function ApiTableUpdate tAPITableNameInfo APITableNameInfoFrom tAPIColumn[] aColumnsFrom tAPIIndex[] aIndexesFrom tAPIRelation[] aRelationsFrom Returns Boolean
+        String sWorkFolder
         Handle hTable
         String sDriverIDFrom sDriverIDTo sLogicalNameTo
         Boolean bOk bOpened bLogicalNameOK bIsVersionTable
@@ -3627,8 +3650,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         // Refresh .int file: 
         If (bIsSQLTableTo = True) Begin
             Open hTable
+            Get _StructureWorkFolder hTable to sWorkFolder
             Structure_Start hTable
-            Structure_End hTable DF_STRUCTEND_OPT_FORCE "." ghoDbUpdateHandler
+            Structure_End hTable DF_STRUCTEND_OPT_FORCE sWorkFolder ghoDbUpdateHandler
             Send ResetFillSQLTables
         End
 
@@ -3644,6 +3668,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // Adds a column name to the passed table number.
     Function ApiColumnAdd Handle hTable String sFieldName Integer iType Integer iLength Integer iPrec Boolean bInitVal String sColVal Returns Boolean
+        String sWorkFolder
         Integer iColumn iCount iFile iPrecision iLastErr
         Boolean bExists bOK bInitializeValue bRetval
         String sDataPath sColumnValue sDriverID
@@ -3675,6 +3700,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get OpenTableExclusive iFile to bOK
         Set Private.phCurrentTable to hTable
 
+        Get _StructureWorkFolder iFile to sWorkFolder
         Structure_Start iFile sDriverID
             Move 0 to iColumn
             Set Private.piCurrentField to iColumn
@@ -3684,7 +3710,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Set_Attribute DF_FIELD_LENGTH    of iFile iColumn to (iLength + iPrecision)
             Set_Attribute DF_FIELD_PRECISION of iFile iColumn to iPrecision
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End iFile DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End iFile DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
 
         Set Action_Text of ghoStatusPanel to ""
 
@@ -3712,6 +3738,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // Adds a column name to the passed table number.
     Function ApiColumnInsert String sDriverIDFrom Handle hTable Integer iColumn String sFieldName Integer iType Integer iLength Integer iPrec Boolean bIsSQLType Returns Boolean
+        String sWorkFolder
         Integer iFile iPrecision iNumberOfFields iDbType
         Boolean bExists bOK bIsDateType bIsSQLTypeTo bNativeType
 
@@ -3771,6 +3798,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Set Private.phCurrentTable to hTable
         Set Private.piCurrentField to iColumn
 
+        Get _StructureWorkFolder iFile to sWorkFolder
         Structure_Start iFile
             Create_Field iFile At iColumn
             Set_Attribute DF_FIELD_NAME            of iFile iColumn to sFieldName
@@ -3786,7 +3814,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Set_Attribute DF_FIELD_PRECISION    of iFile iColumn to iPrecision
             End
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End iFile DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End iFile DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
 
         Set Action_Text of ghoStatusPanel to ""
         // If in development environment; create .fd file:
@@ -3957,6 +3985,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // Changes a field type, length and precision for the passed table number and field name
     Function ApiColumnChange Handle hTable String sFieldNameFrom Integer iTypeFrom Integer iLengthFrom Integer iPrec Returns Boolean
+        String sWorkFolder
         Integer iColumn iPrecFrom iTypeTo iLengthTo iPrecTo
         Boolean bOK bIsSqlTable
         String sFieldNameTo
@@ -4010,6 +4039,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Set Private.phCurrentTable to hTable
         Set Private.piCurrentField to iColumn
 
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable
             Set_Attribute DF_FIELD_NAME              of hTable iColumn to sFieldNameFrom
             If (bIsSqlTable = False) Begin
@@ -4021,7 +4051,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Set_Attribute DF_FIELD_LENGTH            of hTable iColumn to (iLengthFrom + iPrecFrom)
             Set_Attribute DF_FIELD_PRECISION         of hTable iColumn to iPrecFrom
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
 
         Set Action_Text of ghoStatusPanel to ""
         Function_Return (Err = False)
@@ -4029,6 +4059,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // Changes a field type, length and precision for the passed table number and field name
     Function ApiColumnChangeByColumnNumber String sDriverIDFrom Handle hTable Boolean bIsSQLTableFrom Boolean bIsSQLTableTo String sFieldNameFrom Integer iColumn Integer iTypeFrom Integer iLengthFrom Integer iPrec Integer iOpt Returns Boolean
+        String sWorkFolder
         Integer iPrecFrom iTypeTo iLengthTo iPrecTo iDbType iOptionFrom iOptionTo iDataFlexType iDataFlexTypeTo
         Boolean bOK bCompareDate_DateTime bRecnumTable bIsSameDataType
         String sFieldNameTo sDriverIDTo
@@ -4103,6 +4134,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         // The answer is that of the restructure.
         Move False to Err
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable
             If (sFieldNameFrom <> sFieldNameTo) Begin
                 Set_Attribute DF_FIELD_NAME             of hTable iColumn to sFieldNameFrom
@@ -4127,13 +4159,14 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Send UtilColumnMakeIdentity hTable hTable iColumn sFieldNameTo bRecnumTable
             End
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
 
         Set Action_Text of ghoStatusPanel to ""
         Function_Return (Err = False)
     End_Function
 
     Function ApiColumnChangeMainIndex Handle hTable Integer iIndex Integer iColumn Returns Boolean
+        String sWorkFolder
         Boolean bOK
 
         Get AutoConnectionIDLogin to bOK
@@ -4143,10 +4176,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Function_Return False
         End
 
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable
             Set_Attribute DF_FIELD_INDEX of hTable iColumn to iIndex
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
 
         Set Action_Text of ghoStatusPanel to ""
         Function_Return (Err = False)
@@ -4154,6 +4188,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // To move an existing field to another position in a table.
     Function ApiColumnMove Handle hTable Integer iOld Integer iNew Boolean bIsSQLType Integer iLength Integer iPrecision Returns Boolean
+        String sWorkFolder
         String sColumn sDriverID
         Integer iType iSQLType
         Boolean bOK bIsDate bCallersErr
@@ -4188,6 +4223,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         // The caller's Err is kept.
         Get _ErrKeep to bCallersErr
 
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable
             Delete_Field hTable iOld
             Create_Field hTable At iNew
@@ -4211,7 +4247,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             If (iType = DF_BCD) Begin
                 Set_Attribute DF_FIELD_PRECISION of hTable iNew to iPrecision
             End
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
 
         Set Action_Text of ghoStatusPanel to ""
         Get _ErrGiveBack bCallersErr to bOK
@@ -4221,6 +4257,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     
     // Deletes a column name for the passed table number (and column number).
     Function ApiColumnRemove Handle hTable String sFieldName Returns Boolean
+        String sWorkFolder
         Integer iColumn
         Boolean bOK
 
@@ -4250,10 +4287,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Set Private.phCurrentTable to hTable
             Set Private.piCurrentField to iColumn
 
+            Get _StructureWorkFolder hTable to sWorkFolder
             Structure_Start hTable
                 Delete_Field hTable iColumn
                 Set Action_Text of ghoStatusPanel to "Restructures table..."
-            Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+            Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
             Set Action_Text of ghoStatusPanel to ""
         End
         Else Begin
@@ -4268,6 +4306,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Sample usage:
     //   Get ColumnRename Quote.File_Number "ID#" "ID" to bOK
     Function ApiColumnRename Integer hTable String sOldFieldName String sNewFieldName Returns Boolean
+        String sWorkFolder
         Integer iField
         Boolean bOK bExists bIsOpen bOldExists bNotThere
 
@@ -4310,10 +4349,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Set Private.piCurrentField to iField
 
         If (iField > 0) Begin
+            Get _StructureWorkFolder hTable to sWorkFolder
             Structure_Start hTable
                 Set_Attribute DF_FIELD_NAME of hTable iField to sNewFieldName
                 Set Action_Text of ghoStatusPanel to "Restructures table..."
-            Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+            Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
         End
         Else Begin
             // Neither name is there. (True was answered.)
@@ -5470,6 +5510,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // or an error in the restructure leaves the table as it was, and False is returned. (Each step used to be a
     // restructure of its own, so a failure half way left the table half changed.)
     Function ApiColumnsUpdate String sDriverIDFrom Handle hTable Boolean bIsSQLTableFrom tAPIColumn[] aColumnsFrom tAPIColumn[] aColumnsTo Boolean bCompareDate_DateTime Returns Boolean
+        String sWorkFolder
         Integer iCount iPos
         Handle hFile
         Boolean bOK bIsSQLTableTo bRecnumTable bIsOpen bIsSame bInserted
@@ -5536,6 +5577,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
         Set Private.phCurrentTable to hTable
         Move hTable to hFile
+        Get _StructureWorkFolder hFile to sWorkFolder
         Structure_Start hFile sDriverIDTo
             Get UtilColumnStepsApply hFile Plan.aSteps to bOK
             If (bOK = True) Begin
@@ -5547,7 +5589,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Function_Return False
             End
             Set Action_Text of ghoStatusPanel to "Restructuring table..."
-        Structure_End hFile DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hFile DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
         Set Action_Text of ghoStatusPanel to ""
         If (Err = True) Begin
             Function_Return False
@@ -5579,6 +5621,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Note: the "-1" can be left out as this function is overloaded to make it easier to call.
     // Note: This doesn't set Descending attributes - Use function IndexChangeDirection to do that.
     Function ApiIndexCreate Handle hTable Integer iIndex Integer iSegments Integer iSgmnt1 Integer iSgmnt2 Integer iSgmnt3 Integer iSgmnt4 Integer iSgmnt5 Integer iSgmnt6 Integer iSgmnt7 Integer iSgmnt8 Integer iSgmnt9 Integer iSgmnt10 Returns Boolean
+        String sWorkFolder
         Integer iSegment1 iSegment2 iSegment3 iSegment4 iSegment5 iSegment6 iSegment7 iSegment8 iSegment9 iSegment10 iIndexSegments
         String sDriverID
         Boolean bOK bExists bIsSQLTable
@@ -5648,6 +5691,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move False to Err
         Move 0 to LastErr
         Send Ignore_Error of Error_Object_Id CLIERR_GENERAL_ERROR
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable sDriverID
             Create_Index hTable At iIndex
             Set_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable iIndex to iSegments
@@ -5683,7 +5727,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Set_Attribute DF_INDEX_SEGMENT_FIELD of hTable iIndex 10 to iSegment10
             End
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
 
         Set Action_Text of ghoStatusPanel to ""
         Send Trap_Error of Error_Object_Id CLIERR_GENERAL_ERROR
@@ -5695,6 +5739,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Get ApiIndexCreateEx hTable 1 (StrSplitToArray("1,5,6,7,8,2,3,4,10,9,11", ",")) to bOk
     // Note: The StrSplitToArray function was introduced with DataFlex 18.2
     Function ApiIndexCreateEx Handle hTable Integer iIndex Integer[] iSgmnts Returns Boolean
+        String sWorkFolder
         Integer iTableNo iNumSgmnt iNumSgmnts
         String sDriverID
         Boolean bOK bIsSQLTable
@@ -5715,13 +5760,14 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
 
         // We start by deleting the index
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable sDriverID
             Set Error_Report_Mode to DUF_ERROR_NO_REPORT
             Send Ignore_Error of Error_Object_Id DFERR_BAD_PARAMETER
             Delete_Index iTableNo iIndex
             Set Error_Report_Mode to DUF_ERROR_REPORT
             Send Trap_Error of Error_Object_Id DFERR_BAD_PARAMETER
-        Structure_End hTable DF_STRUCTEND_OPT_NONE
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder
 
         Move False to Err
         Move iTableNo to hTable
@@ -5731,6 +5777,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
 
         Send Ignore_Error of Error_Object_Id CLIERR_GENERAL_ERROR
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable sDriverID
             Move (SizeOfArray(iSgmnts)) to iNumSgmnts
 
@@ -5740,7 +5787,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             For iNumSgmnt from 0 to (iNumSgmnts - 1)
                 Set_Attribute DF_INDEX_SEGMENT_FIELD of hTable iIndex (iNumSgmnt + 1) to iSgmnts[iNumSgmnt]
             Loop
-        Structure_End hTable DF_STRUCTEND_OPT_NONE
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder
 
         Send Trap_Error of Error_Object_Id CLIERR_GENERAL_ERROR
 
@@ -5748,6 +5795,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function APIIndexCreateByFieldNames Handle hTable tAPIIndex APIIndex tAPIIndex[] APIIndexTo tAPIIndexSegment[] aIndexSegments Returns Boolean
+        String sWorkFolder
         Integer iCount iSegmentsFrom iFieldFrom iSegmentsTo
         String sDriverID
         Boolean bOK bIsSQLTable bIsOpen bExists
@@ -5775,6 +5823,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move False to Err
         Move 0 to LastErr
 
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable sDriverID
             // An index that exists is taken away first. Asked for a number that is in use, Create_Index makes
             // a new index under another number and leaves the old one as it was.
@@ -5811,7 +5860,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Loop
 
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
 
         Set Action_Text of ghoStatusPanel to ""
 
@@ -5821,6 +5870,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // If an SQL index is to be renamed we need to check that the name doesn't exist already, but
     // with another index number. If we find one we temporarily renames it by adding "TMP" to the SQL name.
     Function UtilIndexTempRenameSQLName Handle hTable String sSQLIndexName String sDriverID Returns Boolean
+        String sWorkFolder
         Integer iLastIndex iCount iTableNo iSegments
         String sSQLIndexNameCompare sTmpIndexName
         Boolean bIsOpen bExists bIsSQLDriver 
@@ -5841,9 +5891,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Get_Attribute DF_INDEX_NAME of hTable iCount to sSQLIndexNameCompare
                 If (Lowercase(sSQLIndexName) = Lowercase(sSQLIndexNameCompare)) Begin
                     Move (sSQLIndexNameCompare + String("_TMP")) to sTmpIndexName
+                    Get _StructureWorkFolder iTableNo to sWorkFolder
                     Structure_Start iTableNo sDriverID
                         Set_Attribute DF_INDEX_NAME of iTableNo iCount to sTmpIndexName
-                    Structure_End iTableNo DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+                    Structure_End iTableNo DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
                     Open hTable
                 End
             End
@@ -5895,6 +5946,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function APIIndexRemoveAllIndexes Handle hTable tAPIIndex[] APIIndex Returns Boolean
+        String sWorkFolder
         Integer iCount iSize iIndex
         String sDriverID
         Boolean bOK bIsSQLTable bIsOpen
@@ -5924,13 +5976,14 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move 0 to LastErr
         Decrement iSize
 
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable sDriverID
             For iCount from 0 to iSize
                 Move APIIndex[iCount].iIndexNumber to iIndex
                 Delete_Index hTable iIndex
             Loop
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
         Move 0 to LastErr
 
         Set Action_Text of ghoStatusPanel to ""
@@ -5938,6 +5991,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Function ApiIndexChangeDirection Handle hTable Integer iIndex Integer iSegment Integer iDirection Returns Boolean
+        String sWorkFolder
         Boolean bOK
 
         Get AutoConnectionIDLogin to bOK
@@ -5946,16 +6000,18 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         If (bOK = False) Begin
             Function_Return False
         End
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable
             Set_Attribute DF_INDEX_SEGMENT_DIRECTION of hTable iIndex iSegment to iDirection
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
 
         Set Action_Text of ghoStatusPanel to ""
         Function_Return (Err = False)
     End_Function
 
     Function ApiIndexChangeUppercase Handle hTable Integer iIndex Integer iSegment Boolean bUppercase Returns Boolean
+        String sWorkFolder
         Integer iCase
         Boolean bOK
 
@@ -5972,10 +6028,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         If (bOK = False) Begin
             Function_Return False
         End
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable
             Set_Attribute DF_INDEX_SEGMENT_CASE of hTable iIndex iSegment to iCase
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
 
         Set Action_Text of ghoStatusPanel to ""
         Function_Return (Err = False)
@@ -5983,6 +6040,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // To delete an index
     Function ApiIndexRemove Handle hTable Integer iIndex Returns Boolean
+        String sWorkFolder
         Integer iTableNo iNumSegments
         String sDriverID
         Boolean bOK bIsSQLTable
@@ -6006,12 +6064,13 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Function_Return True // Then nothing to do.
         End
 
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable sDriverID
             Send Ignore_Error of Error_Object_Id DFERR_BAD_PARAMETER
             Delete_Index iTableNo iIndex
             Send Trap_Error of Error_Object_Id DFERR_BAD_PARAMETER
             Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+        Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
 
         Set Action_Text of ghoStatusPanel to ""
         Function_Return (Err = False)
@@ -6019,6 +6078,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // Delete an Index Segment
     Function ApiIndexRemoveSegment Handle hTable Integer iIndex Integer iSegment Returns Boolean
+        String sWorkFolder
         Boolean bOK bIndexTemporary bIsSQLTable
         Integer iNumSegments iCurSegment iSegmentCase iSegmentDirection iSegmentColumn
 
@@ -6064,6 +6124,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
 
         Else Begin
+           Get _StructureWorkFolder hTable to sWorkFolder
            Structure_Start hTable
                Get_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable iIndex to iNumSegments
                If (iSegment = iNumSegments) Begin
@@ -6082,7 +6143,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                    Set_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable iIndex to (iNumSegments - 1)
                End
                 Set Action_Text of ghoStatusPanel to "Restructures table..."
-            Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+            Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
             Set Action_Text of ghoStatusPanel to ""
         End
 
@@ -6094,6 +6155,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // one over, the new segment got its own number as its column, the append set nothing, and every index of an
     // SQL table was taken for a temporary one.)
     Function ApiIndexInsertSegment Handle hTable Integer iIndex Integer iSegment Integer iSegmentColumn Integer iSegmentCase Integer iSegmentDirection Returns Boolean
+        String sWorkFolder
         Boolean bOK bIsSQLTable bIndexTemporary
         Integer iNumSegments
 
@@ -6122,10 +6184,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Send _UtilIndexSegmentInsert hTable iIndex iSegment iSegmentColumn iSegmentCase iSegmentDirection
         End
         Else Begin
+            Get _StructureWorkFolder hTable to sWorkFolder
             Structure_Start hTable
                 Send _UtilIndexSegmentInsert hTable iIndex iSegment iSegmentColumn iSegmentCase iSegmentDirection
                 Set Action_Text of ghoStatusPanel to "Restructures table..."
-            Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+            Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
             Set Action_Text of ghoStatusPanel to ""
         End
 
@@ -6255,6 +6318,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // It returns True when it succeeds, and when there is nothing to convert: an SQL table, an alias, a table that
     // could not be opened.
     Function UtilTableConvertFrom23Format Handle hTable Returns Boolean
+        String sWorkFolder
         Boolean bOK bIsEmbedded bIsAlias
         String sRevision
         
@@ -6280,10 +6344,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         If (sRevision contains "2.3") Begin
             Move False to Err
             Set Private.phCurrentTable to hTable
+            Get _StructureWorkFolder hTable to sWorkFolder
             Structure_Start hTable    
                 Set_Attribute DF_FILE_INTEGRITY_CHECK of hTable to True
                 Set Action_Text of ghoStatusPanel to "Restructures table to 3.0/4.0"
-            Structure_End hTable DF_STRUCTEND_OPT_FORCE "." ghoDbUpdateHandler
+            Structure_End hTable DF_STRUCTEND_OPT_FORCE sWorkFolder ghoDbUpdateHandler
             Set Action_Text of ghoStatusPanel to ""
         End
         
@@ -8274,6 +8339,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // This message is different from ApiTableCreate in that it will not do a function_return if the table
     // already exists.
     Function UtilRelationsUpdate Handle hTable tAPIRelation[] aRelationsFrom tAPIRelation[] aRelationsTo Returns Boolean
+        String sWorkFolder
         Boolean bOK
         Integer iSizeTo iSize iCount iColumn
         String sDriverID
@@ -8289,6 +8355,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
             // We should probably not make any comparison between "FROM" and "TO" database; instead just create all "FROM" relations
             // for the "TO" database. But start by deleting all current "TO" relations:
+            Get _StructureWorkFolder hTable to sWorkFolder
             Structure_Start hTable sDriverID
                 for iCount from 0 to iSizeTo
                     Move aRelationsTo[iCount].iColumnFrom to iColumn
@@ -8296,7 +8363,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                     Set_Attribute DF_FIELD_RELATED_FIELD of hTable iColumn to 0
                 Loop
                 Set Action_Text of ghoStatusPanel to "Restructures table..."
-            Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+            Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
             Set Action_Text of ghoStatusPanel to ""
         End
 
@@ -9385,6 +9452,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Procedure
 
     Procedure SetAllIndexesToBatch Handle hTable Boolean bSetToBatch
+        String sWorkFolder
         Integer iLastIndex iIndex iNumSegments
         Boolean bOK
         String sDriverID
@@ -9397,6 +9465,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Procedure_Return
             End
             Get_Attribute DF_FILE_LAST_INDEX_NUMBER of hTable to iLastIndex
+            Get _StructureWorkFolder hTable to sWorkFolder
             Structure_Start hTable sDriverID
                 for iIndex from 1 to iLastIndex
                     Get_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable iIndex to iNumSegments
@@ -9409,7 +9478,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                         End
                     End
                 Loop
-            Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
+            Structure_End hTable DF_STRUCTEND_OPT_NONE sWorkFolder ghoDbUpdateHandler
         End
     End_Procedure
 

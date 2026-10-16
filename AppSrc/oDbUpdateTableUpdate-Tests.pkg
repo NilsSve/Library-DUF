@@ -532,6 +532,44 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Function_Return iRecords
     End_Function
 
+    // A restructure that rewrites the data makes its work files beside the data file. They were made in the folder
+    // the program was started in, and where they cannot be made there every such update failed with error 4254
+    // (".\duftt1.da!"). Here the program is in a folder where a folder stands in the way of the work file.
+    { Published=True }
+    Procedure Test_A_Restructure_Works_Wherever_The_Program_Was_Started
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors iDone
+        String sStart sWasCurrent sWork
+
+        Send MakeBaseTable "DUFTT50" 5 True
+        Move (psFolder(Self) + "\Start") to sStart
+        Make_Directory sStart
+        Make_Directory (sStart + "\duftt50.da!")
+        Get_Current_Directory to sWasCurrent
+        Move (SetCurrentDirectory(sStart)) to iDone
+        Get _StructureWorkFolder of ghoDbUpdateFunctionLibrary (phTable(Self)) to sWork
+
+        // Code goes: the data is written anew.
+        Get Col 1 "Id" DF_BCD 6 0        to aColumns[0]
+        Get Col 2 "Name" DF_ASCII 30 0   to aColumns[1]
+        Get Col 3 "Created" DF_DATE 6 0  to aColumns[2]
+        Get Col 4 "Amount" DF_BCD 8 2    to aColumns[3]
+        Get Idx 1 1 "Id" -1 "" -1 ""        to aIndexes[0]
+        Get Idx 2 2 "Name" 1 "Id" -1 ""     to aIndexes[1]
+        Get Idx 3 3 "Created" 1 "Id" -1 ""  to aIndexes[2]
+        Get UpdateTable aColumns aIndexes to iErrors
+
+        Move (SetCurrentDirectory(sWasCurrent)) to iDone
+        Remove_Directory (sStart + "\duftt50.da!")
+        Remove_Directory sStart
+        Send AssertSAreEqual (Uppercase(psFolder(Self))) (Uppercase(sWork)) "The work folder is the folder of the data file."
+        Send AssertIAreEqual 0 iErrors ("The update runs without an error." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id,Name,Created,Amount" (ColumnNames(Self)) "Code is gone."
+        Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "Name")) "Name holds its text."
+        Send AssertIAreEqual 2 (RecordCount(Self)) "Both records are there."
+    End_Procedure
+
     { Published=True }
     Procedure Test_A_Column_Removed_From_The_Middle_Leaves_The_Others_As_They_Are
         tAPIColumn[] aColumns

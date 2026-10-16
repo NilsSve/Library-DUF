@@ -177,6 +177,70 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return sPath
     End_Function
 
+    // The folder a restructure writes its work files in (the work folder of Structure_End): the folder of the
+    // table's data file, so that they are made beside it. It was "." - the folder the program was started in: a
+    // restructure that rewrites the data failed with error 4254 (".\<table>.da!") when the program was started
+    // in a folder it cannot write in, and the work files were made on another drive than the table. The data
+    // file is looked for the way the runtime does: in the folder of a root name that has one, then in the
+    // folders of the data path, then in those of the open path. A table of a database driver keeps ".", and so
+    // does a new one (handle 0): it has no data to copy. Ask BEFORE Structure_Start, with the table's number - the
+    // handle Structure_Start hands back for a new table has no root name to read (error 4105).
+    Function _StructureWorkFolder Handle hTable Returns String
+        String sRootName sFolder sOpenPath sOpenFolder
+        Integer iPos iPaths iPath
+        Boolean bIsDriverTable bExists
+
+        If (hTable = 0) Begin
+            Function_Return "."
+        End
+        Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
+        Move (Trim(sRootName)) to sRootName
+        If (Uppercase(Left(sRootName, 9)) = "DATAFLEX:") Begin
+            Move (Right(sRootName, Length(sRootName) - 9)) to sRootName
+        End
+        Get _UtilRootNameIsDriverTable sRootName to bIsDriverTable
+        If (sRootName = "" or bIsDriverTable = True) Begin
+            Function_Return "."
+        End
+
+        Move "" to sFolder
+        Move (RightPos("\", sRootName)) to iPos
+        If (iPos > 0) Begin
+            Move (Left(sRootName, iPos)) to sFolder
+        End
+        Else Begin
+            Get _UtilEmbeddedTableFolder sRootName to sFolder
+            If (sFolder = "") Begin
+                Get_Attribute DF_OPEN_PATH to sOpenPath
+                Get CountOfPaths of (phoWorkspace(ghoApplication)) sOpenPath to iPaths
+                For iPath from 1 to iPaths
+                    If (sFolder = "") Begin
+                        Get PathAtIndex of (phoWorkspace(ghoApplication)) sOpenPath iPath to sOpenFolder
+                        If (Trim(sOpenFolder) <> "") Begin
+                            Get vFolderFormat sOpenFolder to sOpenFolder
+                            Get vFilePathExists (sOpenFolder + sRootName + ".dat") to bExists
+                            If (bExists = True) Begin
+                                Move sOpenFolder to sFolder
+                            End
+                        End
+                    End
+                Loop
+            End
+            If (sFolder = "") Begin
+                Get PathAtIndex of (phoWorkspace(ghoApplication)) (psDataPath(phoWorkspace(ghoApplication))) 1 to sFolder
+            End
+        End
+        Move (Trim(sFolder)) to sFolder
+        If (sFolder = "") Begin
+            Function_Return "."
+        End
+        // Without the backslash at the end, as "." was: the runtime puts one between the folder and the file.
+        If (Length(sFolder) > 3 and Right(sFolder, 1) = "\") Begin
+            Move (Left(sFolder, Length(sFolder) - 1)) to sFolder
+        End
+        Function_Return sFolder
+    End_Function
+
     Procedure _SqlColumnInfo Handle hoStmt
         Integer i iCols iItem
         tSqlColumnNew[] aQueryColumns
@@ -1804,6 +1868,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     End_Function
 
     Function _SqlUtilUpdateIntFile Integer hTable Returns Boolean
+        String sWorkFolder
         String sOrgFormat sNewFormat sRootName sTableName sDriverID
         Boolean bOpened bOK
 
@@ -1833,10 +1898,11 @@ Class cBaseDbUpdateFuncLib is a cObject
         Move False to Err
 
         If (hTable > 0) Begin
+            Get _StructureWorkFolder hTable to sWorkFolder
             Structure_Start hTable
                 Set_Attribute DF_FILE_TABLE_CHARACTER_FORMAT of hTable to sNewFormat
                 Set_Attribute DF_FILE_TABLE_CHARACTER_FORMAT of hTable to sOrgFormat
-            Structure_End hTable DF_STRUCTEND_OPT_FORCE "." ghoDbUpdateHandler
+            Structure_End hTable DF_STRUCTEND_OPT_FORCE sWorkFolder ghoDbUpdateHandler
         End
         Else Begin
             Set_Attribute DF_FILE_TABLE_CHARACTER_FORMAT of hTable to sNewFormat
@@ -1902,6 +1968,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     // It creates an .int file in the first Data folder of the psDataPath property. 
     // It is important that the hTable can be opened.
     Function _SqlUtilCreateIntFile Handle hTable String sDriverID String sConnectionID Boolean bAnsi Boolean bSysFile Boolean bBackup Returns Boolean
+        String sWorkFolder
         Boolean bOK bExists bUseConnectionID bOpen 
         String sDataPath sRootName sLogicalName sPhysicalFileName sConnectionString sTableName sSchemaName sANSI_OEM 
         String[] asIndexArray
@@ -2004,8 +2071,9 @@ Class cBaseDbUpdateFuncLib is a cObject
             Move hTable to hTableOrg
             Get_Attribute DF_FILE_OPENED of hTable to bOpen
             If (bOpen = True) Begin
+                Get _StructureWorkFolder hTable to sWorkFolder
                 Structure_Start hTable sDriverID
-                Structure_End hTable DF_STRUCTEND_OPT_FORCE "." ghoDbUpdateHandler
+                Structure_End hTable DF_STRUCTEND_OPT_FORCE sWorkFolder ghoDbUpdateHandler
                 Set Message_Text of ghoStatusPanel to ("Table number:" * String(hTableOrg))
             End
         End
@@ -2016,6 +2084,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     // Simplier version of the _SqlUtilCreateIntFile. It can be used if there might be something wrong with the .int file and it needs
     // to be refreshed by the driver. 
     Function _SqlUtilRefreshIntFile Handle hTable String sDriverID String sConnectionID Boolean bAnsi Boolean bSysFile Returns Boolean        
+        String sWorkFolder
         Boolean bErr
         Integer iLastErr iErrLine
         
@@ -2032,8 +2101,9 @@ Class cBaseDbUpdateFuncLib is a cObject
             Function_Return False
         End
         
+        Get _StructureWorkFolder hTable to sWorkFolder
         Structure_Start hTable
-        Structure_End hTable DF_STRUCTEND_OPT_FORCE "." ghoDbUpdateHandler  
+        Structure_End hTable DF_STRUCTEND_OPT_FORCE sWorkFolder ghoDbUpdateHandler
 
         If (Err = True) Begin  
             Error DFERR_PROGRAM ("The table:" * String(hTable) * "could not restructered properly. Error:" * String(LastErr))
