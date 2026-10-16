@@ -1308,8 +1308,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
     { MethodType=Property Category="Database" InitialValue=Default }
     { EnumList="EN_DbTypeMSSQL, EN_DbTypeMySQL, EN_DbTypeOracle, EN_DbTypeDB2, EN_DbTypePostgre, EN_DbTypeDataFlex" }
     Procedure Set piDbType Integer iDbType
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set piDbType of ghoSQLConnectionHandler to iDbType
@@ -1317,8 +1316,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
 
     Function piDbType Returns Integer
         Integer iDbType
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return ""
         End
         Get piDbType of ghoSQLConnectionHandler to iDbType
@@ -1328,8 +1326,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
     { MethodType=Property Category="Database" InitialValue="Default" }
     { EnumList="DATAFLEX, MSSQLDRV, DB2_DRV, ODBC_DRV" }
     Procedure Set psDriverID String sDriverID
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psDriverID of ghoSQLConnectionHandler to sDriverID
@@ -1337,8 +1334,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
 
     Function psDriverID Returns String
         String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return ""
         End
         Get psDriverID of ghoSQLConnectionHandler to sValue
@@ -1401,8 +1397,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
     Procedure CreateSQLConnection String sDriverID String sConnectionID String sServer String sDatabase Boolean bTrusted String sUserID String sPassword Boolean bSilent
         tSQLConnection SQLConnection
 
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Move sDriverID     to SQLConnection.sDriverID
@@ -1418,8 +1413,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
 
     Function RedirectConnection String sOldConnection String sNewConnection Returns Integer
         Integer iRetval
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return 2
         End
 
@@ -1428,8 +1422,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
     End_Function
 
     Procedure Set psConnectionID String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psConnectionID of ghoSQLConnectionHandler to sValue
@@ -1437,8 +1430,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
 
     Function psConnectionID Returns String
         String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return ""
         End
         Get psConnectionID of ghoSQLConnectionHandler to sValue
@@ -1450,8 +1442,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
     // relayed to the ghoSQLConnectionHandler object
     // simply by changing one of its parameters.
     Procedure Set psServer String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psServer of ghoSQLConnectionHandler to sValue
@@ -1459,8 +1450,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
 
     Function psServer Returns String
         String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return ""
         End
         Get psServer of ghoSQLConnectionHandler to sValue
@@ -1469,8 +1459,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
     End_Function
 
     Procedure Set psDatabase String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psDatabase of ghoSQLConnectionHandler to sValue
@@ -1478,8 +1467,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
 
     Function psDatabase Returns String
         String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return ""
         End
         Get psDatabase of ghoSQLConnectionHandler to sValue
@@ -1488,8 +1476,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
     End_Function
 
     Procedure Set psUserID String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psUserID of ghoSQLConnectionHandler to sValue
@@ -1497,8 +1484,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
 
     Function psUserID Returns String
         String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return ""
         End
         Get psUserID of ghoSQLConnectionHandler to sValue
@@ -1507,8 +1493,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
     End_Function
 
     Procedure Set psPassword String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psPassword of ghoSQLConnectionHandler to sValue
@@ -1516,8 +1501,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
 
     Function psPassword Returns String
         String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return ""
         End
         Get psPassword of ghoSQLConnectionHandler to sValue
@@ -1526,8 +1510,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
     End_Function
 
     Procedure Set pbTrusted Boolean bValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbTrusted of ghoSQLConnectionHandler to bValue
@@ -1535,8 +1518,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
 
     Function pbTrusted Returns Boolean
         Boolean bValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return False
         End
         Get pbTrusted of ghoSQLConnectionHandler to bValue
@@ -1545,8 +1527,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
     End_Function
 
     Procedure Set psConnectionString String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psConnectionString of ghoSQLConnectionHandler to sValue
@@ -1554,8 +1535,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
 
     Function psConnectionString Returns String
         String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return ""
         End
         Get psConnectionString of ghoSQLConnectionHandler to sValue
@@ -1566,8 +1546,7 @@ Class cDbUpdateHandler is a cDbUpdateFunctionLibrary
     { MethodType=Property }
     Function piConnectionOptions Returns Integer
         Integer iValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that no ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return 0
         End
         Get piConnectionOptions of ghoSQLConnectionHandler to iValue

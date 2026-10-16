@@ -134,6 +134,21 @@ Enum_List
     Define eStrict    
 End_Enum_List
 
+// The word of an Encrypt option: Optional, Mandatory or Strict; "" for an option that is not known. (The driver class
+// and the Microsoft SQL handler each had a function for it, with different answers for an unknown option.)
+Function SQLEncryptOptionWord Global Integer eEncryptOption Returns String
+    If (eEncryptOption = eOptional) Begin
+        Function_Return CS_SQLIniEncryptOptional
+    End
+    If (eEncryptOption = eMandatory) Begin
+        Function_Return CS_SQLIniEncryptMandatory
+    End
+    If (eEncryptOption = eStrict) Begin
+        Function_Return CS_SQLIniEncryptStrictShort
+    End
+    Function_Return ""
+End_Function
+
 Struct tSQLConnection
     Boolean bEnabled                // 1. There can only be one active/enabled connection at a time.
     String  sConnectionID           // 2. The name of the connection ID.

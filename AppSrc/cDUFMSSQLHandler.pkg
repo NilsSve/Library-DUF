@@ -5,6 +5,7 @@
 // and for every program with DUF on its path, on every DataFlex version, with the 26.0 package.)
 
 Use MSSqldrv.pkg
+Use cSQLConnectionIniFile.h.pkg
 
 // The SQL Server 2019 client (ODBC Driver 18) under DUF's own names, with the values of the 26.0 package: the
 // MSSqldrv.pkg of DataFlex 19.1 and 20.1 does not name it yet, and a #Replace name cannot be tested for with
@@ -89,21 +90,16 @@ Class cDUFMSSQLHandler is a cMSSQLHandler
         Function_Return (Item_Count(Current_Object))
     End_Function
 
+    // The Encrypt part of a connection string, "Encrypt=Strict;" (SQLEncryptOptionWord); "" for an option that is
+    // not known, which leaves it to the driver. (It became "Encrypt=;".)
     Function EncryptOptionToText Integer eEncryptionOption Returns String
-        String sEncryptionWord
+        String sWord
 
-        Move ("Encrypt" + "=") to sEncryptionWord
-        If (eEncryptionOption = 0) Begin
-            Append sEncryptionWord "Optional"
+        Move (SQLEncryptOptionWord(eEncryptionOption)) to sWord
+        If (sWord = "") Begin
+            Function_Return ""
         End
-        Else If (eEncryptionOption = 1) Begin
-            Append sEncryptionWord "Mandatory"
-        End
-        Else If (eEncryptionOption = 2) Begin
-            Append sEncryptionWord "Strict"
-        End
-        Append sEncryptionWord ";"
-        Function_Return sEncryptionWord
+        Function_Return (CS_SQLIniEncrypt + "=" + sWord + ";")
     End_Function
 
 End_Class

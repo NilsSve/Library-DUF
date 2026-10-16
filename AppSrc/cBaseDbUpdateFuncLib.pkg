@@ -196,6 +196,17 @@ Class cBaseDbUpdateFuncLib is a cObject
         Set paQueryColumns to aQueryColumns
     End_Procedure
 
+    // Is there no connection handler? Then an error says so, and True is answered: the connection properties below
+    // relay to ghoSQLConnectionHandler and stop then. (The test and its error were written into each of them.)
+    Function _NoSQLConnectionHandler Returns Boolean
+        If (ghoSQLConnectionHandler = 0) Begin
+            // Note: No point in translating as the programmer will see this immediately after compiling the program...
+            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+            Function_Return True
+        End
+        Function_Return False
+    End_Function
+
     // *** Property Messages ***
     //
     // These "properties" are settings for the cSQLConnectionHandler class, but have been
@@ -203,9 +214,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     //
     Function pSQLConnection Returns tSQLConnection
         tSQLConnection SQLConnection
-        If (ghoSQLConnectionHandler = 0) Begin
-            // Note: No point in translating as the programmer will see this immediately after compiling the program...
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pSQLConnection of ghoSQLConnectionHandler to SQLConnection
@@ -218,9 +227,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     End_Function
 
     Procedure Set psServer String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            // Note: No point in translating as the programmer will see this immediately after compiling the program...
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psServer of ghoSQLConnectionHandler to sValue
@@ -228,8 +235,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psServer Returns String
         String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psServer of ghoSQLConnectionHandler to sValue
@@ -237,8 +243,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     End_Function
 
     Procedure Set psDatabase String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psDatabase of ghoSQLConnectionHandler to sValue
@@ -246,8 +251,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psDatabase Returns String
         String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psDatabase of ghoSQLConnectionHandler to sValue
@@ -255,8 +259,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     End_Function
 
     Procedure Set psUserID String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psUserID of ghoSQLConnectionHandler to sValue
@@ -264,8 +267,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psUserID Returns String
         String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psUserID of ghoSQLConnectionHandler to sValue
@@ -273,8 +275,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     End_Function
 
     Procedure Set psPassword String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psPassword of ghoSQLConnectionHandler to sValue
@@ -282,8 +283,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psPassword Returns String
         String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psPassword of ghoSQLConnectionHandler to sValue
@@ -291,8 +291,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     End_Function
 
     Procedure Set pbTrusted Boolean bValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbTrusted of ghoSQLConnectionHandler to bValue
@@ -300,8 +299,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbTrusted Returns Boolean
         Boolean bValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbTrusted of ghoSQLConnectionHandler to bValue
@@ -309,8 +307,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     End_Function
 
     Procedure Set pbSilentLogin Boolean bValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbSilentLogin of ghoSQLConnectionHandler to bValue
@@ -318,8 +315,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbSilentLogin Returns Boolean
         Boolean bValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbSilentLogin of ghoSQLConnectionHandler to bValue
@@ -327,8 +323,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     End_Function
 
     Procedure Set psConnectionID String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psConnectionID of ghoSQLConnectionHandler to sValue
@@ -336,8 +331,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psConnectionID Returns String
         String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psConnectionID of ghoSQLConnectionHandler to sValue
@@ -345,8 +339,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     End_Function
 
     Procedure Set psConnectionString String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psConnectionString of ghoSQLConnectionHandler to sValue
@@ -354,8 +347,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psConnectionString Returns String
         String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psConnectionString of ghoSQLConnectionHandler to sValue
@@ -368,8 +360,7 @@ Class cBaseDbUpdateFuncLib is a cObject
     // DFConnectionId OrderEntry, SERVER=.\SQLEXPRESS; DATABASE=OrderEntry; TRUSTED_CONNECTION=Yes; ,0
     Function psFullConnectionString Returns String
         String sConnectionID sConnectionString
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psConnectionID     of ghoSQLConnectionHandler to sConnectionID
@@ -380,8 +371,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function piConnectionOptions Returns Integer
         Integer iValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get piConnectionOptions of ghoSQLConnectionHandler to iValue
@@ -390,8 +380,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="Convert to SQL" InitialValue="Default" }
     Procedure Set psSchema String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psSchema of ghoSQLConnectionHandler to sValue
@@ -399,8 +388,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psSchema Returns String
         String sRetval
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psSchema of ghoSQLConnectionHandler to sRetval
@@ -409,8 +397,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="Convert to SQL" InitialValue="Default" }
     Procedure Set psBaseTableSpace String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psBaseTableSpace of ghoSQLConnectionHandler to sValue
@@ -418,8 +405,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psBaseTableSpace Returns String
         String sRetval
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psBaseTableSpace of ghoSQLConnectionHandler to sRetval
@@ -428,8 +414,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="Convert to SQL" InitialValue="Default" }
     Procedure Set psLongTableSpace String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psLongTableSpace of ghoSQLConnectionHandler to sValue
@@ -437,8 +422,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psLongTableSpace Returns String
         String sRetval
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psLongTableSpace of ghoSQLConnectionHandler to sRetval
@@ -447,8 +431,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="Convert to SQL" InitialValue="Default" }
     Procedure Set psIndexTableSpace String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psIndexTableSpace of ghoSQLConnectionHandler to sValue
@@ -456,8 +439,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psIndexTableSpace Returns String
         String sRetval
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psIndexTableSpace of ghoSQLConnectionHandler to sRetval
@@ -466,8 +448,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="Convert to SQL" InitialValue=True }
     Procedure Set pbUseConnectionID Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbUseConnectionID of ghoSQLConnectionHandler to bState
@@ -475,8 +456,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbUseConnectionID Returns Boolean
         Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbUseConnectionID of ghoSQLConnectionHandler to bState
@@ -485,8 +465,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="Convert to SQL" InitialValue=True }
     Procedure Set pbToANSI Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbToANSI of ghoSQLConnectionHandler to bState
@@ -494,8 +473,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbToANSI Returns Boolean
         Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbToANSI of ghoSQLConnectionHandler to bState
@@ -504,8 +482,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="Convert to SQL" InitialValue=True }
     Procedure Set pbRecnum Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbRecnum of ghoSQLConnectionHandler to bState
@@ -513,8 +490,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbRecnum Returns Boolean
         Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbRecnum of ghoSQLConnectionHandler to bState
@@ -523,8 +499,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="Convert to SQL" InitialValue=True }
     Procedure Set pbCopyData Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbCopyData of ghoSQLConnectionHandler to bState
@@ -532,8 +507,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbCopyData Returns Boolean
         Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbCopyData of ghoSQLConnectionHandler to bState
@@ -542,8 +516,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="Convert to SQL" InitialValue=False }
     Procedure Set pbApiTableUpdateAuto Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbApiTableUpdateAuto of ghoSQLConnectionHandler to bState
@@ -551,8 +524,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbApiTableUpdateAuto Returns Boolean
         Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbApiTableUpdateAuto of ghoSQLConnectionHandler to bState
@@ -561,8 +533,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="Convert to SQL" InitialValue=False }
     Procedure Set pbCompareDate_DateTime Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbCompareDate_DateTime of ghoSQLConnectionHandler to bState
@@ -570,8 +541,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbCompareDate_DateTime Returns Boolean
         Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbCompareDate_DateTime of ghoSQLConnectionHandler to bState
@@ -580,8 +550,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="Convert to SQL" InitialValue=False }
     Procedure Set pbCompareIndexAscending Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbCompareIndexAscending of ghoSQLConnectionHandler to bState
@@ -589,8 +558,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbCompareIndexAscending Returns Boolean
         Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbCompareIndexAscending of ghoSQLConnectionHandler to bState
@@ -599,8 +567,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="Convert to SQL" InitialValue=False }
     Procedure Set pbCompareIndexUppercase Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbCompareIndexUppercase of ghoSQLConnectionHandler to bState
@@ -608,8 +575,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbCompareIndexUppercase Returns Boolean
         Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO ConnectionID has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbCompareIndexUppercase of ghoSQLConnectionHandler to bState
@@ -618,8 +584,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="SQL Driver Defaults" InitialValue="Default" }
     Procedure Set psDriverDefaultValueASCII String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psDriverDefaultValueASCII of ghoSQLConnectionHandler to sValue
@@ -627,8 +592,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psDriverDefaultValueASCII Returns String
         String sRetval
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psDriverDefaultValueASCII of ghoSQLConnectionHandler to sRetval
@@ -637,8 +601,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="SQL Driver Defaults" InitialValue="Default" }
     Procedure Set psDriverDefaultValueBinary String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psDriverDefaultValueBinary of ghoSQLConnectionHandler to sValue
@@ -646,8 +609,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psDriverDefaultValueBinary Returns String
         String sRetval
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psDriverDefaultValueBinary of ghoSQLConnectionHandler to sRetval
@@ -656,8 +618,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="SQL Driver Defaults" InitialValue="Default" }
     Procedure Set psDriverDefaultValueDate String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psDriverDefaultValueDate of ghoSQLConnectionHandler to sValue
@@ -665,8 +626,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psDriverDefaultValueDate Returns String
         String sRetval
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psDriverDefaultValueDate of ghoSQLConnectionHandler to sRetval
@@ -675,8 +635,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="SQL Driver Defaults" InitialValue="Default" }
     Procedure Set psDriverDefaultValueDateTime String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psDriverDefaultValueDateTime of ghoSQLConnectionHandler to sValue
@@ -684,8 +643,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psDriverDefaultValueDateTime Returns String
         String sRetval
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psDriverDefaultValueDateTime of ghoSQLConnectionHandler to sRetval
@@ -694,8 +652,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="SQL Driver Defaults" InitialValue="Default" }
     Procedure Set psDriverDefaultValueNumeric String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psDriverDefaultValueNumeric of ghoSQLConnectionHandler to sValue
@@ -703,8 +660,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psDriverDefaultValueNumeric Returns String
         String sRetval
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psDriverDefaultValueNumeric of ghoSQLConnectionHandler to sRetval
@@ -713,8 +669,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="SQL Driver Defaults" InitialValue="Default" }
     Procedure Set psDriverDefaultValueText String sValue
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set psDriverDefaultValueText of ghoSQLConnectionHandler to sValue
@@ -722,8 +677,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function psDriverDefaultValueText Returns String
         String sRetval
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get psDriverDefaultValueText of ghoSQLConnectionHandler to sRetval
@@ -732,8 +686,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="SQL Driver Defaults" InitialValue=False }
     Procedure Set pbDriverDefaultNullableASCII Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbDriverDefaultNullableASCII of ghoSQLConnectionHandler to bState
@@ -741,8 +694,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbDriverDefaultNullableASCII Returns Boolean
         Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbDriverDefaultNullableASCII of ghoSQLConnectionHandler to bState
@@ -751,8 +703,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="SQL Driver Defaults" InitialValue=False }
     Procedure Set pbDriverDefaultNullableBinary Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbDriverDefaultNullableBinary of ghoSQLConnectionHandler to bState
@@ -760,8 +711,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbDriverDefaultNullableBinary Returns Boolean
         Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbDriverDefaultNullableBinary of ghoSQLConnectionHandler to bState
@@ -770,8 +720,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="SQL Driver Defaults" InitialValue=False }
     Procedure Set pbDriverDefaultNullableDate Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbDriverDefaultNullableDate of ghoSQLConnectionHandler to bState
@@ -779,8 +728,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbDriverDefaultNullableDate Returns Boolean
         Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbDriverDefaultNullableDate of ghoSQLConnectionHandler to bState
@@ -789,8 +737,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="SQL Driver Defaults" InitialValue=False }
     Procedure Set pbDriverDefaultNullableDateTime Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbDriverDefaultNullableDateTime of ghoSQLConnectionHandler to bState
@@ -798,8 +745,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbDriverDefaultNullableDateTime Returns Boolean
         Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbDriverDefaultNullableDateTime of ghoSQLConnectionHandler to bState
@@ -808,8 +754,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="SQL Driver Defaults" InitialValue=False }
     Procedure Set pbDriverDefaultNullableNumeric Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbDriverDefaultNullableNumeric of ghoSQLConnectionHandler to bState
@@ -817,8 +762,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbDriverDefaultNullableNumeric Returns Boolean
         Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbDriverDefaultNullableNumeric of ghoSQLConnectionHandler to bState
@@ -827,8 +771,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     { MethodType=Property Category="SQL Driver Defaults" InitialValue=False }
     Procedure Set pbDriverDefaultNullableText Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Procedure_Return
         End
         Set pbDriverDefaultNullableText of ghoSQLConnectionHandler to bState
@@ -836,8 +779,7 @@ Class cBaseDbUpdateFuncLib is a cObject
 
     Function pbDriverDefaultNullableText Returns Boolean
         Boolean bState
-        If (ghoSQLConnectionHandler = 0) Begin
-            Error DFERR_PROGRAM "ghoSQLConnectionHandler = 0! This indicates that NO SQL connection has been setup by the programmer."
+        If (_NoSQLConnectionHandler(Self)) Begin
             Function_Return
         End
         Get pbDriverDefaultNullableText of ghoSQLConnectionHandler to bState
@@ -2431,10 +2373,11 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return (sLeft = "")
     End_Function
 
-    // Checks that the passed hTable number both exists in Filelist.cfg and
-    // that the embedded .dat file exists on disk _or_ that the SQL table exists
-    // if it is an SQL table
-    Function _UtilTableExists Handle hTable Returns Boolean
+    // Is the table there: its number is in Filelist.cfg, and the server has it (a table of a database driver,
+    // _UtilRootNameIsDriverTable) or its data file is there (an embedded table). bCached: the server's list in
+    // pasSQLDataTables. (A ":" anywhere in the root name made the table SQL, a drive too; _UtilTableExists and its
+    // _Ex were two copies.)
+    Function _UtilTableExistsBy Handle hTable Boolean bCached Returns Boolean
         Boolean bExists bIsSQLTable
         String sRootName
 
@@ -2446,16 +2389,23 @@ Class cBaseDbUpdateFuncLib is a cObject
         Move False to bIsSQLTable
         If (hTable > 0) Begin
             Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
-            Move (sRootName contains ":") to bIsSQLTable
+            Get _UtilRootNameIsDriverTable sRootName to bIsSQLTable
         End
         If (bIsSQLTable = True) Begin
-            Get _UtilTableIsSql hTable to bExists
-            Function_Return bExists
+            Get _UtilTableIsSqlBy hTable bCached to bExists
         End
         Else Begin
             Get _UtilEmbeddedTableFileExists sRootName to bExists
         End
+        Function_Return bExists
+    End_Function
 
+    // Checks that the passed hTable number both exists in Filelist.cfg and
+    // that the embedded .dat file exists on disk _or_ that the SQL table exists
+    // if it is an SQL table
+    Function _UtilTableExists Handle hTable Returns Boolean
+        Boolean bExists
+        Get _UtilTableExistsBy hTable False to bExists
         Function_Return bExists
     End_Function
 
@@ -2465,27 +2415,8 @@ Class cBaseDbUpdateFuncLib is a cObject
     // It checks that the SQL table exists on the SQL end, *or*
     // if embedded database, that the .dat file exists on disk.
     Function _UtilTableExists_Ex Handle hTable Returns Boolean
-        Boolean bExists bIsSQLTable
-        String sRootName
-
-        Get _UtilTableNumberIsInUse hTable to bExists
-        If (bExists = False) Begin
-            Function_Return False
-        End
-
-        Move False to bIsSQLTable
-        If (hTable > 0) Begin
-            Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
-            Move (sRootName contains ":") to bIsSQLTable
-        End
-        If (bIsSQLTable = True) Begin
-            Get _UtilTableIsSql_Ex hTable to bExists
-            Function_Return bExists
-        End
-        Else Begin
-            Get _UtilEmbeddedTableFileExists sRootName to bExists
-        End
-
+        Boolean bExists
+        Get _UtilTableExistsBy hTable True to bExists
         Function_Return bExists
     End_Function
 
@@ -3015,44 +2946,45 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return (bOK = True)
     End_Function
 
-    // When dropping columns SQL Sever does not reclaim the space taken up by the columns dropped.
-    // For data types that are stored inline in the rows (int for example) it may even take up space on
-    // the new rows added after the alter statement. To get around this you need to create a clustered
-    // index on the table or rebuild the clustered Index if it already has one. Rebuilding the index
-    // can be done with a REBUILD command after modifying the table. But be warned this can be slow on very big tables.
-    //   ALTER TABLE MyTable
-    //       REBUILD
-    Function _SqlUtilRemoveTableColumnByScript String sMemScriptFile String sTableName String sColumnName Returns Boolean
+    // Runs an SQL script that is compiled into the program, with each placeholder (asPlaceholders) replaced in every
+    // line by its value (asValues). (Three functions each had a copy of this.)
+    Function _SqlUtilRunScriptResource String sMemScriptFile String[] asPlaceholders String[] asValues Returns Boolean
         tSQLScriptArray SQLScriptArray
         String sDriverID
         Boolean bOK
-        Integer iSize iCount
-
-        If (Trim(sTableName) = "" or Trim(sColumnName) = "") Begin
-            Function_Return False
-        End
+        Integer iLine iItem
 
         Get psDriverID to sDriverID
         Get _SqlUtilReadResource sMemScriptFile to SQLScriptArray
         If (SQLScriptArray.bError = True) Begin
             Function_Return False
         End
-
-        Move (SizeOfArray(SQLScriptArray.sSQLScriptArray)) to iSize
-        Decrement iSize
-
-        For iCount from 0 to iSize
-            If (SQLScriptArray.sSQLScriptArray[iCount] contains "TABLE_NAME_XXX") Begin
-                Move (Replaces("TABLE_NAME_XXX",  SQLScriptArray.sSQLScriptArray[iCount], String(sTableName))) to SQLScriptArray.sSQLScriptArray[iCount]
-            End
-            If (SQLScriptArray.sSQLScriptArray[iCount] contains "COLUMN_NAME_XXX") Begin
-                Move (Replaces("COLUMN_NAME_XXX", SQLScriptArray.sSQLScriptArray[iCount], String(sColumnName))) to SQLScriptArray.sSQLScriptArray[iCount]
-            End
+        For iLine from 0 to (SizeOfArray(SQLScriptArray.sSQLScriptArray) - 1)
+            For iItem from 0 to (SizeOfArray(asPlaceholders) - 1)
+                Move (Replaces(asPlaceholders[iItem], SQLScriptArray.sSQLScriptArray[iLine], asValues[iItem])) to SQLScriptArray.sSQLScriptArray[iLine]
+            Loop
         Loop
-
         Get _SqlUtilExecuteEmbeddedScript SQLScriptArray sDriverID False "" to bOK
-
         Function_Return (bOK = True)
+    End_Function
+
+    // Removes a column from a table with the script sMemScriptFile (TABLE_NAME_XXX, COLUMN_NAME_XXX).
+    // can be done with a REBUILD command after modifying the table. But be warned this can be slow on very big tables.
+    //   ALTER TABLE MyTable
+    //       REBUILD
+    Function _SqlUtilRemoveTableColumnByScript String sMemScriptFile String sTableName String sColumnName Returns Boolean
+        String[] asPlaceholders asValues
+        Boolean bOK
+
+        If (Trim(sTableName) = "" or Trim(sColumnName) = "") Begin
+            Function_Return False
+        End
+        Move "TABLE_NAME_XXX"  to asPlaceholders[0]
+        Move "COLUMN_NAME_XXX" to asPlaceholders[1]
+        Move sTableName        to asValues[0]
+        Move sColumnName       to asValues[1]
+        Get _SqlUtilRunScriptResource sMemScriptFile asPlaceholders asValues to bOK
+        Function_Return bOK
     End_Function
 
     // Reads a SQL script file that has been compiled into the .exe program as a resource.
@@ -3296,72 +3228,23 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return (hoSQLConnect <> 0 and Err = False)
     End_Function
 
-    Function _SqlUtilCreatePostGreSQLDatabaseByScript String sMemScriptFile String sDatabaseName Returns Boolean
-        tSQLScriptArray SQLScriptArray
-        String sDriverID sCollation
+    // Creates a database with the script sMemScriptFile (DATABASE_NAME_XXX, and COLLATION_NAME_XXX for psCollation),
+    // for PostgreSQL and MySQL. (Each had a function of its own, the same function.)
+    Function _SqlUtilCreateDatabaseByScript String sMemScriptFile String sDatabaseName Returns Boolean
+        String[] asPlaceholders asValues
+        String sCollation
         Boolean bOK
-        Integer iSize iCount
 
         If (Trim(sDatabaseName) = "") Begin
             Function_Return False
         End
-
-        Get psDriverID  to sDriverID
         Get psCollation to sCollation
-        Get _SqlUtilReadResource sMemScriptFile to SQLScriptArray
-        If (SQLScriptArray.bError = True) Begin
-            Function_Return False
-        End
-
-        Move (SizeOfArray(SQLScriptArray.sSQLScriptArray)) to iSize
-        Decrement iSize
-
-        For iCount from 0 to iSize
-            If (SQLScriptArray.sSQLScriptArray[iCount] contains "DATABASE_NAME_XXX") Begin
-                Move (Replaces("DATABASE_NAME_XXX",  SQLScriptArray.sSQLScriptArray[iCount], String(sDatabaseName))) to SQLScriptArray.sSQLScriptArray[iCount]
-            End
-            If (SQLScriptArray.sSQLScriptArray[iCount] contains "COLLATION_NAME_XXX") Begin
-                Move (Replaces("COLLATION_NAME_XXX", SQLScriptArray.sSQLScriptArray[iCount], String(sCollation))) to SQLScriptArray.sSQLScriptArray[iCount]
-            End
-        Loop
-
-        Get _SqlUtilExecuteEmbeddedScript SQLScriptArray sDriverID False "" to bOK
-
-        Function_Return (bOK = True)
-    End_Function
-
-    Function _SqlUtilCreateMySQLDatabaseByScript String sMemScriptFile String sDatabaseName Returns Boolean
-        tSQLScriptArray SQLScriptArray
-        String sDriverID sCollation
-        Boolean bOK
-        Integer iSize iCount
-
-        If (Trim(sDatabaseName) = "") Begin
-            Function_Return False
-        End
-
-        Get psDriverID  to sDriverID
-        Get psCollation to sCollation
-        Get _SqlUtilReadResource sMemScriptFile to SQLScriptArray
-        If (SQLScriptArray.bError = True) Begin
-            Function_Return False
-        End
-
-        Move (SizeOfArray(SQLScriptArray.sSQLScriptArray)) to iSize
-        Decrement iSize
-
-        For iCount from 0 to iSize
-            If (SQLScriptArray.sSQLScriptArray[iCount] contains "DATABASE_NAME_XXX") Begin
-                Move (Replaces("DATABASE_NAME_XXX",  SQLScriptArray.sSQLScriptArray[iCount], String(sDatabaseName))) to SQLScriptArray.sSQLScriptArray[iCount]
-            End
-            If (SQLScriptArray.sSQLScriptArray[iCount] contains "COLLATION_NAME_XXX") Begin
-                Move (Replaces("COLLATION_NAME_XXX", SQLScriptArray.sSQLScriptArray[iCount], String(sCollation))) to SQLScriptArray.sSQLScriptArray[iCount]
-            End
-        Loop
-        // ToDo: THIS FAILS BUT THE SQL SCRIPT WORKS IN MYSQL!
-        Get _SqlUtilExecuteEmbeddedScript SQLScriptArray sDriverID False "" to bOK
-
-        Function_Return (bOK = True)
+        Move "DATABASE_NAME_XXX"  to asPlaceholders[0]
+        Move "COLLATION_NAME_XXX" to asPlaceholders[1]
+        Move sDatabaseName        to asValues[0]
+        Move sCollation           to asValues[1]
+        Get _SqlUtilRunScriptResource sMemScriptFile asPlaceholders asValues to bOK
+        Function_Return bOK
     End_Function
 
     // Checks if the passed connection id exists in the CLI interface.
@@ -3457,20 +3340,22 @@ Class cBaseDbUpdateFuncLib is a cObject
         Set pbProcessingError to False
     End_Procedure
 
-    // *** Miscellanous Helper Functions ***
-    //
-    // Helper function. Takes a DF_FILE_ROOT_NAME value as parameter and
-    // returns the table name only; stripped of any prefix, path or filename extension.
+    // The table name of a root name: without a driver prefix (MSSQLDRV:Customer), a folder (C:\Data\Customer) or an .int
+    // suffix (Customer.int). A drive is no driver prefix: a driver id is longer than one letter. (A drive was taken
+    // for a driver prefix, and the folder was left in.)
     Function _TableNameOnly String sTableName Returns String
         Integer iPos
         Move (Pos(":", sTableName)) to iPos
-        If (iPos <> 0) Begin
-            Move (Mid(sTableName, Length(sTableName), (iPos +1))) to sTableName
-        End  
-        Move (Pos(".int", Lowercase(sTableName))) to iPos
-        If (iPos <> 0) Begin
-            Move (Left(sTableName, (iPos -1))) to sTableName
-        End  
+        If (iPos > 2) Begin
+            Move (Right(sTableName, (Length(sTableName) - iPos))) to sTableName
+        End
+        Move (RightPos("\", sTableName)) to iPos
+        If (iPos > 0) Begin
+            Move (Right(sTableName, (Length(sTableName) - iPos))) to sTableName
+        End
+        If (Lowercase(Right(sTableName, 4)) = ".int") Begin
+            Move (Left(sTableName, (Length(sTableName) - 4))) to sTableName
+        End
         Function_Return sTableName
     End_Function
 
@@ -3490,15 +3375,15 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return sName
     End_Function
     
+    // The driver of a root name: its prefix (MSSQLDRV:Customer), else DATAFLEX_ID. A drive is no prefix. An .int file
+    // without a prefix (Customer.int) names its driver itself; DATAFLEX_ID is answered for it too.
     Function _DriverIDFromRootName String sRootName Returns String
-        String sDriverID
         Integer iPos
-        Move DATAFLEX_ID to sDriverID
         Move (Pos(":", sRootName)) to iPos
-        If (iPos <> 0) Begin
-            Move (Left(sRootName, (iPos -1))) to sDriverID
+        If (iPos > 2) Begin
+            Function_Return (Left(sRootName, (iPos - 1)))
         End
-        Function_Return sDriverID
+        Function_Return DATAFLEX_ID
     End_Function
 
     // Does the Rootname points to a .dat file?
@@ -3524,13 +3409,11 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return bExists
     End_Function
     
-    // Does the Rootname contain a ".int" suffix.
+    // Does an .int file stand for the table: does its root name end in ".int"?
     Function _IsIntEntry Handle hTable Returns Boolean
-        Boolean bFound
         String sRootName
         Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
-        Move (Lowercase(sRootName) contains ".int") to bFound
-        Function_Return bFound
+        Function_Return (Lowercase(Right(sRootName, 4)) = ".int")
     End_Function
 
     // Checks to see if the .int file actually exists in a folder of the data path. (The whole data path was taken
@@ -3559,16 +3442,13 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return bExists
     End_Function
         
-    // Returns True if the hTable's RootName has a driver <> DataFlex
+    // Is the table a table of a database driver? See _UtilRootNameIsDriverTable.
     Function _IsSQLEntry Handle hTable Returns Boolean
-        Boolean bFound bIsIntFile
-        String sRootName sNoDriverRootname sDriver
-        
+        String sRootName
+        Boolean bFound
+
         Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
-        Get _DriverIDFromRootName sRootName to sDriver
-        Get _IsIntEntry hTable to bIsIntFile
-        Get _TableNameOnly sRootName to sNoDriverRootname
-        Move (bIsIntFile = True or sDriver <> DATAFLEX_ID) to bFound
+        Get _UtilRootNameIsDriverTable sRootName to bFound
         Function_Return bFound
     End_Function
 
@@ -3623,26 +3503,13 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return bIsSystem
     End_Function
                           
-    // Removes any driver prefix and any .int suffix from the Rootname
-    // If any driver found, it will be placed in the ByRef param: sDriver.
+    // The table name of a root name (_TableNameOnly); its driver goes into sDriver (_DriverIDFromRootName).
     Function _RemoveDriverFromRootName String sRootname String ByRef sDriver Returns String
-        String sNoDriverRootname
-        Integer iPos
-        
-        Move sRootname to sNoDriverRootname
-        Move (Pos(":", sRootname)) to iPos
-        If (iPos <> 0) Begin
-            Move (Left(sRootname, iPos -1)) to sDriver
-            Move (Mid(sRootname, Length(sRootname), iPos +1)) to sNoDriverRootname    
-        End
-        Else Begin
-            Move DATAFLEX_ID to sDriver
-        End
-        Move (Pos(".int", Lowercase(sNoDriverRootname))) to iPos
-        If (iPos <> 0) Begin
-            Move (Left(sNoDriverRootname, iPos -1)) to sNoDriverRootname
-        End
-        Function_Return sNoDriverRootname    
+        String sTableName
+
+        Get _DriverIDFromRootName sRootname to sDriver
+        Get _TableNameOnly sRootname to sTableName
+        Function_Return sTableName
     End_Function
 
     Function _CountFilelistSystemTables Returns Integer
@@ -4084,23 +3951,31 @@ Class cBaseDbUpdateFuncLib is a cObject
         End
     End_Procedure
 
-    // For this to be returning a True value, the table number needs to be in the Filelist.cfg,
-    // and the table needs to exist as an SQL table.
-    Function _UtilTableIsSql Handle hTable Returns Boolean
+    // Is the table an SQL table that is there: its root name is that of a table of a database driver, and the
+    // server has it. bCached: the server's list in pasSQLDataTables (FillSQLTables). (_UtilTableIsSql and its _Ex
+    // were two copies.)
+    Function _UtilTableIsSqlBy Handle hTable Boolean bCached Returns Boolean
         String sRootName sDriverID
         Boolean bIsSQL
 
-        Move False to bIsSQL
-        If (hTable > 0) Begin
-            Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
-            Get _UtilTableIsSqlByRootName sRootName to bIsSQL
-            If (bIsSQL = True) Begin
-                Get psDriverID to sDriverID
-                Get _TableNameOnly sRootName to sRootName
-                Get _SqlUtilCheckIfTableNameExists sRootName sDriverID to bIsSQL
-            End
+        If (hTable <= 0) Begin
+            Function_Return False
         End
+        Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
+        Get _UtilTableIsSqlByRootName sRootName to bIsSQL
+        If (bIsSQL = True) Begin
+            Get psDriverID to sDriverID
+            Get _TableNameOnly sRootName to sRootName
+            Get _SqlUtilTableNameIsOnServer sRootName sDriverID bCached False to bIsSQL
+        End
+        Function_Return bIsSQL
+    End_Function
 
+    // For this to be returning a True value, the table number needs to be in the Filelist.cfg,
+    // and the table needs to exist as an SQL table.
+    Function _UtilTableIsSql Handle hTable Returns Boolean
+        Boolean bIsSQL
+        Get _UtilTableIsSqlBy hTable False to bIsSQL
         Function_Return bIsSQL
     End_Function
 
@@ -4108,71 +3983,55 @@ Class cBaseDbUpdateFuncLib is a cObject
     //       Thus that property needs to have been initialized before
     //       calling this function.
     Function _UtilTableIsSql_Ex Handle hTable Returns Boolean
-        String sRootName sDriverID
         Boolean bIsSQL
-
-        Move False to bIsSQL
-        If (hTable > 0) Begin
-            Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
-            Get _UtilTableIsSqlByRootName sRootName to bIsSQL
-            If (bIsSQL = True) Begin
-                Get psDriverID to sDriverID
-                Get _TableNameOnly sRootName to sRootName
-                Get _SqlUtilCheckIfTableNameExists_Ex sRootName sDriverID to bIsSQL
-            End
-        End
-
+        Get _UtilTableIsSqlBy hTable True to bIsSQL
         Function_Return bIsSQL
     End_Function
 
+    // Is the root name that of a table of a database driver? See _UtilRootNameIsDriverTable. (A ":" anywhere said
+    // yes: a drive too. An .int file said no.)
     Function _UtilTableIsSqlByRootName String sRootName Returns Boolean
         Boolean bIsSQL
-        Move (sRootName contains ":") to bIsSQL
+        Get _UtilRootNameIsDriverTable sRootName to bIsSQL
         Function_Return bIsSQL
+    End_Function
+
+    // Is a table of this name in the database the library is connected to? bCached: in pasSQLDataTables, filled
+    // by FillSQLTables, instead of the server's list. bQuiet: no error when there is no database to look in, or the
+    // driver is DataFlex's own. (_SqlUtilCheckIfTableNameExists, its _Ex and SqlUtilCheckIfTableHandleExists each
+    // had a copy of this.)
+    Function _SqlUtilTableNameIsOnServer String sTableName String sDriverID Boolean bCached Boolean bQuiet Returns Boolean
+        String sDatabase sSchema
+        String[] asTablesArray
+
+        Get psDatabase to sDatabase
+        Get psSchema   to sSchema
+        If (sDriverID = DATAFLEX_ID or sDatabase = "") Begin
+            If (bQuiet = False) Begin
+                Error DFERR_PROGRAM ("Function _SqlUtilCheckIfTableNameExists: psDatabase =" * String(sDatabase) * "psDriver =" * String(sDriverID))
+            End
+            Function_Return False
+        End
+        If (bCached = True) Begin
+            Get pasSQLDataTables to asTablesArray
+        End
+        Else Begin
+            Get _SqlUtilEnumerateTables sDriverID sDatabase sSchema to asTablesArray
+        End
+        Function_Return (SearchArray(sTableName, asTablesArray, Desktop, (RefFunc(DFSTRICMP))) <> -1)
     End_Function
 
     // Checks if a table exists as an SQL table. Returns = True if it does.
     Function _SqlUtilCheckIfTableNameExists String sTableName String sDriverID Returns Boolean
-        String sDatabase sSchema
         Boolean bExists
-        String[] asTablesArray
-        Integer iItem
-
-        Move False to bExists
-        Get psDatabase to sDatabase
-        Get psSchema   to sSchema
-        If (sDriverID = DATAFLEX_ID or sDatabase = "") Begin
-            Error DFERR_PROGRAM ("Function _SqlUtilCheckIfTableNameExists: psDatabase =" * String(sDatabase) * "psDriver =" * String(sDriverID))
-            Function_Return False
-        End
-        Get _SqlUtilEnumerateTables sDriverID sDatabase sSchema to asTablesArray
-        Move (SearchArray(sTableName, asTablesArray, Desktop, (RefFunc(DFSTRICMP)))) to iItem
-        If (iItem <> -1) Begin
-            Move True to bExists
-        End
+        Get _SqlUtilTableNameIsOnServer sTableName sDriverID False False to bExists
         Function_Return bExists
     End_Function
 
-    // Checks if a table exists as an SQL table. Returns = True if it does.
-    // This alternative is much faster as it first enumerates all SQL tables
+    // Checks if a table exists as an SQL table, in pasSQLDataTables (much faster: the tables were listed once).
     Function _SqlUtilCheckIfTableNameExists_Ex String sTableName String sDriverID Returns Boolean
-        String sDatabase sSchema
         Boolean bExists
-        String[] asTablesArray
-        Integer iItem
-
-        Move False to bExists
-        Get psDatabase to sDatabase
-        Get psSchema   to sSchema
-        If (sDriverID = DATAFLEX_ID or sDatabase = "") Begin
-            Error DFERR_PROGRAM ("Function _SqlUtilCheckIfTableNameExists: psDatabase =" * String(sDatabase) * "psDriver =" * String(sDriverID))
-            Function_Return False
-        End
-        Get pasSQLDataTables to asTablesArray
-        Move (SearchArray(sTableName, asTablesArray, Desktop, (RefFunc(DFSTRICMP)))) to iItem
-        If (iItem <> -1) Begin
-            Move True to bExists
-        End
+        Get _SqlUtilTableNameIsOnServer sTableName sDriverID True False to bExists
         Function_Return bExists
     End_Function
 

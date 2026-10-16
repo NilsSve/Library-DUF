@@ -265,19 +265,9 @@ Class cDbUpdateGenericDatabaseDriver is a cObject
         Function_Return sConnectionString
     End_Function
 
+    // The word of an Encrypt option (SQLEncryptOptionWord); "" for an option that is not known.
     Function EncryptOptionToText Integer eEncryptOption Returns String
-        String sEncryptionWord 
-
-        If (eEncryptOption = eOptional) Begin
-            Move CS_SQLIniEncryptOptional to sEncryptionWord
-        End
-        Else If (eEncryptOption = eMandatory) Begin
-            Move CS_SQLIniEncryptMandatory to sEncryptionWord
-        End
-        Else If (eEncryptOption = eStrict) Begin
-            Move CS_SQLIniEncryptStrictShort to sEncryptionWord
-        End
-        Function_Return sEncryptionWord
+        Function_Return (SQLEncryptOptionWord(eEncryptOption))
     End_Function
 
     // The option for its word, in any case, or for its number - an older save wrote the number into the ini file.

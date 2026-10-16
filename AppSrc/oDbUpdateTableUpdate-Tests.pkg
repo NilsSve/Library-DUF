@@ -1614,4 +1614,60 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Send Assert bOK "No error in between: _ErrGiveBack answers True."
         Send Assert bErrAfter "The caller has its Err back."
     End_Procedure
+
+    // A root name is read one way everywhere: a driver prefix is a name of more than one letter in front of ":", a
+    // drive is part of a folder, and an .int file stands for a table of a database driver. (A ":" anywhere made a
+    // table an SQL table, and an .int file made it an embedded one.)
+    { Published=True }
+    Procedure Test_A_Root_Name_Is_Read_One_Way
+        Handle ho
+
+        Move ghoDbUpdateFunctionLibrary to ho
+        Send AssertSAreEqual "Customer" (_TableNameOnly(ho, "MSSQLDRV:Customer")) "The driver prefix goes."
+        Send AssertSAreEqual "Customer" (_TableNameOnly(ho, "Customer.int")) "The .int suffix goes."
+        Send AssertSAreEqual "Customer" (_TableNameOnly(ho, "C:\Data\Customer")) "The folder goes, the drive with it."
+        Send AssertSAreEqual "Customer" (_TableNameOnly(ho, "Customer")) "A plain name stays."
+        Send AssertSAreEqual "MSSQLDRV" (_DriverIDFromRootName(ho, "MSSQLDRV:Customer")) "The prefix is the driver."
+        Send AssertSAreEqual DATAFLEX_ID (_DriverIDFromRootName(ho, "C:\Data\Customer")) "A drive is no driver."
+        Send Assert (_UtilTableIsSqlByRootName(ho, "MSSQLDRV:Customer")) "A driver prefix: an SQL table."
+        Send Assert (_UtilTableIsSqlByRootName(ho, "Customer.int")) "An .int file: an SQL table."
+        Send AssertFalse (_UtilTableIsSqlByRootName(ho, "C:\Data\Customer")) "A drive: an embedded table."
+        Send AssertFalse (_UtilTableIsSqlByRootName(ho, "Customer")) "A plain name: an embedded table."
+    End_Procedure
+
+    // An embedded table whose root name has its folder, drive and all, is there and is no SQL table. (The ":" of the
+    // drive made it an SQL table: it was looked for on a server, with an error, and was not there.)
+    { Published=True }
+    Procedure Test_An_Embedded_Table_With_A_Drive_In_Its_Root_Name_Is_There
+        Handle h
+        Boolean bExists bSQL
+        Integer iErrors
+
+        Send MakeBaseTable "DUFTT44" 5 False
+        Get phTable to h
+        Set_Attribute DF_FILE_ROOT_NAME of h to (psFolder(Self) + "\DUFTT44")
+        Send BeginCatch
+        Get _UtilTableExists of ghoDbUpdateFunctionLibrary h to bExists
+        Get _IsSQLEntry of ghoDbUpdateFunctionLibrary h to bSQL
+        Get EndCatch to iErrors
+        Send Assert bExists "The table is there."
+        Send AssertFalse bSQL "It is no SQL table."
+        Send AssertIAreEqual 0 iErrors ("No error." + psErrors(oErrors(Self)))
+    End_Procedure
+
+    // The word of an Encrypt option has one answer: the global function, the driver object and the Microsoft SQL
+    // handler give it, and "" for an option that is not known. (The handler's copy made "Encrypt=;" of that.)
+    { Published=True }
+    Procedure Test_The_Encrypt_Word_Has_One_Answer
+        Handle ho
+
+        Send AssertSAreEqual "Strict" (SQLEncryptOptionWord(eStrict)) "The global function."
+        Send AssertSAreEqual "" (SQLEncryptOptionWord(9)) "The global function, an option that is not known."
+        Get phoMSSQLHandler of ghoDbUpdateFunctionLibrary to ho
+        Send Assert (ho <> 0) "The library has its Microsoft SQL handler."
+        If (ho <> 0) Begin
+            Send AssertSAreEqual "Encrypt=Mandatory;" (EncryptOptionToText(ho, eMandatory)) "The handler: the part of a connection string."
+            Send AssertSAreEqual "" (EncryptOptionToText(ho, 9)) "The handler, an option that is not known: nothing."
+        End
+    End_Procedure
 End_Object

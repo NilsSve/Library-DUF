@@ -149,12 +149,13 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Case (iDbType = EN_DbTypeMySQL and sDriverID = ODBC_DRV_ID)
                 // ToDo: How should this be set/checked?
                 SQLIncludeScriptFile ..\Scripts\CreateMySQLDatabase.sql as CreateMySQLDatabase.sql
-                Get _SqlUtilCreateMySQLDatabaseByScript "CreateMySQLDatabase.sql" sDatabase to bOK
+                // ToDo: this fails, but the SQL script works in MySQL.
+                Get _SqlUtilCreateDatabaseByScript "CreateMySQLDatabase.sql" sDatabase to bOK
                 Case Break
 
             Case (iDbType = EN_DbTypePostgre and sDriverID = ODBC_DRV_ID)
                 SQLIncludeScriptFile ..\Scripts\CreatePostgreSQLDatabase.sql as CreatePostgreSQLDatabase.sql
-                Get _SqlUtilCreatePostGreSQLDatabaseByScript "CreatePostgreSQLDatabase.sql" sDatabase to bOK
+                Get _SqlUtilCreateDatabaseByScript "CreatePostgreSQLDatabase.sql" sDatabase to bOK
                 Case Break
 
             Case Else
@@ -1564,28 +1565,14 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return bExists
     End_Function
 
-    // Checks if a table exists as an SQL table. Returns = True if it does.
+    // Checks if a table exists as an SQL table. Returns = True if it does. No error when there is no database to
+    // look in.
     Function SqlUtilCheckIfTableHandleExists Handle hTable String sDriverID Returns Boolean
-        String sDatabase sSchema sTableName sVal
+        String sTableName
         Boolean bExists
-        String[] sTablesArray
-        Integer iSize iCount
 
-        Move False to bExists
         Get UtilTableHandleToString hTable to sTableName
-        Get psDatabase to sDatabase
-        Get psSchema   to sSchema
-        Get _SqlUtilEnumerateTables sDriverID sDatabase sSchema to sTablesArray
-        Move (SizeOfArray(sTablesArray)) to iSize
-        Decrement iSize
-        For iCount from 0 to iSize
-            Move sTablesArray[iCount] to sVal
-            If (Uppercase(sVal) = Uppercase(sTableName)) Begin
-                Move True to bExists
-                Move iSize to iCount // We're done!
-            End
-        Loop
-
+        Get _SqlUtilTableNameIsOnServer sTableName sDriverID False True to bExists
         Function_Return bExists
     End_Function
 

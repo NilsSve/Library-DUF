@@ -84,4 +84,17 @@ Object oDbUpdateDatabaseDriver_Tests is a cTestFixture
         Send AssertSAreEqual "FILEDSN=c:\x\sales.dsn" (DSNLoginServer(hoDriver, "FILEDSN=c:\x\sales.dsn")) "It is there already."
         Send Destroy of hoDriver
     End_Procedure
+
+    // The word of an Encrypt option, from the one global function; "" for an option that is not known.
+    { Published=True }
+    Procedure Test_The_Encrypt_Word_Of_Each_Option
+        Handle hoDriver
+
+        Get CreateDatabaseDriverObject MSSQLDRV_ID to hoDriver
+        Send AssertSAreEqual "Optional"  (EncryptOptionToText(hoDriver, eOptional))  "Optional."
+        Send AssertSAreEqual "Mandatory" (EncryptOptionToText(hoDriver, eMandatory)) "Mandatory."
+        Send AssertSAreEqual "Strict"    (EncryptOptionToText(hoDriver, eStrict))    "Strict."
+        Send AssertSAreEqual ""          (EncryptOptionToText(hoDriver, 9))          "An option that is not known."
+        Send Destroy of hoDriver
+    End_Procedure
 End_Object
