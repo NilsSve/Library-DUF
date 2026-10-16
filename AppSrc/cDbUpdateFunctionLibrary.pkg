@@ -2524,11 +2524,69 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     End_Procedure
 
+    // The server attributes of an SQL table inside its restructure (hFile is its handle there): the login - the
+    // connection ID or the connection string -, recnum, the owner (schema) and the DB2 table spaces. (ApiTableCreate
+    // and ApiTableConvertToSql_Ex each had a copy.)
+    Procedure UtilStructureSqlAttributes Handle hFile String sDriverID Boolean bUseConnectionID tSQLConnection SQLConnection String sSchema Boolean bRecnum
+        If (bUseConnectionID = True) Begin
+            Set_Attribute DF_FILE_LOGIN of hFile to (CS_DFCONNID + "=" + SQLConnection.sConnectionID)
+        End
+        Else Begin
+            Set_Attribute DF_FILE_LOGIN of hFile to SQLConnection.sConnectionString
+        End
+        Set_Attribute DF_FILE_RECNUM_TABLE of hFile to bRecnum
+        If (sSchema <> "") Begin
+            Set_Attribute DF_FILE_OWNER of hFile to sSchema
+        End
+        If (sDriverID = DB2_DRV_ID) Begin
+            If (SQLConnection.sLongTableSpace <> "") Begin
+                Set_Attribute DF_FILE_LONG_TABLESPACE  of hFile to SQLConnection.sLongTableSpace
+            End
+            If (SQLConnection.sBaseTableSpace <> "") Begin
+                Set_Attribute DF_FILE_TABLE_TABLESPACE of hFile to SQLConnection.sBaseTableSpace
+            End
+            If (SQLConnection.sIndexTableSpace <> "") Begin
+                Set_Attribute DF_FILE_INDEX_TABLESPACE of hFile to SQLConnection.sIndexTableSpace
+            End
+        End
+    End_Procedure
+
+    // The data of an embedded table copied into its new SQL table (ApiTableConvertToSql_Ex). When the copy fails,
+    // and pbContinueOnError is False, the new SQL table is kept under another name - the logical name with a GUID,
+    // as far as it fits - and an error says so; its Filelist entry is not changed.
+    Function UtilTableCopyDataOrSetAside Handle hTable String sPhysicalName String sRootName String sDriverID String sLogicalName Returns Boolean
+        Boolean bOK bContinueOnError
+        String sGUIDName
+
+        Get ApiTableCopyData hTable sPhysicalName sRootName sDriverID to bOK
+        If (ghoDbUpdateHandler > 0) Begin
+            Get pbContinueOnError to bContinueOnError
+        End
+        If (bOK = False and bContinueOnError = False) Begin
+            Get SQLUtilGUIDTempTableName sLogicalName to sGUIDName
+            Get SqlTableRename hTable sLogicalName sGUIDName to bOK
+            Error DFERR_PROGRAM ("Copying of" * sLogicalName * " data failed due to bad data. Either duplicate records and/or bad e.g Date/DateTime data. The SQL table was renamed to:" * String(sGUIDName) * "and its Filelist.cfg entry was NOT changed.")
+        End
+        Function_Return bOK
+    End_Function
+
+    // Has one of the columns the identity option?
+    Function UtilColumnsHaveIdentity tAPIColumn[] aColumns Returns Boolean
+        Integer iCount
+
+        For iCount from 0 to (SizeOfArray(aColumns) - 1)
+            If (aColumns[iCount].iOptions = C_tAPIColumn_Identity) Begin
+                Function_Return True
+            End
+        Loop
+        Function_Return False
+    End_Function
+
     Function ApiTableConvertToSql_Ex Handle hTable String sDriverID Boolean bUseConnectionID Boolean bToAnsi Boolean bRecnum Boolean bCopyData Returns Boolean
         Handle hToTable hoLogFile
-        Boolean bOK bExists bOpened bDAWDriver bContinueOnError bIsAlias
+        Boolean bOK bExists bOpened bDAWDriver bIsAlias
         String sPhysicalName sRootName sLogicalName sDisplayName sConnectionID sConnectionString
-        String sANSI_OEM sSchema sBaseTableSpace sLongTableSpace sIndexTableSpace sDatabase sGUIDName sWarning
+        String sANSI_OEM sSchema sDatabase sWarning
         tSQLConnection SQLConnection
         
         // ToDo: Remake logic. Instead create the new table!?
@@ -2642,9 +2700,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Case (sDriverID = ODBC_DRV_ID)
                 Case Break
             Case (sDriverID = DB2_DRV_ID)
-                Move SQLConnection.sBaseTableSpace  to sBaseTableSpace
-                Move SQLConnection.sLongTableSpace  to sLongTableSpace
-                Move SQLConnection.sIndexTableSpace to sIndexTableSpace
                 Case Break
             Case (sDriverID = DATAFLEX_ID)
                 Case Break
@@ -2662,30 +2717,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Set_Attribute DF_FILE_PHYSICAL_NAME of hToTable to sPhysicalName
 
             If (sDriverID <> DATAFLEX_ID) Begin
-                If (bUseConnectionID = True) Begin
-                    Set_Attribute DF_FILE_LOGIN of hToTable to (CS_DFCONNID + "=" + sConnectionID)
-                End
-                Else Begin
-                    Set_Attribute DF_FILE_LOGIN of hToTable to sConnectionString
-                End
-
-                Set_Attribute DF_FILE_RECNUM_TABLE of hToTable to bRecnum
-
-                If (sSchema <> "") Begin
-                    Set_Attribute DF_FILE_OWNER of hToTable to sSchema
-                End
-
-                If (sDriverID = DB2_DRV_ID) Begin
-                    If (sLongTableSpace <> "") Begin
-                        Set_Attribute DF_FILE_LONG_TABLESPACE  of hToTable to sLongTableSpace
-                    End
-                    If (sBaseTableSpace <> "") Begin
-                        Set_Attribute DF_FILE_TABLE_TABLESPACE of hToTable to sBaseTableSpace
-                    End
-                    If (sIndexTableSpace <> "") Begin
-                        Set_Attribute DF_FILE_INDEX_TABLESPACE of hToTable to sIndexTableSpace
-                    End
-                End
+                Send UtilStructureSqlAttributes hToTable sDriverID bUseConnectionID SQLConnection sSchema bRecnum
             End
 
             Set Action_Text of ghoStatusPanel to "Restructures table..."
@@ -2695,22 +2727,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move (not(Err)) to bOK
 
         If (bOK = True and bCopyData = True) Begin
-            Get ApiTableCopyData hTable sPhysicalName sRootName sDriverID to bOK
-
-            If (ghoDbUpdateHandler > 0) Begin
-                Get pbContinueOnError to bContinueOnError
-            End
-            // If the data copy failed we will keep the newly created SQL table but
-            // rename it by adding a GUID to the end of the table name
-            // - or as much as "fit" because different SQL back-ends have
-            // different rules how long a table name can be.
-            // The new table will probably contain data but something went
-            // wrong while converting the data from embedded to SQL.
-            If (bOK = False and bContinueOnError = False) Begin
-                Get SQLUtilGUIDTempTableName sLogicalName to sGUIDName
-                Get SqlTableRename hTable sLogicalName sGUIDName to bOK
-                Error DFERR_PROGRAM ("Copying of" * sLogicalName * " data failed due to bad data. Either duplicate records and/or bad e.g Date/DateTime data. The SQL table was renamed to:" * String(sGUIDName) * "and its Filelist.cfg entry was NOT changed.")
-            End
+            Get UtilTableCopyDataOrSetAside hTable sPhysicalName sRootName sDriverID sLogicalName to bOK
         End
 
         // This must be after copying data...
@@ -2867,7 +2884,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     Function ApiTableCreate Handle hTable String sRootName String sDisplayName String sLogicalName Boolean bUseConnectionID Boolean bANSI Boolean bRecnum tAPIColumn[] aColumnIn Returns Boolean
         Handle hFile
         String sConnectionID sPhysicalFile sANSI_OEM sVal sSchema sDriverID sTableName
-        Integer iIdentityType iDataType iDbType iCount iSize
+        Integer iIdentityType iDataType iDbType
         Boolean bOk bExists bSqlDriver bDeleteDummy bExistsInFilelist bSysFile
         tSQLConnection SQLConnection
         tAPIColumn[] aColumns
@@ -2915,15 +2932,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         // has been specified (aColumns[iCounter].iOptions = C_tAPIColumn_Identity), and
         // if so auto-set the bRecnum to FALSE. This is because else there would be
         // two identity columns and SQL doesn't like that and throws an error.
-        If (bRecnum = True and (SizeOfArray(aColumns)) <> 0) Begin
-            Move (SizeOfArray(aColumns)) to iSize
-            Decrement iSize
-            for iCount from 0 to iSize
-                If (aColumns[iCount].iOptions = C_tAPIColumn_Identity) Begin
-                    Move False to bRecnum
-                    Move iSize to iCount
-                End
-            Loop
+        If (bRecnum = True) Begin
+            Get UtilColumnsHaveIdentity aColumns to bExists
+            If (bExists = True) Begin
+                Move False to bRecnum
+            End
         End
 
         // If this is a SQL based driver we also check if the table exists
@@ -3008,34 +3021,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Structure_Start hFile sDriverID
             If (sDriverID <> DATAFLEX_ID) Begin
-                If (bUseConnectionID = True) Begin
-                    Set_Attribute DF_FILE_LOGIN                of hFile to (CS_DFCONNID + "=" + sConnectionID)
-                End
-                Else Begin
-                    Set_Attribute DF_FILE_LOGIN                of hFile to SQLConnection.sConnectionString
-                End
+                // The connection ID the login names is the one checked above (SQLConnection.sConnectionID).
                 Set_Attribute DF_FILE_TABLE_NAME               of hFile to sTableName
                 Set_Attribute DF_FILE_USE_DUMMY_ZERO_DATE      of hFile to True
                 Set_Attribute DF_FILE_TABLE_CHARACTER_FORMAT   of hFile to sANSI_OEM
-                Set_Attribute DF_FILE_RECNUM_TABLE             of hFile to bRecnum
-
-                If (sSchema <> "") Begin
-                    Set_Attribute DF_FILE_OWNER                of hFile to sSchema
-                End
-
-                If (sDriverID = DB2_DRV_ID) Begin
-                    If (SQLConnection.sLongTableSpace <> "") Begin
-                        Set_Attribute DF_FILE_LONG_TABLESPACE  of hFile to SQLConnection.sLongTableSpace
-                    End
-                End
-                If (sDriverID = DB2_DRV_ID) Begin
-                    If (SQLConnection.sBaseTableSpace <> "") Begin
-                        Set_Attribute DF_FILE_TABLE_TABLESPACE of hFile to SQLConnection.sBaseTableSpace
-                    End
-                    If (SQLConnection.sIndexTableSpace <> "") Begin
-                        Set_Attribute DF_FILE_INDEX_TABLESPACE of hFile to SQLConnection.sIndexTableSpace
-                    End
-                End
+                Send UtilStructureSqlAttributes hFile sDriverID bUseConnectionID SQLConnection sSchema bRecnum
             End
 
             Set_Attribute DF_FILE_PHYSICAL_NAME of hFile to sPhysicalFile
@@ -3394,17 +3384,145 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return True
     End_Function
 
-    Function ApiTableUpdate tAPITableNameInfo APITableNameInfoFrom tAPIColumn[] aColumnsFrom tAPIIndex[] aIndexesFrom tAPIRelation[] aRelationsFrom Returns Boolean
-        Handle hTable
-        String sDriverIDFrom sDriverIDTo sLogicalNameTo
-        Integer iDbType
-        Boolean bOk bOpened bApiTableUpdateAuto bLogicalNameOK bIsVersionTable
-        Boolean bUseConnectionID bToANSI bRecnum bCopyData bCompareDate_DateTime bCompareIndexAscending bCompareIndexUppercase bTableExists
-        Boolean bIsSame bFilelistError bIsAliasFrom bIsSQLTableFrom bIsSQLTableTo
-        tAPITable      APITableFrom APITableTo
+    // A new table for ApiTableUpdate: it is made (ApiTableCreate), a system file when the description says so, and
+    // gets the indexes and relations of the description. Each step only when the steps before it went well. (The
+    // result of the create used to be overwritten by the steps after it, which then ran on a table that was not
+    // made.)
+    Function UtilTableUpdateNew Handle hTable tAPITableNameInfo Info tAPIColumn[] aColumnsFrom tAPIIndex[] aIndexesFrom tAPIRelation[] aRelationsFrom Boolean bIsSQLTableFrom Boolean bIsSQLTableTo Returns Boolean
+        Boolean bOk bUseConnectionID bToANSI bRecnum bCompareIndexAscending bCompareIndexUppercase
+        tAPIIndex[] aNoIndexes
+        tAPIRelation[] aNoRelations
+
+        Get pbUseConnectionID       to bUseConnectionID
+        Get pbToANSI                to bToANSI
+        Get pbRecnum                to bRecnum
+        Get pbCompareIndexAscending to bCompareIndexAscending
+        Get pbCompareIndexUppercase to bCompareIndexUppercase
+        Get ApiTableCreate hTable Info.sRootName Info.sDisplayName Info.sLogicalName bUseConnectionID bToANSI bRecnum aColumnsFrom to bOk
+        //LR 20191112 Begin: Make file a system file if bIsSystemFile = True
+        If (bOk = True and Info.bIsSystemFile) Begin
+            Get ApiTableChangeAttribute hTable DF_FILE_IS_SYSTEM_FILE True to bOK
+        End
+        // The new table has none of them yet.
+        If (bOk = True) Begin
+            Get UtilIndexesUpdate hTable bIsSQLTableFrom bIsSQLTableTo aIndexesFrom aNoIndexes bCompareIndexUppercase bCompareIndexAscending to bOk
+        End
+        If (bOk = True) Begin
+            Get UtilRelationsUpdate hTable aRelationsFrom aNoRelations to bOk
+        End
+        Function_Return bOk
+    End_Function
+
+    // A table that is there, for ApiTableUpdate: a new root, logical or display name, then the columns
+    // (ApiColumnsUpdate), the indexes and the relations of the description, each where it differs. A step that fails
+    // stops the update; True when there is nothing to do.
+    Function UtilTableUpdateExisting Handle hTable tAPITableNameInfo Info tAPITable APITableFrom tAPITable APITableTo String sDriverIDFrom String sDriverIDTo Boolean bIsSQLTableFrom Boolean bIsSQLTableTo Returns Boolean
+        Boolean bOk bIsSame bFilelistError bCompareDate_DateTime bCompareIndexAscending bCompareIndexUppercase
         tAPIColumnCompare[]   aAPIColumnCompare
         tAPIIndexCompare[]    aAPIIndexCompare
         tAPIRelationCompare[] aAPIRelationCompare
+
+        Get pbCompareDate_DateTime  to bCompareDate_DateTime
+        Get pbCompareIndexAscending to bCompareIndexAscending
+        Get pbCompareIndexUppercase to bCompareIndexUppercase
+        Get UtilColumnCombineFromAndToArrays   APITableFrom.aApiColumns   APITableTo.aApiColumns    to aAPIColumnCompare
+        Get UtilIndexCombineFromAndToArrays    APITableFrom.aApiIndexes   APITableTo.aApiIndexes    to aAPIIndexCompare
+        Get UtilRelationCombineFromAndToArrays APITableFrom.aApiRelations APITableTo.aApiRelations  to aAPIRelationCompare
+
+        Get UtilTableCompare APITableFrom APITableTo False (&bFilelistError) to bIsSame
+        If (bIsSame = True) Begin
+            Function_Return True
+        End
+        If (bFilelistError = True) Begin
+            Get ApiTableRename hTable Info.sRootName Info.sDisplayName Info.sLogicalName to bOk
+            If (bOk = False) Begin
+                Function_Return False
+            End
+        End
+
+        If (ghoProgressBar <> 0) Begin
+            Send DoAdvance of ghoProgressBar
+            Set TableName_Text of ghoStatusPanel to ("Updating Table:" * "Number:" * String(hTable) * String(Info.sLogicalName))
+        End
+
+        // Columns:
+        Move True to bOk
+        Get UtilColumnsCompare sDriverIDFrom sDriverIDTo bIsSQLTableFrom bIsSQLTableTo aAPIColumnCompare bCompareDate_DateTime to bIsSame
+        If (bIsSame = False) Begin
+            Get ApiColumnsUpdate sDriverIDFrom hTable bIsSQLTableFrom APITableFrom.aApiColumns APITableTo.aApiColumns bCompareDate_DateTime to bOk
+            // The column step gives columns new numbers, and a column that is moved leaves its indexes.
+            // The indexes and relations are read again, so that the steps below see the table as it is now.
+            If (bOk = True) Begin
+                Get UtilTableStructFill hTable False to APITableTo
+                Get UtilIndexCombineFromAndToArrays    APITableFrom.aApiIndexes   APITableTo.aApiIndexes    to aAPIIndexCompare
+                Get UtilRelationCombineFromAndToArrays APITableFrom.aApiRelations APITableTo.aApiRelations  to aAPIRelationCompare
+            End
+        End
+        If (bOk = False) Begin
+            Function_Return False
+        End
+
+        // Indexes:
+        Get UtilIndexesCompare bIsSQLTableFrom bIsSQLTableTo aAPIIndexCompare bCompareIndexUppercase bCompareIndexAscending to bIsSame
+        If (bIsSame = False) Begin
+            Get UtilIndexesUpdate hTable bIsSQLTableFrom bIsSQLTableTo APITableFrom.aApiIndexes APITableTo.aApiIndexes bCompareIndexUppercase bCompareIndexAscending to bOk
+            If (bOk = False) Begin
+                Function_Return False
+            End
+        End
+
+        // Relations:
+        Get UtilRelationsCompare hTable aAPIRelationCompare to bIsSame
+        If (bIsSame = False) Begin
+            Get UtilRelationsUpdate hTable APITableFrom.aApiRelations APITableTo.aApiRelations to bOk
+        End
+        Function_Return bOk
+    End_Function
+
+    // After the table part of ApiTableUpdate went well: an SQL description for an embedded table attaches the table
+    // to the SQL table that is there, or converts it to SQL; an embedded description for an SQL table converts it
+    // back only with pbApiTableUpdateAuto True. Then the Filelist names of the description.
+    Function UtilTableUpdateDriverSide Handle hTable tAPITableNameInfo Info String sDriverIDFrom Boolean bIsSQLTableFrom Boolean bIsSQLTableTo Returns Boolean
+        Boolean bOk bApiTableUpdateAuto bUseConnectionID bToANSI bRecnum bCopyData
+
+        Move True to bOk
+        If (bIsSQLTableFrom = True and bIsSQLTableTo = False) Begin
+            Get SqlUtilCheckIfTableHandleExists hTable sDriverIDFrom to bOk
+            If (bOk = False) Begin
+                Get pbUseConnectionID to bUseConnectionID
+                Get pbToANSI          to bToANSI
+                Get pbRecnum          to bRecnum
+                Get pbCopyData        to bCopyData
+                Get ApiTableConvertToSql_Ex hTable sDriverIDFrom bUseConnectionID bToANSI bRecnum bCopyData to bOK
+            End
+        End
+        Else If (bIsSQLTableFrom = False and bIsSQLTableTo = True) Begin
+            // An SQL table goes back to embedded only when the update code asks for it: pbApiTableUpdateAuto
+            // True, or SqlTableConvertToEmbedded in an update of its own. Otherwise it stays on SQL and has had
+            // the changes of the description. (It was always converted, and the SQL table was left behind.)
+            Get pbApiTableUpdateAuto to bApiTableUpdateAuto
+            If (bApiTableUpdateAuto = True) Begin
+                Get SqlTableConvertToEmbedded hTable True to bOk
+            End
+            Else Begin
+                Send LogError ("Table" * String(Info.sLogicalName) * "stays on SQL. The description is for an embedded table; pbApiTableUpdateAuto is False.") False
+            End
+        End
+
+        // Filelist Names: only when the conversion went well (its result used to be overwritten here).
+        If (bOk = True) Begin
+            Get _UtilTableCheckChangeFilelistNames Info to bOk
+        End
+        Function_Return bOk
+    End_Function
+
+    Function ApiTableUpdate tAPITableNameInfo APITableNameInfoFrom tAPIColumn[] aColumnsFrom tAPIIndex[] aIndexesFrom tAPIRelation[] aRelationsFrom Returns Boolean
+        Handle hTable
+        String sDriverIDFrom sDriverIDTo sLogicalNameTo
+        Boolean bOk bOpened bLogicalNameOK bIsVersionTable
+        Boolean bUseConnectionID bToANSI bRecnum bCopyData bTableExists
+        Boolean bIsAliasFrom bIsSQLTableFrom bIsSQLTableTo
+        tAPITable APITableFrom APITableTo
 
         // We don't allow changes to the framework's DbVersion table: it holds the version number that decides which
         // updates still run. It is skipped with a line in the log. (This compared a name that was never filled in,
@@ -3417,14 +3535,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         
         Move True to bOk
         Move APITableNameInfoFrom.sDriverID     to sDriverIDFrom
-        Get piDbType                            to iDbType
         Get pbRecnum                            to bRecnum
         Get pbToANSI                            to bToANSI
         Get pbCopyData                          to bCopyData
-        Get pbApiTableUpdateAuto                to bApiTableUpdateAuto
-        Get pbCompareDate_DateTime              to bCompareDate_DateTime
-        Get pbCompareIndexAscending             to bCompareIndexAscending
-        Get pbCompareIndexUppercase             to bCompareIndexUppercase
         Get pbUseConnectionID                   to bUseConnectionID
 
         Move APITableNameInfoFrom.iTableNumber  to hTable
@@ -3475,10 +3588,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Send UserError DFERR_PROGRAM ("Could not open table number:" * String(hTable) * "Table could not be updated.")
                 Function_Return False
             End
-            Get UtilTableStructFill hTable False                                                        to APITableTo
-            Get UtilColumnCombineFromAndToArrays   APITableFrom.aApiColumns   APITableTo.aApiColumns    to aAPIColumnCompare
-            Get UtilIndexCombineFromAndToArrays    APITableFrom.aApiIndexes   APITableTo.aApiIndexes    to aAPIIndexCompare
-            Get UtilRelationCombineFromAndToArrays APITableFrom.aApiRelations APITableTo.aApiRelations  to aAPIRelationCompare
+            Get UtilTableStructFill hTable False to APITableTo
         End
 
         Move True to bOk
@@ -3497,74 +3607,12 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Case Break
             // New Table:
             Case (bTableExists = False)
-                // Each step only when the steps before it went well. (The result of the create used to be
-                // overwritten by the steps after it, which then ran on a table that was not made.)
-                Get ApiTableCreate      hTable APITableNameInfoFrom.sRootName APITableNameInfoFrom.sDisplayName APITableNameInfoFrom.sLogicalName bUseConnectionID bToANSI bRecnum aColumnsFrom to bOk
-                //LR 20191112 Begin: Make file a system file if bIsSystemFile = True
-                If (bOk = True and APITableNameInfoFrom.bIsSystemFile) Begin
-                    Get ApiTableChangeAttribute hTable DF_FILE_IS_SYSTEM_FILE True to bOK
-                End
-                If (bOk = True) Begin
-                    Get UtilIndexesUpdate   hTable bIsSQLTableFrom bIsSQLTableTo APITableFrom.aApiIndexes APITableTo.aApiIndexes bCompareIndexUppercase bCompareIndexAscending  to bOk
-                End
-                If (bOk = True) Begin
-                    Get UtilRelationsUpdate hTable APITableFrom.aApiRelations APITableTo.aApiRelations to bOk
-                End
+                Get UtilTableUpdateNew hTable APITableNameInfoFrom aColumnsFrom aIndexesFrom aRelationsFrom bIsSQLTableFrom bIsSQLTableTo to bOk
                 Case Break
 
             // Update table:
             Case (bTableExists = True)
-                Get UtilTableCompare APITableFrom APITableTo False (&bFilelistError) to bIsSame
-                If (bIsSame = True) Begin
-                    Case Break
-                End
-                If (bFilelistError = True) Begin
-                    Get ApiTableRename hTable APITableNameInfoFrom.sRootName APITableNameInfoFrom.sDisplayName APITableNameInfoFrom.sLogicalName to bOk
-                    If (bOk = False) Begin
-                        Case Break
-                    End
-                End
-
-                If (ghoProgressBar <> 0) Begin
-                    Send DoAdvance of ghoProgressBar
-                    Set TableName_Text of ghoStatusPanel to ("Updating Table:" * "Number:" * String(hTable) * String(APITableNameInfoFrom.sLogicalName))
-                End
-
-                // Columns:
-                Move True to bOk
-                Get UtilColumnsCompare sDriverIDFrom sDriverIDTo bIsSQLTableFrom bIsSQLTableTo aAPIColumnCompare bCompareDate_DateTime to bIsSame
-                If (bIsSame = False) Begin
-                    Get ApiColumnsUpdate sDriverIDFrom hTable bIsSQLTableFrom APITableFrom.aApiColumns APITableTo.aApiColumns bCompareDate_DateTime to bOk
-                    // The column step gives columns new numbers, and a column that is moved leaves its indexes.
-                    // The indexes and relations are read again, so that the steps below see the table as it is now.
-                    If (bOk = True) Begin
-                        Get UtilTableStructFill hTable False to APITableTo
-                        Get UtilIndexCombineFromAndToArrays    APITableFrom.aApiIndexes   APITableTo.aApiIndexes    to aAPIIndexCompare
-                        Get UtilRelationCombineFromAndToArrays APITableFrom.aApiRelations APITableTo.aApiRelations  to aAPIRelationCompare
-                    End
-                End
-                If (bOk = False) Begin
-                    Case Break
-                End
-
-                // Indexes:
-                Get UtilIndexesCompare bIsSQLTableFrom bIsSQLTableTo aAPIIndexCompare bCompareIndexUppercase bCompareIndexAscending to bIsSame
-                If (bIsSame = False) Begin
-                    Get UtilIndexesUpdate hTable bIsSQLTableFrom bIsSQLTableTo APITableFrom.aApiIndexes APITableTo.aApiIndexes bCompareIndexUppercase bCompareIndexAscending  to bOk
-                    If (bOk = False) Begin
-                        Case Break
-                    End
-                End
-
-                // Relations:
-                Get UtilRelationsCompare hTable aAPIRelationCompare to bIsSame
-                If (bIsSame = False) Begin
-                    Get UtilRelationsUpdate hTable APITableFrom.aApiRelations APITableTo.aApiRelations to bOk
-                    If (bOk = False) Begin
-                        Case Break
-                    End
-                End
-
+                Get UtilTableUpdateExisting hTable APITableNameInfoFrom APITableFrom APITableTo sDriverIDFrom sDriverIDTo bIsSQLTableFrom bIsSQLTableTo to bOk
                 Case Break
 
             Case Else
@@ -3573,30 +3621,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Case End
         
         If (bOk = True) Begin
-            // Note: If the from table was SQL; we should either connect to an existing SQL to table,
-            // or convert an embedded table to SQL
-            If (bIsSQLTableFrom = True and bIsSQLTableTo = False) Begin
-                Get SqlUtilCheckIfTableHandleExists hTable sDriverIDFrom to bOk
-                If (bOk = False) Begin
-                    Get ApiTableConvertToSql_Ex hTable sDriverIDFrom bUseConnectionID bToANSI bRecnum bCopyData to bOK
-                End
-            End
-            Else If (bIsSQLTableFrom = False and bIsSQLTableTo = True) Begin
-                // An SQL table goes back to embedded only when the update code asks for it: pbApiTableUpdateAuto
-                // True, or SqlTableConvertToEmbedded in an update of its own. Otherwise it stays on SQL and has had
-                // the changes of the description. (It was always converted, and the SQL table was left behind.)
-                If (bApiTableUpdateAuto = True) Begin
-                    Get SqlTableConvertToEmbedded hTable True to bOk
-                End
-                Else Begin
-                    Send LogError ("Table" * String(APITableNameInfoFrom.sLogicalName) * "stays on SQL. The description is for an embedded table; pbApiTableUpdateAuto is False.") False
-                End
-            End
-
-            // Filelist Names: only when the conversion went well (its result used to be overwritten here).
-            If (bOk = True) Begin
-                Get _UtilTableCheckChangeFilelistNames APITableNameInfoFrom to bOk
-            End
+            Get UtilTableUpdateDriverSide hTable APITableNameInfoFrom sDriverIDFrom bIsSQLTableFrom bIsSQLTableTo to bOk
         End
         
         // Refresh .int file: 
@@ -4757,36 +4782,21 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return aSlots
     End_Function
 
-    // Works out the plan of ApiColumnsUpdate on the description and the table's columns (aSlots). The table is
-    // not changed. The plan holds the columns as its steps leave them, and the steps in their order:
-    // 1) the columns that got a new name and a new length in the same version, found by their neighbours
-    //    (UtilColumnsCheckForRenamesByNeighbours). This comes first: the next step removes every column whose
-    //    name the description no longer has, and its values with it;
-    // 2) the columns that the description no longer has, one at a time and from the left. With a column gone the
-    //    columns behind it stand where they are described, and a column that only changed its name comes to stand
-    //    where its new name is;
-    // 3) the new columns, in the form that ApiColumnInsert gives them;
-    // 4) the columns that stand in another place, always the leftmost one first, in the form that ApiColumnMove
-    //    gives them;
-    // 5) the columns that only got a new name;
-    // 6) the columns behind the description's last one, the last one first.
-    // bOK is False, after an error, when the columns cannot be brought into the order of the description.
-    Function UtilColumnsPlan String sDriverIDFrom Handle hTable Boolean bIsSQLTableTo String sDriverIDTo tAPIColumn[] aColumnsFrom tAPIColumnSlot[] aSlots Returns tAPIColumnPlan
-        tAPIColumnPlan Plan
+    // Step 1 of the column plan (UtilColumnsPlan).
+    // 1) Renamed and made longer: found by the neighbours.
+    Function UtilColumnsPlanRenamesByNeighbours tAPIColumnPlan Plan Handle hTable tAPIColumn[] aColumnsFrom Returns tAPIColumnPlan
+        tAPIColumnSlot[] aSlots
         tAPIColumn[] aColumnsTo
-        tAPIColumnCompare[] aAPIColumnCompare aList aNoList
+        tAPIColumnCompare[] aList
         tAPIColumnStep[] aSteps
         tAPIColumnStep Step StepEmpty
-        tAPIColumnSlot Slot SlotEmpty
-        Integer iCount iPos iOther iItem iStep iRemoved iMax iMoves iMaxMoves iLastFrom iLastTo iOld iNew iType iNative iDbType
-        String sName sOld sNew
-        Boolean bRename bNative bDone bIsSQLType bIsDate
+        Integer iCount iPos iOther iStep
+        String sOld sNew
 
-        Move False to Plan.bOK
-        Get piDbType to iDbType
-        Move 0 to iStep
+        Move Plan.aSlots to aSlots
+        Move Plan.aSteps to aSteps
+        Move (SizeOfArray(aSteps)) to iStep
 
-        // 1) Renamed and made longer: found by the neighbours.
         Get UtilColumnSlotsToColumns aSlots to aColumnsTo
         Get UtilColumnsCheckForRenamesByNeighbours aColumnsFrom aColumnsTo to aList
         For iCount from 0 to (SizeOfArray(aList) - 1)
@@ -4796,6 +4806,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get UtilColumnSlotsFind aSlots sOld to iPos
             If (iOther <> 0 or iPos = 0) Begin
                 Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Table number:" * String(hTable) + ". Column" * sOld * "could not be renamed to" * sNew + ". The columns of the table were left as they were.")
+                Move False to Plan.bOK
                 Function_Return Plan
             End
             Move StepEmpty to Step
@@ -4809,7 +4820,26 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Move sNew to aSlots[iPos - 1].Column.sFieldName
         Loop
 
-        // 2) The columns that the description no longer has, one at a time and from the left.
+        Move aSlots to Plan.aSlots
+        Move aSteps to Plan.aSteps
+        Function_Return Plan
+    End_Function
+
+    // Step 2 of the column plan (UtilColumnsPlan).
+    // 2) The columns that the description no longer has, one at a time and from the left.
+    Function UtilColumnsPlanRemovals tAPIColumnPlan Plan Handle hTable tAPIColumn[] aColumnsFrom Returns tAPIColumnPlan
+        tAPIColumnSlot[] aSlots
+        tAPIColumn[] aColumnsTo
+        tAPIColumnCompare[] aAPIColumnCompare
+        tAPIColumnStep[] aSteps
+        tAPIColumnStep Step StepEmpty
+        Integer iPos iStep iRemoved iMax
+        String sName
+
+        Move Plan.aSlots to aSlots
+        Move Plan.aSteps to aSteps
+        Move (SizeOfArray(aSteps)) to iStep
+
         Move 0 to iRemoved
         Move (SizeOfArray(aSlots)) to iMax
         Get UtilColumnSlotsToColumns aSlots to aColumnsTo
@@ -4819,6 +4849,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get UtilColumnSlotsFind aSlots sName to iPos
             If (iPos = 0) Begin
                 Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Table number:" * String(hTable) * "was left as it was: column" * sName * "is to be removed and was not found.")
+                Move False to Plan.bOK
                 Function_Return Plan
             End
             Move StepEmpty to Step
@@ -4834,8 +4865,30 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get UtilColumnsFirstToRemove aAPIColumnCompare to sName
         Loop
 
-        // 3) The new columns: a column of the description that the table has under no name, and that is neither
-        //    one in another place nor one under a new name.
+        Move aSlots to Plan.aSlots
+        Move aSteps to Plan.aSteps
+        Function_Return Plan
+    End_Function
+
+    // Step 3 of the column plan (UtilColumnsPlan).
+    // 3) The new columns: a column of the description that the table has under no name, and that is neither
+    //    one in another place nor one under a new name.
+    Function UtilColumnsPlanInserts tAPIColumnPlan Plan String sDriverIDFrom Handle hTable Boolean bIsSQLTableTo tAPIColumn[] aColumnsFrom Returns tAPIColumnPlan
+        tAPIColumnSlot[] aSlots
+        tAPIColumn[] aColumnsTo
+        tAPIColumnCompare[] aAPIColumnCompare aList aNoList
+        tAPIColumnStep[] aSteps
+        tAPIColumnStep Step StepEmpty
+        tAPIColumnSlot Slot SlotEmpty
+        Integer iCount iPos iOther iItem iStep iType iDbType
+        String sName
+        Boolean bRename bNative bIsDate
+
+        Move Plan.aSlots to aSlots
+        Move Plan.aSteps to aSteps
+        Move (SizeOfArray(aSteps)) to iStep
+        Get piDbType to iDbType
+
         Get UtilColumnSlotsToColumns aSlots to aColumnsTo
         Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
         Move aNoList to aList
@@ -4858,6 +4911,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get UtilColumnSlotsFind aSlots sName to iOther
             If (iOther <> 0) Begin
                 Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Table number:" * String(hTable) * "was left as it was: column" * sName * "is to be added, and the table has a column of that name.")
+                Move False to Plan.bOK
                 Function_Return Plan
             End
             // As ApiColumnInsert: a native type only for an SQL table and a native type in the description. An
@@ -4908,9 +4962,29 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get UtilColumnSlotsInsert aSlots iPos Slot to aSlots
         Loop
 
-        // 4) The columns that stand in another place, always the leftmost one first. After each move the list is
-        //    made anew. The same move asked for twice, or more moves than there are columns, means that the
-        //    columns cannot be brought into the order of the description.
+        Move aSlots to Plan.aSlots
+        Move aSteps to Plan.aSteps
+        Function_Return Plan
+    End_Function
+
+    // Step 4 of the column plan (UtilColumnsPlan).
+    // 4) The columns that stand in another place, always the leftmost one first. After each move the list is
+    //    made anew. The same move asked for twice, or more moves than there are columns, means that the
+    //    columns cannot be brought into the order of the description.
+    Function UtilColumnsPlanMoves tAPIColumnPlan Plan Handle hTable String sDriverIDTo tAPIColumn[] aColumnsFrom Returns tAPIColumnPlan
+        tAPIColumnSlot[] aSlots
+        tAPIColumn[] aColumnsTo
+        tAPIColumnCompare[] aAPIColumnCompare aList
+        tAPIColumnStep[] aSteps
+        tAPIColumnStep Step StepEmpty
+        tAPIColumnSlot Slot
+        Integer iCount iItem iStep iMoves iMaxMoves iLastFrom iLastTo iOld iNew iType iNative
+        Boolean bDone bIsSQLType bIsDate
+
+        Move Plan.aSlots to aSlots
+        Move Plan.aSteps to aSteps
+        Move (SizeOfArray(aSteps)) to iStep
+
         Get UtilColumnSlotsToColumns aSlots to aColumnsTo
         Move (SizeOfArray(aColumnsFrom) + SizeOfArray(aColumnsTo)) to iMaxMoves
         Move 0  to iMoves
@@ -4932,10 +5006,12 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             End
             Else If (iMoves >= iMaxMoves or (aList[iItem].iFieldNumber = iLastFrom and aList[iItem].iFieldNumberTo = iLastTo)) Begin
                 Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. The columns of table number:" * String(hTable) * "could not be brought into the order of the description. Column" * String(aList[iItem].sFieldNameFrom) * "did not move from number" * String(aList[iItem].iFieldNumberTo) * "to number" * String(aList[iItem].iFieldNumber) + ". The table was left as it was.")
+                Move False to Plan.bOK
                 Function_Return Plan
             End
             Else If (sDriverIDTo = DFBTRDRV_ID) Begin
                 Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Table number:" * String(hTable) * "was left as it was: a column cannot be moved on the Pervasive database.")
+                Move False to Plan.bOK
                 Function_Return Plan
             End
             Else Begin
@@ -4988,7 +5064,26 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             End
         Loop
 
-        // 5) The columns that only got a new name.
+        Move aSlots to Plan.aSlots
+        Move aSteps to Plan.aSteps
+        Function_Return Plan
+    End_Function
+
+    // Step 5 of the column plan (UtilColumnsPlan).
+    // 5) The columns that only got a new name.
+    Function UtilColumnsPlanRenames tAPIColumnPlan Plan Handle hTable tAPIColumn[] aColumnsFrom Returns tAPIColumnPlan
+        tAPIColumnSlot[] aSlots
+        tAPIColumn[] aColumnsTo
+        tAPIColumnCompare[] aAPIColumnCompare aList
+        tAPIColumnStep[] aSteps
+        tAPIColumnStep Step StepEmpty
+        Integer iCount iPos iOther iStep
+        String sOld sNew
+
+        Move Plan.aSlots to aSlots
+        Move Plan.aSteps to aSteps
+        Move (SizeOfArray(aSteps)) to iStep
+
         Get UtilColumnSlotsToColumns aSlots to aColumnsTo
         Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
         Get UtilColumnsCheckForRenames hTable aAPIColumnCompare to aList
@@ -4998,6 +5093,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get UtilColumnSlotsFind aSlots sNew to iOther
             If (iOther <> 0) Begin
                 Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Table number:" * String(hTable) + ". Column" * sOld * "could not be renamed to" * sNew + ". The columns of the table were left as they were.")
+                Move False to Plan.bOK
                 Function_Return Plan
             End
             Get UtilColumnSlotsFind aSlots sOld to iPos
@@ -5013,7 +5109,25 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             End
         Loop
 
-        // 6) The columns behind the description's last one, the last one first.
+        Move aSlots to Plan.aSlots
+        Move aSteps to Plan.aSteps
+        Function_Return Plan
+    End_Function
+
+    // Step 6 of the column plan (UtilColumnsPlan).
+    // 6) The columns behind the description's last one, the last one first.
+    Function UtilColumnsPlanTrailingRemovals tAPIColumnPlan Plan tAPIColumn[] aColumnsFrom Returns tAPIColumnPlan
+        tAPIColumnSlot[] aSlots
+        tAPIColumn[] aColumnsTo
+        tAPIColumnCompare[] aAPIColumnCompare
+        tAPIColumnStep[] aSteps
+        tAPIColumnStep Step StepEmpty
+        Integer iCount iPos iStep
+
+        Move Plan.aSlots to aSlots
+        Move Plan.aSteps to aSteps
+        Move (SizeOfArray(aSteps)) to iStep
+
         Get UtilColumnSlotsToColumns aSlots to aColumnsTo
         Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
         Move (SizeOfArray(aAPIColumnCompare)) to iCount
@@ -5033,20 +5147,68 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             End
         Loop
 
-        // A column of another name still stands where a column is described: giving it the described name and
-        // form would put one column's values under another column's name.
+        Move aSlots to Plan.aSlots
+        Move aSteps to Plan.aSteps
+        Function_Return Plan
+    End_Function
+
+    // Step 7 of the column plan (UtilColumnsPlan).
+    // A column of another name still stands where a column is described: giving it the described name and
+    // form would put one column's values under another column's name.
+    Function UtilColumnsPlanCheck tAPIColumnPlan Plan Handle hTable tAPIColumn[] aColumnsFrom Returns tAPIColumnPlan
+        tAPIColumnSlot[] aSlots
+        tAPIColumn[] aColumnsTo
+        tAPIColumnCompare[] aAPIColumnCompare
+        tAPIColumnStep[] aSteps
+        Integer iCount iStep
+
+        Move Plan.aSlots to aSlots
+        Move Plan.aSteps to aSteps
+        Move (SizeOfArray(aSteps)) to iStep
+
         Get UtilColumnSlotsToColumns aSlots to aColumnsTo
         Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
         For iCount from 0 to (SizeOfArray(aAPIColumnCompare) - 1)
             If (aAPIColumnCompare[iCount].bExistsFrom = True and aAPIColumnCompare[iCount].bExistsTo = True and Uppercase(aAPIColumnCompare[iCount].sFieldNameFrom) <> Uppercase(aAPIColumnCompare[iCount].sFieldNameTo)) Begin
                 Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Table number:" * String(hTable) * "was left as it was: column number" * String(aAPIColumnCompare[iCount].iFieldNumber) * "is" * aAPIColumnCompare[iCount].sFieldNameTo + ", and the description has" * aAPIColumnCompare[iCount].sFieldNameFrom * "there.")
+                Move False to Plan.bOK
                 Function_Return Plan
             End
         Loop
 
-        Move True    to Plan.bOK
-        Move aSlots  to Plan.aSlots
-        Move aSteps  to Plan.aSteps
+        Move aSlots to Plan.aSlots
+        Move aSteps to Plan.aSteps
+        Function_Return Plan
+    End_Function
+
+    // Works out the plan of ApiColumnsUpdate on the description and the table's columns (aSlots). The table is
+    // not changed. The plan holds the columns as its steps leave them, and the steps in their order. Each step is a
+    // function of its own (UtilColumnsPlanRenamesByNeighbours ... UtilColumnsPlanCheck); one that cannot be made
+    // sets bOK False after an error, and the steps after it are not made.
+    Function UtilColumnsPlan String sDriverIDFrom Handle hTable Boolean bIsSQLTableTo String sDriverIDTo tAPIColumn[] aColumnsFrom tAPIColumnSlot[] aSlots Returns tAPIColumnPlan
+        tAPIColumnPlan Plan
+
+        Move True   to Plan.bOK
+        Move aSlots to Plan.aSlots
+        Get UtilColumnsPlanRenamesByNeighbours Plan hTable aColumnsFrom to Plan
+        If (Plan.bOK = True) Begin
+            Get UtilColumnsPlanRemovals Plan hTable aColumnsFrom to Plan
+        End
+        If (Plan.bOK = True) Begin
+            Get UtilColumnsPlanInserts Plan sDriverIDFrom hTable bIsSQLTableTo aColumnsFrom to Plan
+        End
+        If (Plan.bOK = True) Begin
+            Get UtilColumnsPlanMoves Plan hTable sDriverIDTo aColumnsFrom to Plan
+        End
+        If (Plan.bOK = True) Begin
+            Get UtilColumnsPlanRenames Plan hTable aColumnsFrom to Plan
+        End
+        If (Plan.bOK = True) Begin
+            Get UtilColumnsPlanTrailingRemovals Plan aColumnsFrom to Plan
+        End
+        If (Plan.bOK = True) Begin
+            Get UtilColumnsPlanCheck Plan hTable aColumnsFrom to Plan
+        End
         Function_Return Plan
     End_Function
 
