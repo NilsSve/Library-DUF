@@ -37,6 +37,72 @@ These sections can be found in the `Developer5.chm` Help file located in the `/H
 
 The workspace also uses three other libraries from Nils Sve's GitHub page — DFAbout, RDCToolsLib and vwin32fh. As of the flattening described below, they are **no longer nested submodules of DUF**; they are separate sibling libraries. See the Dependencies section for why, and what a consuming application must do.
 
+## What is new in 1.0.5
+
+The review findings that 1.0.4 left for later, and a fix for the SQL Repair Utility on DataFlex 19.1 and 20.1.
+
+The SQL Repair Utility:
+
+- On DataFlex 19.1 and 20.1, recreating .int files and removing uppercased columns wrote an EMPTY .int file over
+  the one the driver had just made; only the backup copy made before kept the old one. Relations and the DATETIME
+  and hidden-column settings were not collected, and "Move *.Dat files to backup" moved nothing. The cause: an
+  append written `arr[-1]` adds nothing before DataFlex 23. DUF writes every append the long way now.
+
+The update run:
+
+- `ApiColumnsUpdate` makes all the column changes of a table in one restructure, or none. Each step (renames,
+  removals, inserts, moves) was a restructure of its own, so an update that failed half way left the table half
+  changed: a removed column stayed removed. A column that is to become a Date while it holds other values stops
+  the update before anything is changed.
+
+The answers of the function library:
+
+- A function that finds its work done already answers True, with a line in the update log: `ApiColumnAdd`,
+  `ApiColumnInsert`, `ApiColumnRemove`, `ApiColumnRename`, `ApiColumnChange`, `ApiTableCreate`, `SqlTableCreate`
+  and `ApiTableAttachToSql`. They answered False, as for a failure. Code that reads that False as "nothing to do"
+  needs a look.
+- `ApiColumnRename` with both names in the table, or neither, answers False. With neither it answered True.
+- `ApiColumnChange` of a column that is not in the table is an error. It changed column 0.
+- `SqlDatabaseBackupToDisk` and `SqlDatabaseDrop` raise an error for a driver they have no code for. They showed a
+  message box.
+- `SqlUtilEnumerateServers` shows no message box when it finds no server; a program can show
+  `SqlUtilNoServersFoundText`, as the two dialogs that list servers do. `SqlUtilChangeIntFilesToConnectionIDs`
+  says "no .int files" only when `bShowResult` is True.
+- Root names are read one way. A root name with a drive in it (`C:\Data\Customer`) is an embedded table; it was
+  looked for on the server, with an error. `Customer.int` is a table of a database driver; it was taken for an
+  embedded table that is not there.
+- The messages of an SQL script are logged with their numbers. Each showed number 0.
+- The Microsoft SQL handler leaves out an Encrypt option it does not know. It wrote "Encrypt=;".
+- `IsIntFileTable` of the update handler answers for the table it is asked about. It asked about table 0.
+
+The programs:
+
+- Code Generator and Test Program: Shift+Ctrl+Tab goes to the previous view. It went to the next one.
+- The four selection dialogs (database, schema, server, table space) are one class, `cDUFSelectionDialog`. Three
+  of them place their grid and buttons a few units differently.
+- The menu items About, Ko-fi, Suggest, Help and Exit are classes in `cDUFMenuItems.pkg`. Suggest opens the same
+  page in all four programs.
+
+Inside DUF:
+
+- The .int file backup of the update handler is a class of its own, `cDbUpdateIntFileBackup`. The handler relays
+  its 16 messages, so code that sends them to the handler works as before.
+- The repair work of the SQL Repair Utility is a class of its own, `cDUFFilelistRepair`, out of its view.
+- `ApiTableUpdate` and the column plan are in smaller parts. Code that was written more than once is written once:
+  the test for a missing SQL connection handler, the look in the server's list of tables, the script runner, the
+  word of an Encrypt option (`SQLEncryptOptionWord`) and the writing of the .fd file.
+- A language without texts of its own (Dansk, Francais, Italiano, Russian, Polish, Hungarian) takes the English
+  texts from one place. The programs show the same texts as before.
+
+Removed:
+
+- `UtilColumnsCheckForInserts`, `UtilColumnsInsert`, `UtilColumnsMove`, `UtilColumnsRenameByNeighbours`,
+  `UtilColumnRemoveByName` and `UtilColumnsRename`, the steps of `ApiColumnsUpdate` that each made a restructure
+  of their own; and `_SqlUtilCreateMySQLDatabaseByScript` and `_SqlUtilCreatePostGreSQLDatabaseByScript`, which
+  are `_SqlUtilCreateDatabaseByScript` now. A program that calls one of them no longer compiles.
+
+121 unit tests now.
+
 ## What is new in 1.0.4
 
 The fixes of a review of the whole source, and of a check of the SQL functions against Microsoft SQL Server.
@@ -262,12 +328,12 @@ vwin32fh come with it. A package brings the sources of DUF's programs, but no pr
 Add it with the version after a `#`:
 
 ```
-https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.4
+https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.5
 ```
 
-Each release has a version tag (`1.0.0`, `1.0.1`, `1.0.2`, `1.0.3`, `1.0.4`, ...), listed under Tags on GitHub.
-Without the `#` part the workspace gets a commit. A workspace that also names RDCToolsLib or DFAbout itself lists
-them before DUF, in a version DUF accepts: RDCToolsLib 1.0.11 or later, DFAbout 1.0.2 or later.
+Each release has a version tag (`1.0.0`, `1.0.1`, `1.0.2`, `1.0.3`, `1.0.4`, `1.0.5`, ...), listed under Tags on
+GitHub. Without the `#` part the workspace gets a commit. A workspace that also names RDCToolsLib or DFAbout
+itself lists them before DUF, in a version DUF accepts: RDCToolsLib 1.0.11 or later, DFAbout 1.0.2 or later.
 
 The package puts **`BuildDUFUtilities.bat`** into the workspace folder. Start it there. It compiles
 `DUFCodeGenerator` and `DUFSQLRepairUtility` into the workspace's `Programs` folder:
