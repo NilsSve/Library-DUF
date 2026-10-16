@@ -935,6 +935,65 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "Name")) "Name keeps its type and its values."
     End_Procedure
 
+    // A column update is all or nothing. Code is to go and Name is to become a Date, but Name holds names: the
+    // update is refused, and Code is still there. (Each column step was a restructure of its own, so Code was
+    // gone before the date check said no.)
+    { Published=True }
+    Procedure Test_A_Refused_Update_Leaves_Every_Column_As_It_Was
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors
+
+        Send MakeBaseTable "DUFTT40" 5 False
+        Get Col 1 "Id" DF_BCD 6 0        to aColumns[0]
+        Get Col 2 "Name" DF_DATE 6 0     to aColumns[1]
+        Get Col 3 "Created" DF_DATE 6 0  to aColumns[2]
+        Get Col 4 "Amount" DF_BCD 8 2    to aColumns[3]
+        Get Idx 1 1 "Id" -1 "" -1 ""     to aIndexes[0]
+
+        Get UpdateTable aColumns aIndexes to iErrors
+        Send AssertIAreEqual 1 iErrors ("One error names the column." + psErrors(oErrors(Self)))
+        Send AssertSAreEqual "Id,Code,Name,Created,Amount" (ColumnNames(Self)) "No column was removed."
+        Send AssertSAreEqual (String(DF_ASCII) + "|C1") (ColumnTypeAndFirstValue(Self, "Code")) "Code holds its text."
+        Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "Name")) "Name keeps its type and its values."
+        Send AssertIAreEqual 2 (RecordCount(Self)) "Both records are there."
+    End_Procedure
+
+    // A column removed, one added and two moved, all in one update: every value follows its column, and so do
+    // the indexes. Code goes, Created comes in front of Name, Note is new between them.
+    { Published=True }
+    Procedure Test_Columns_Removed_Added_And_Moved_In_One_Update_Keep_Their_Values
+        tAPIColumn[] aColumns
+        tAPIIndex[] aIndexes
+        Integer iErrors iRun
+        Date dFirst
+
+        Send MakeBaseTable "DUFTT41" 5 True
+        Get Col 1 "Id" DF_BCD 6 0        to aColumns[0]
+        Get Col 2 "Created" DF_DATE 6 0  to aColumns[1]
+        Get Col 3 "Note" DF_ASCII 10 0   to aColumns[2]
+        Get Col 4 "Name" DF_ASCII 30 0   to aColumns[3]
+        Get Col 5 "Amount" DF_BCD 8 2    to aColumns[4]
+        Get Idx 1 1 "Id" -1 "" -1 ""        to aIndexes[0]
+        Get Idx 2 4 "Name" 1 "Id" -1 ""     to aIndexes[1]
+        Get Idx 3 2 "Created" 1 "Id" -1 ""  to aIndexes[2]
+        Move (DateSet(2026, 1, 15)) to dFirst
+
+        // Twice: the second run has to find nothing to do.
+        For iRun from 1 to 2
+            Get UpdateTable aColumns aIndexes to iErrors
+            Send AssertIAreEqual 0 iErrors ("Run " + String(iRun) + " is without an error." + psErrors(oErrors(Self)))
+            Send AssertSAreEqual "Id,Created,Note,Name,Amount" (ColumnNames(Self)) ("Run " + String(iRun) + ": the columns are in the described order.")
+            Send AssertSAreEqual (String(DF_DATE) + "|" + String(dFirst)) (ColumnTypeAndFirstValue(Self, "Created")) ("Run " + String(iRun) + ": Created holds its date.")
+            Send AssertSAreEqual (String(DF_ASCII) + "|") (ColumnTypeAndFirstValue(Self, "Note")) ("Run " + String(iRun) + ": the new column is empty.")
+            Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "Name")) ("Run " + String(iRun) + ": Name holds its text.")
+            Send AssertSAreEqual (String(DF_BCD) + "|" + String(12.5)) (ColumnTypeAndFirstValue(Self, "Amount")) ("Run " + String(iRun) + ": Amount holds its number.")
+            Send AssertSAreEqual "Name,Id" (IndexColumns(Self, 2)) ("Run " + String(iRun) + ": index 2 is on Name and Id.")
+            Send AssertSAreEqual "Created,Id" (IndexColumns(Self, 3)) ("Run " + String(iRun) + ": index 3 is on Created and Id.")
+            Send AssertIAreEqual 2 (RecordCount(Self)) ("Run " + String(iRun) + ": both records are there.")
+        Loop
+    End_Procedure
+
     // A new index gets the direction and case of the description, also with the two compare switches off (the
     // default). It used to come out ascending and case-sensitive.
     { Published=True }

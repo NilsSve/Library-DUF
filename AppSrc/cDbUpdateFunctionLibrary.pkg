@@ -4377,72 +4377,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return (Err = False)
     End_Function
 
-    Function UtilColumnsCheckForInserts Handle hTable tAPIColumnCompare[] aAPIColumnCompare Returns tAPIColumnCompare[]
-        tAPIColumnCompare[] aAPIColumnsToInsert
-        Integer iSize iCount iItem iFieldTo iNumberOfFieldsTo iColumnNumber
-        Boolean bRenameField
-
-        Open hTable
-        Set Error_Report_Mode to DUF_ERROR_NO_REPORT
-        Send Ignore_Error of Error_Object_Id DFERR_CANT_FIND_FIELD
-        Move (SizeOfArray(aAPIColumnCompare)) to iSize
-        Get_Attribute DF_FILE_NUMBER_FIELDS of hTable to iNumberOfFieldsTo
-        Move (iSize max iNumberOfFieldsTo) to iSize
-        Decrement iSize
-        For iCount from 0 to iSize
-            If (Uppercase(aAPIColumnCompare[iCount].sFieldNameFrom) <> Uppercase(aAPIColumnCompare[iCount].sFieldNameTo)) Begin
-                Set Error_Report_Mode to DUF_ERROR_NO_REPORT
-
-                Field_Map hTable aAPIColumnCompare[iCount].sFieldNameFrom to iFieldTo
-                If (aAPIColumnCompare[iCount].bExistsFrom = True and iFieldTo = 0) Begin
-                    Get UtilColumnExistsWithOtherNumber aAPIColumnCompare iCount to iColumnNumber
-                    Get UtilColumnIsRename aAPIColumnCompare iCount              to bRenameField
-                    If (iColumnNumber = -1 and bRenameField = False) Begin
-                        Move aAPIColumnCompare[iCount].iFieldNumber     to aAPIColumnsToInsert[iItem].iFieldNumber
-                        Move aAPIColumnCompare[iCount].sFieldNameFrom   to aAPIColumnsToInsert[iItem].sFieldNameFrom
-                        Move aAPIColumnCompare[iCount].iTypeFrom        to aAPIColumnsToInsert[iItem].iTypeFrom
-                        Move aAPIColumnCompare[iCount].sTypeFrom        to aAPIColumnsToInsert[iItem].sTypeFrom
-                        Move aAPIColumnCompare[iCount].iLengthFrom      to aAPIColumnsToInsert[iItem].iLengthFrom
-                        Move aAPIColumnCompare[iCount].iPrecisionFrom   to aAPIColumnsToInsert[iItem].iPrecisionFrom
-                        Move aAPIColumnCompare[iCount].bIsSQLTypeFrom   to aAPIColumnsToInsert[iItem].bIsSQLTypeFrom
-                        Move aAPIColumnCompare[iCount].bIsSQLTypeTo     to aAPIColumnsToInsert[iItem].bIsSQLTypeTo
-                        Move True                                       to aAPIColumnsToInsert[iItem].bExistsFrom
-                        Move False                                      to aAPIColumnsToInsert[iItem].bExistsTo
-                        Increment iItem
-                    End
-                End
-            End
-        Loop
-
-        Move False to Err
-        Move 0 to LastErr
-        Set Error_Report_Mode to DUF_ERROR_REPORT
-        Send Trap_Error of Error_Object_Id DFERR_CANT_FIND_FIELD
-        Function_Return aAPIColumnsToInsert
-    End_Function
-
-    Function UtilColumnsInsert String sDriverIDFrom Handle hTable tAPIColumnCompare[] aAPIColumnsToInsert Returns Boolean
-        Integer iSize iCount
-        Boolean bOK
-
-        Move (SizeOfArray(aAPIColumnsToInsert)) to iSize
-        If (iSize = 0) Begin
-            Function_Return True
-        End
-
-        Move False to Err
-        Decrement iSize
-        for iCount from 0 to iSize
-            Get ApiColumnInsert sDriverIDFrom hTable aAPIColumnsToInsert[iCount].iFieldNumber aAPIColumnsToInsert[iCount].sFieldNameFrom aAPIColumnsToInsert[iCount].iTypeFrom aAPIColumnsToInsert[iCount].iLengthFrom aAPIColumnsToInsert[iCount].iPrecisionFrom aAPIColumnsToInsert[iCount].bIsSQLTypeFrom to bOK
-            // The first column that fails stops the inserts. (Only the last one's result was answered.)
-            If (bOK = False) Begin
-                Function_Return False
-            End
-        Loop
-
-        Function_Return bOK
-    End_Function
-
     // Returns a struct array with fields that has the same names but different field numbers.
     Function UtilColumnsCheckForMoves Handle hTable tAPIColumnCompare[] aAPIColumnCompare Returns tAPIColumnCompare[]
         tAPIColumnCompare[] aAPIColumnsToMove
@@ -4466,67 +4400,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move False to Err
         Move 0 to LastErr
         Function_Return aAPIColumnsToMove
-    End_Function
-
-    Function UtilColumnsMove Handle hTable tAPIColumn[] aColumnsFrom tAPIColumn[] aColumnsTo tAPIColumnCompare[] aAPIColumnsToMove Returns Boolean
-        Integer iSize iCount iItem iMoves iMaxMoves iLastFrom iLastTo
-        Boolean bOK bDone
-        tAPIColumnCompare[] aAPIColumnCompare
-
-        If (SizeOfArray(aAPIColumnsToMove) = 0) Begin
-            Function_Return True
-        End
-
-        Move False to Err
-        Move True  to bOK
-        Move False to bDone
-        Move 0  to iMoves
-        Move -1 to iLastFrom
-        Move -1 to iLastTo
-        // No table needs more moves than it has columns.
-        Move (SizeOfArray(aColumnsFrom) + SizeOfArray(aColumnsTo)) to iMaxMoves
-
-        // Always the first move of the list. After every move the table is read again and the list is made
-        // anew, so its first entry is the leftmost column that is not in its place yet. (The loop used to go
-        // on with the second entry of the new list, and left columns behind.)
-        While (bDone = False)
-            Move -1 to iItem
-            Move (SizeOfArray(aAPIColumnsToMove)) to iSize
-            Decrement iSize
-            For iCount from 0 to iSize
-                If (iItem = -1 and aAPIColumnsToMove[iCount].bExistsFrom = True and aAPIColumnsToMove[iCount].bExistsTo = True) Begin
-                    Move iCount to iItem
-                End
-            Loop
-            If (iItem = -1) Begin
-                Move True to bDone
-            End
-            Else If (iMoves >= iMaxMoves or (aAPIColumnsToMove[iItem].iFieldNumber = iLastFrom and aAPIColumnsToMove[iItem].iFieldNumberTo = iLastTo)) Begin
-                // The same move is asked for again: the last one changed nothing.
-                Set Error_Report_Mode to DUF_ERROR_REPORT
-                Error DFERR_PROGRAM ("Function 'UtilColumnsMove'. The columns of table number:" * String(hTable) * "could not be brought into the order of the description. Column" * String(aAPIColumnsToMove[iItem].sFieldNameFrom) * "did not move from number" * String(aAPIColumnsToMove[iItem].iFieldNumberTo) * "to number" * String(aAPIColumnsToMove[iItem].iFieldNumber) + ".")
-                Move False to bOK
-                Move True  to bDone
-            End
-            Else Begin
-                Move aAPIColumnsToMove[iItem].iFieldNumber   to iLastFrom
-                Move aAPIColumnsToMove[iItem].iFieldNumberTo to iLastTo
-                Set Error_Report_Mode to DUF_ERROR_NO_REPORT
-                Get ApiColumnMove hTable aAPIColumnsToMove[iItem].iFieldNumberTo aAPIColumnsToMove[iItem].iFieldNumber aAPIColumnsToMove[iItem].bIsSQLTypeFrom aAPIColumnsToMove[iItem].iLengthFrom aAPIColumnsToMove[iItem].iPrecisionFrom to bOK
-                Increment iMoves
-                If (bOK = True) Begin
-                    Get UtilColumnsStructFill hTable to aColumnsTo
-                    Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
-                    Get UtilColumnsCheckForMoves hTable aAPIColumnCompare to aAPIColumnsToMove
-                End
-                Else Begin
-                    Move True to bDone
-                End
-            End
-        Loop
-
-        Set Error_Report_Mode to DUF_ERROR_REPORT
-        Function_Return bOK
     End_Function
 
     // Takes a tAPIColumnCompare struct as parameter and returns True if;
@@ -4699,32 +4572,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return aAPIColumnsToRename
     End_Function
 
-    // Renames the columns that UtilColumnsCheckForRenamesByNeighbours found, each in a restructure of its
-    // own, and writes a line to the log for each. Stops at the first one that fails.
-    Function UtilColumnsRenameByNeighbours Handle hTable tAPIColumnCompare[] aAPIColumnsToRename Returns Boolean
-        Integer iSize iCount
-        Boolean bOK
-        String sOld sNew sLogicalName
-
-        Get_Attribute DF_FILE_LOGICAL_NAME of hTable to sLogicalName
-        Move (SizeOfArray(aAPIColumnsToRename)) to iSize
-        Decrement iSize
-        For iCount from 0 to iSize
-            Move aAPIColumnsToRename[iCount].sFieldNameTo   to sOld
-            Move aAPIColumnsToRename[iCount].sFieldNameFrom to sNew
-            Move False to Err
-            Get ApiColumnRename hTable sOld sNew to bOK
-            If (bOK = False) Begin
-                If (Err = False) Begin
-                    Error DFERR_PROGRAM ("Function 'UtilColumnsRenameByNeighbours'. Table number:" * String(hTable) + ". Column" * sOld * "could not be renamed to" * sNew + ". The columns of the table were left as they were.")
-                End
-                Function_Return False
-            End
-            Send LogError ("Table:" * String(sLogicalName) + ". Column" * sOld * "was taken for column" * sNew * "of the new layout under its old name: it stands between the same two columns and has the same type. It was renamed and keeps its values. If" * sNew * "is a new column, remove" * sOld * "with ApiColumnRemove before the table is updated.") False
-        Loop
-        Function_Return True
-    End_Function
-
     // Returns the name of the leftmost column of the table that the description no longer has, or "" when
     // there is none. A column that UtilColumnIsRename takes for the old name of a renamed column is not one.
     Function UtilColumnsFirstToRemove tAPIColumnCompare[] aAPIColumnCompare Returns String
@@ -4752,46 +4599,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             End
         Loop
         Function_Return ""
-    End_Function
-
-    // Removes one column, found by its name, in a restructure of its own.
-    // Returns False when the table cannot be opened, the column is not there or the restructure failed.
-    Function UtilColumnRemoveByName Handle hTable String sFieldName Returns Boolean
-        Integer iFields iField iRemove
-        String sName sDriverID
-        Handle hFile
-        Boolean bOK
-
-        Get AutoConnectionIDLogin to bOK
-        Close hTable
-        Get OpenTableExclusive hTable to bOK
-        If (bOK = False) Begin
-            Error DFERR_PROGRAM ("Function 'UtilColumnRemoveByName'. Can't open table number:" * String(hTable))
-            Function_Return False
-        End
-        Get_Attribute DF_FILE_DRIVER of hTable to sDriverID
-        Get_Attribute DF_FILE_NUMBER_FIELDS of hTable to iFields
-        Move 0 to iRemove
-        For iField from 1 to iFields
-            Get_Attribute DF_FIELD_NAME of hTable iField to sName
-            If (Uppercase(sName) = Uppercase(sFieldName)) Begin
-                Move iField to iRemove
-            End
-        Loop
-        If (iRemove = 0) Begin
-            Function_Return False
-        End
-
-        Set Private.phCurrentTable to hTable
-        Set Private.piCurrentField to iRemove
-        Move False to Err
-        Move hTable to hFile
-        Structure_Start hFile sDriverID
-            Delete_Field hFile iRemove
-            Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hFile DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
-        Set Action_Text of ghoStatusPanel to ""
-        Function_Return (Err = False)
     End_Function
 
     // Returns -1 if the passed iColumn number doesn't exist with the same name in the aAPIColumnCompare struct array.
@@ -4848,31 +4655,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Move False to Err
         Move 0 to LastErr
         Function_Return aAPIColumnsToRename
-    End_Function
-
-    Function UtilColumnsRename Handle hTable tAPIColumnCompare[] aAPIColumnsToRename Returns Boolean
-        Integer iSize iCount
-        Boolean bOK
-
-        Move (SizeOfArray(aAPIColumnsToRename)) to iSize
-        If (iSize = 0) Begin
-            Function_Return True
-        End
-
-        Move False to Err
-        Decrement iSize
-        For iCount from 0 to iSize
-            Set Error_Report_Mode to DUF_ERROR_NO_REPORT
-            Get ApiColumnRename hTable aAPIColumnsToRename[iCount].sFieldNameTo aAPIColumnsToRename[iCount].sFieldNameFrom to bOK
-            // The first rename that fails stops them. (Only the last one's result was answered.)
-            If (bOK = False) Begin
-                Set Error_Report_Mode to DUF_ERROR_REPORT
-                Function_Return False
-            End
-        Loop
-
-        Set Error_Report_Mode to DUF_ERROR_REPORT
-        Function_Return bOK
     End_Function
 
     Function UtilColumnIsDateType Integer iType Boolean bIsSQLTableTo Returns Boolean
@@ -4964,15 +4746,631 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return bOK
     End_Function
 
+    // The table's columns in the plan of ApiColumnsUpdate, from its column array (UtilColumnsStructFill). That
+    // array leaves overlap fields out; the plan keeps them in their places, because every field counts in the
+    // numbers that a restructure works with.
+    Function UtilColumnSlotsFill Handle hTable tAPIColumn[] aColumnsTo Returns tAPIColumnSlot[]
+        tAPIColumnSlot[] aSlots
+        tAPIColumnSlot Slot SlotEmpty
+        Integer iFields iField iCount iSize
+        String sName
+        Boolean bFound
+
+        Get_Attribute DF_FILE_NUMBER_FIELDS of hTable to iFields
+        Move (SizeOfArray(aColumnsTo)) to iSize
+        For iField from 1 to iFields
+            Move SlotEmpty to Slot
+            Move False to bFound
+            For iCount from 0 to (iSize - 1)
+                If (bFound = False and aColumnsTo[iCount].iFieldNumber = iField) Begin
+                    Move aColumnsTo[iCount] to Slot.Column
+                    Move True to bFound
+                End
+            Loop
+            If (bFound = False) Begin
+                Get_Attribute DF_FIELD_NAME of hTable iField to sName
+                Move True  to Slot.bOverlap
+                Move iField to Slot.Column.iFieldNumber
+                Move sName to Slot.Column.sFieldName
+            End
+            Move iField to Slot.iOldNumber
+            Move Slot to aSlots[iField - 1]
+        Loop
+        Function_Return aSlots
+    End_Function
+
+    // The columns of the plan in the form of UtilColumnsStructFill: no overlap fields, each column with its
+    // number in the plan.
+    Function UtilColumnSlotsToColumns tAPIColumnSlot[] aSlots Returns tAPIColumn[]
+        tAPIColumn[] aColumns
+        Integer iCount iItem
+
+        Move 0 to iItem
+        For iCount from 0 to (SizeOfArray(aSlots) - 1)
+            If (aSlots[iCount].bOverlap = False) Begin
+                Move aSlots[iCount].Column to aColumns[iItem]
+                Move (iCount + 1) to aColumns[iItem].iFieldNumber
+                Increment iItem
+            End
+        Loop
+        Function_Return aColumns
+    End_Function
+
+    // The number of the column of this name in the plan, or 0: Field_Map's answer, without the table.
+    Function UtilColumnSlotsFind tAPIColumnSlot[] aSlots String sFieldName Returns Integer
+        Integer iCount
+        String sName
+
+        Move (Uppercase(sFieldName)) to sName
+        For iCount from 0 to (SizeOfArray(aSlots) - 1)
+            If (Uppercase(aSlots[iCount].Column.sFieldName) = sName) Begin
+                Function_Return (iCount + 1)
+            End
+        Loop
+        Function_Return 0
+    End_Function
+
+    // The plan with a column put in at this number. 0, or a number behind the last column, puts it at the end,
+    // as Create_Field does.
+    Function UtilColumnSlotsInsert tAPIColumnSlot[] aSlots Integer iColumn tAPIColumnSlot Slot Returns tAPIColumnSlot[]
+        Integer iSize iCount
+
+        Move (SizeOfArray(aSlots)) to iSize
+        If (iColumn < 1 or iColumn > iSize) Begin
+            Move Slot to aSlots[iSize]
+            Function_Return aSlots
+        End
+        Move iSize to iCount
+        While (iCount >= iColumn)
+            Move aSlots[iCount - 1] to aSlots[iCount]
+            Decrement iCount
+        Loop
+        Move Slot to aSlots[iColumn - 1]
+        Function_Return aSlots
+    End_Function
+
+    // Works out the plan of ApiColumnsUpdate on the description and the table's columns (aSlots). The table is
+    // not changed. The plan holds the columns as its steps leave them, and the steps in their order:
+    // 1) the columns that got a new name and a new length in the same version, found by their neighbours
+    //    (UtilColumnsCheckForRenamesByNeighbours). This comes first: the next step removes every column whose
+    //    name the description no longer has, and its values with it;
+    // 2) the columns that the description no longer has, one at a time and from the left. With a column gone the
+    //    columns behind it stand where they are described, and a column that only changed its name comes to stand
+    //    where its new name is;
+    // 3) the new columns, in the form that ApiColumnInsert gives them;
+    // 4) the columns that stand in another place, always the leftmost one first, in the form that ApiColumnMove
+    //    gives them;
+    // 5) the columns that only got a new name;
+    // 6) the columns behind the description's last one, the last one first.
+    // bOK is False, after an error, when the columns cannot be brought into the order of the description.
+    Function UtilColumnsPlan String sDriverIDFrom Handle hTable Boolean bIsSQLTableTo String sDriverIDTo tAPIColumn[] aColumnsFrom tAPIColumnSlot[] aSlots Returns tAPIColumnPlan
+        tAPIColumnPlan Plan
+        tAPIColumn[] aColumnsTo
+        tAPIColumnCompare[] aAPIColumnCompare aList aNoList
+        tAPIColumnStep[] aSteps
+        tAPIColumnStep Step StepEmpty
+        tAPIColumnSlot Slot SlotEmpty
+        Integer iCount iPos iOther iItem iStep iRemoved iMax iMoves iMaxMoves iLastFrom iLastTo iOld iNew iType iNative iDbType
+        String sName sOld sNew
+        Boolean bRename bNative bDone bIsSQLType bIsDate
+
+        Move False to Plan.bOK
+        Get piDbType to iDbType
+        Move 0 to iStep
+
+        // 1) Renamed and made longer: found by the neighbours.
+        Get UtilColumnSlotsToColumns aSlots to aColumnsTo
+        Get UtilColumnsCheckForRenamesByNeighbours aColumnsFrom aColumnsTo to aList
+        For iCount from 0 to (SizeOfArray(aList) - 1)
+            Move aList[iCount].sFieldNameTo   to sOld
+            Move aList[iCount].sFieldNameFrom to sNew
+            Get UtilColumnSlotsFind aSlots sNew to iOther
+            Get UtilColumnSlotsFind aSlots sOld to iPos
+            If (iOther <> 0 or iPos = 0) Begin
+                Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Table number:" * String(hTable) + ". Column" * sOld * "could not be renamed to" * sNew + ". The columns of the table were left as they were.")
+                Function_Return Plan
+            End
+            Move StepEmpty to Step
+            Move C_tAPIColumnStep_Rename to Step.iKind
+            Move iPos to Step.iColumn
+            Move sNew to Step.sFieldName
+            Move sOld to Step.sOldName
+            Move True to Step.bByNeighbours
+            Move Step to aSteps[iStep]
+            Increment iStep
+            Move sNew to aSlots[iPos - 1].Column.sFieldName
+        Loop
+
+        // 2) The columns that the description no longer has, one at a time and from the left.
+        Move 0 to iRemoved
+        Move (SizeOfArray(aSlots)) to iMax
+        Get UtilColumnSlotsToColumns aSlots to aColumnsTo
+        Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
+        Get UtilColumnsFirstToRemove aAPIColumnCompare to sName
+        While (sName <> "" and iRemoved < iMax)
+            Get UtilColumnSlotsFind aSlots sName to iPos
+            If (iPos = 0) Begin
+                Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Table number:" * String(hTable) * "was left as it was: column" * sName * "is to be removed and was not found.")
+                Function_Return Plan
+            End
+            Move StepEmpty to Step
+            Move C_tAPIColumnStep_Delete to Step.iKind
+            Move iPos  to Step.iColumn
+            Move sName to Step.sFieldName
+            Move Step  to aSteps[iStep]
+            Increment iStep
+            Move (RemoveFromArray(aSlots, iPos - 1)) to aSlots
+            Increment iRemoved
+            Get UtilColumnSlotsToColumns aSlots to aColumnsTo
+            Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
+            Get UtilColumnsFirstToRemove aAPIColumnCompare to sName
+        Loop
+
+        // 3) The new columns: a column of the description that the table has under no name, and that is neither
+        //    one in another place nor one under a new name.
+        Get UtilColumnSlotsToColumns aSlots to aColumnsTo
+        Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
+        Move aNoList to aList
+        Move 0 to iItem
+        For iCount from 0 to (SizeOfArray(aAPIColumnCompare) - 1)
+            If (aAPIColumnCompare[iCount].bExistsFrom = True and Uppercase(aAPIColumnCompare[iCount].sFieldNameFrom) <> Uppercase(aAPIColumnCompare[iCount].sFieldNameTo)) Begin
+                Get UtilColumnSlotsFind aSlots aAPIColumnCompare[iCount].sFieldNameFrom to iPos
+                If (iPos = 0) Begin
+                    Get UtilColumnExistsWithOtherNumber aAPIColumnCompare iCount to iOther
+                    Get UtilColumnIsRename aAPIColumnCompare iCount to bRename
+                    If (iOther = -1 and bRename = False) Begin
+                        Move aAPIColumnCompare[iCount] to aList[iItem]
+                        Increment iItem
+                    End
+                End
+            End
+        Loop
+        For iCount from 0 to (SizeOfArray(aList) - 1)
+            Move aList[iCount].sFieldNameFrom to sName
+            Get UtilColumnSlotsFind aSlots sName to iOther
+            If (iOther <> 0) Begin
+                Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Table number:" * String(hTable) * "was left as it was: column" * sName * "is to be added, and the table has a column of that name.")
+                Function_Return Plan
+            End
+            // As ApiColumnInsert: a native type only for an SQL table and a native type in the description. An
+            // embedded table gets a DataFlex type, and a DateTime is a Date there.
+            Move aList[iCount].iTypeFrom to iType
+            If (iType < -1490) Begin
+                Move (iType + 1500) to iType
+            End
+            Move (bIsSQLTableTo = True and aList[iCount].bIsSQLTypeFrom = True) to bNative
+            If (bIsSQLTableTo = False) Begin
+                Get UtilSQLColumnTypeToDataFlexType sDriverIDFrom iDbType iType aList[iCount].iLengthFrom to iType
+                If (iType = DF_DATETIME) Begin
+                    Move DF_DATE to iType
+                End
+            End
+            Get UtilColumnIsDateType iType bNative to bIsDate
+            Move aList[iCount].iFieldNumber to iPos
+            If (iPos > SizeOfArray(aSlots)) Begin
+                Move 0 to iPos
+            End
+            Move StepEmpty to Step
+            Move C_tAPIColumnStep_Insert to Step.iKind
+            Move iPos    to Step.iColumn
+            Move sName   to Step.sFieldName
+            Move iType   to Step.iType
+            Move bNative to Step.bNativeType
+            Move bIsDate to Step.bIsDate
+            Move aList[iCount].iLengthFrom    to Step.iLength
+            Move aList[iCount].iPrecisionFrom to Step.iPrecision
+            Move Step to aSteps[iStep]
+            Increment iStep
+
+            // The new column in the plan, in the form the step gives it. Its NULL rule and default value are set
+            // apart from the description's: the last pass then gives an SQL column the description's, as it did
+            // when it read the new column back from the server.
+            Move SlotEmpty to Slot
+            Move True  to Slot.bNew
+            Move Step  to Slot.NewStep
+            Move sName to Slot.Column.sFieldName
+            Move iType to Slot.Column.iType
+            Move bIsSQLTableTo to Slot.Column.bIsSQLType
+            If (bIsDate = False) Begin
+                Move (Step.iLength + Step.iPrecision) to Slot.Column.iLength
+                Move Step.iPrecision to Slot.Column.iPrecision
+            End
+            Move (not(aList[iCount].bAllowNULLFrom)) to Slot.Column.bAllowNULL
+            Move (aList[iCount].sDefaultValueFrom + Character(1)) to Slot.Column.sDefaultValue
+            Get UtilColumnSlotsInsert aSlots iPos Slot to aSlots
+        Loop
+
+        // 4) The columns that stand in another place, always the leftmost one first. After each move the list is
+        //    made anew. The same move asked for twice, or more moves than there are columns, means that the
+        //    columns cannot be brought into the order of the description.
+        Get UtilColumnSlotsToColumns aSlots to aColumnsTo
+        Move (SizeOfArray(aColumnsFrom) + SizeOfArray(aColumnsTo)) to iMaxMoves
+        Move 0  to iMoves
+        Move -1 to iLastFrom
+        Move -1 to iLastTo
+        Move False to bDone
+        While (bDone = False)
+            Get UtilColumnSlotsToColumns aSlots to aColumnsTo
+            Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
+            Get UtilColumnsCheckForMoves hTable aAPIColumnCompare to aList
+            Move -1 to iItem
+            For iCount from 0 to (SizeOfArray(aList) - 1)
+                If (iItem = -1 and aList[iCount].bExistsFrom = True and aList[iCount].bExistsTo = True) Begin
+                    Move iCount to iItem
+                End
+            Loop
+            If (iItem = -1) Begin
+                Move True to bDone
+            End
+            Else If (iMoves >= iMaxMoves or (aList[iItem].iFieldNumber = iLastFrom and aList[iItem].iFieldNumberTo = iLastTo)) Begin
+                Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. The columns of table number:" * String(hTable) * "could not be brought into the order of the description. Column" * String(aList[iItem].sFieldNameFrom) * "did not move from number" * String(aList[iItem].iFieldNumberTo) * "to number" * String(aList[iItem].iFieldNumber) + ". The table was left as it was.")
+                Function_Return Plan
+            End
+            Else If (sDriverIDTo = DFBTRDRV_ID) Begin
+                Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Table number:" * String(hTable) * "was left as it was: a column cannot be moved on the Pervasive database.")
+                Function_Return Plan
+            End
+            Else Begin
+                Move aList[iItem].iFieldNumberTo to iOld
+                Move aList[iItem].iFieldNumber   to iNew
+                Move iNew to iLastFrom
+                Move iOld to iLastTo
+                Move aSlots[iOld - 1] to Slot
+                Move StepEmpty to Step
+                If (Slot.bNew = True) Begin
+                    // A column that the update adds is put in again at its new place, in the form of its insert.
+                    Move Slot.NewStep to Step
+                    Move 0 to Step.iOldNumber
+                End
+                Else Begin
+                    // As ApiColumnMove: the type of the table's column, the length and precision of the description.
+                    Move aList[iItem].bIsSQLTypeFrom to bIsSQLType
+                    Get_Attribute DF_FIELD_TYPE of hTable Slot.iOldNumber to iType
+                    Move 0 to iNative
+                    If (bIsSQLType = True) Begin
+                        Get_Attribute DF_FIELD_NATIVE_TYPE of hTable Slot.iOldNumber to iNative
+                        Get UtilColumnIsDateType iNative True to bIsDate
+                    End
+                    Else Begin
+                        Get UtilColumnIsDateType iType False to bIsDate
+                    End
+                    Move Slot.iOldNumber   to Step.iOldNumber
+                    Move iType             to Step.iType
+                    Move iNative           to Step.iNativeType
+                    Move bIsSQLType        to Step.bNativeType
+                    Move bIsDate           to Step.bIsDate
+                    Move aList[iItem].iLengthFrom    to Step.iLength
+                    Move aList[iItem].iPrecisionFrom to Step.iPrecision
+                    If (bIsDate = False) Begin
+                        Move Step.iLength to Slot.Column.iLength
+                    End
+                    If (iType = DF_BCD) Begin
+                        Move Step.iPrecision to Slot.Column.iPrecision
+                    End
+                End
+                Move C_tAPIColumnStep_Move to Step.iKind
+                Move iOld to Step.iColumn
+                Move iNew to Step.iNewColumn
+                Move Slot.Column.sFieldName to Step.sFieldName
+                Move Step to aSteps[iStep]
+                Increment iStep
+                Move (RemoveFromArray(aSlots, iOld - 1)) to aSlots
+                Get UtilColumnSlotsInsert aSlots iNew Slot to aSlots
+                Increment iMoves
+            End
+        Loop
+
+        // 5) The columns that only got a new name.
+        Get UtilColumnSlotsToColumns aSlots to aColumnsTo
+        Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
+        Get UtilColumnsCheckForRenames hTable aAPIColumnCompare to aList
+        For iCount from 0 to (SizeOfArray(aList) - 1)
+            Move aList[iCount].sFieldNameTo   to sOld
+            Move aList[iCount].sFieldNameFrom to sNew
+            Get UtilColumnSlotsFind aSlots sNew to iOther
+            If (iOther <> 0) Begin
+                Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Table number:" * String(hTable) + ". Column" * sOld * "could not be renamed to" * sNew + ". The columns of the table were left as they were.")
+                Function_Return Plan
+            End
+            Get UtilColumnSlotsFind aSlots sOld to iPos
+            If (iPos > 0) Begin
+                Move StepEmpty to Step
+                Move C_tAPIColumnStep_Rename to Step.iKind
+                Move iPos to Step.iColumn
+                Move sNew to Step.sFieldName
+                Move sOld to Step.sOldName
+                Move Step to aSteps[iStep]
+                Increment iStep
+                Move sNew to aSlots[iPos - 1].Column.sFieldName
+            End
+        Loop
+
+        // 6) The columns behind the description's last one, the last one first.
+        Get UtilColumnSlotsToColumns aSlots to aColumnsTo
+        Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
+        Move (SizeOfArray(aAPIColumnCompare)) to iCount
+        While (iCount > 0)
+            Decrement iCount
+            If (aAPIColumnCompare[iCount].bExistsFrom = False and aAPIColumnCompare[iCount].bExistsTo = True) Begin
+                Get UtilColumnSlotsFind aSlots aAPIColumnCompare[iCount].sFieldNameTo to iPos
+                If (iPos > 0) Begin
+                    Move StepEmpty to Step
+                    Move C_tAPIColumnStep_Delete to Step.iKind
+                    Move iPos to Step.iColumn
+                    Move aAPIColumnCompare[iCount].sFieldNameTo to Step.sFieldName
+                    Move Step to aSteps[iStep]
+                    Increment iStep
+                    Move (RemoveFromArray(aSlots, iPos - 1)) to aSlots
+                End
+            End
+        Loop
+
+        // A column of another name still stands where a column is described: giving it the described name and
+        // form would put one column's values under another column's name.
+        Get UtilColumnSlotsToColumns aSlots to aColumnsTo
+        Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
+        For iCount from 0 to (SizeOfArray(aAPIColumnCompare) - 1)
+            If (aAPIColumnCompare[iCount].bExistsFrom = True and aAPIColumnCompare[iCount].bExistsTo = True and Uppercase(aAPIColumnCompare[iCount].sFieldNameFrom) <> Uppercase(aAPIColumnCompare[iCount].sFieldNameTo)) Begin
+                Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Table number:" * String(hTable) * "was left as it was: column number" * String(aAPIColumnCompare[iCount].iFieldNumber) * "is" * aAPIColumnCompare[iCount].sFieldNameTo + ", and the description has" * aAPIColumnCompare[iCount].sFieldNameFrom * "there.")
+                Function_Return Plan
+            End
+        Loop
+
+        Move True    to Plan.bOK
+        Move aSlots  to Plan.aSlots
+        Move aSteps  to Plan.aSteps
+        Function_Return Plan
+    End_Function
+
+    // The form of a column that ApiColumnsUpdate adds, as ApiColumnInsert gives it.
+    Procedure UtilColumnStepNewForm Handle hFile Integer iColumn tAPIColumnStep Step
+        Set_Attribute DF_FIELD_NAME of hFile iColumn to Step.sFieldName
+        If (Step.bNativeType = False) Begin
+            Set_Attribute DF_FIELD_TYPE        of hFile iColumn to Step.iType
+        End
+        Else Begin
+            Set_Attribute DF_FIELD_NATIVE_TYPE of hFile iColumn to Step.iType
+        End
+        If (Step.bIsDate = False) Begin
+            Set_Attribute DF_FIELD_LENGTH    of hFile iColumn to (Step.iLength + Step.iPrecision)
+            Set_Attribute DF_FIELD_PRECISION of hFile iColumn to Step.iPrecision
+        End
+    End_Procedure
+
+    // Makes the steps of the plan of ApiColumnsUpdate, inside its restructure (hFile is the table's handle there).
+    // Returns False at the first step that raised an error.
+    Function UtilColumnStepsApply Handle hFile tAPIColumnStep[] aSteps Returns Boolean
+        tAPIColumnStep Step
+        Integer iCount iColumn
+
+        For iCount from 0 to (SizeOfArray(aSteps) - 1)
+            Move aSteps[iCount] to Step
+            Move Step.iColumn to iColumn
+            Set Private.piCurrentField to iColumn
+            If (Step.iKind = C_tAPIColumnStep_Rename) Begin
+                Set_Attribute DF_FIELD_NAME of hFile iColumn to Step.sFieldName
+            End
+            Else If (Step.iKind = C_tAPIColumnStep_Delete) Begin
+                Delete_Field hFile iColumn
+            End
+            Else If (Step.iKind = C_tAPIColumnStep_Insert) Begin
+                Create_Field hFile At iColumn
+                Send UtilColumnStepNewForm hFile iColumn Step
+            End
+            Else If (Step.iKind = C_tAPIColumnStep_Move) Begin
+                Delete_Field hFile iColumn
+                Move Step.iNewColumn to iColumn
+                Create_Field hFile At iColumn
+                Set Private.piCurrentField to iColumn
+                If (Step.iOldNumber = 0) Begin
+                    Send UtilColumnStepNewForm hFile iColumn Step
+                End
+                Else Begin
+                    // This one is the crucial line: the values of the column's number before the update go to
+                    // its new place.
+                    Set_Attribute DF_FIELD_OLD_NUMBER of hFile iColumn to Step.iOldNumber
+                    Set_Attribute DF_FIELD_NAME of hFile iColumn to Step.sFieldName
+                    // The new field starts as text of length 0. A date column that is left like that comes back as
+                    // text and its values are gone, so a date gets its type as well. Only its length is fixed and
+                    // is not written.
+                    If (Step.bNativeType = True) Begin
+                        Set_Attribute DF_FIELD_NATIVE_TYPE of hFile iColumn to Step.iNativeType
+                    End
+                    If (Step.bIsDate = False) Begin
+                        Set_Attribute DF_FIELD_TYPE   of hFile iColumn to Step.iType
+                        Set_Attribute DF_FIELD_LENGTH of hFile iColumn to Step.iLength
+                    End
+                    Else If (Step.bNativeType = False) Begin
+                        Set_Attribute DF_FIELD_TYPE   of hFile iColumn to Step.iType
+                    End
+                    If (Step.iType = DF_BCD) Begin
+                        Set_Attribute DF_FIELD_PRECISION of hFile iColumn to Step.iPrecision
+                    End
+                End
+            End
+            If (Err = True) Begin
+                Function_Return False
+            End
+        Loop
+        Function_Return True
+    End_Function
+
+    // The last pass of ApiColumnsUpdate, inside its restructure: each column of the description gets the form of
+    // the description - name, type, length, precision, the NULL rule and default value of an SQL column, identity.
+    // The steps of the plan have brought the columns into the order of the description. Returns False at the
+    // first column that raised an error.
+    Function UtilColumnsApplyForms Handle hFile Handle hTable String sDriverIDFrom String sDriverIDTo Boolean bIsSQLTableFrom Boolean bIsSQLTableTo Boolean bRecnumTable tAPIColumnCompare[] aAPIColumnCompare Boolean bCompareDate_DateTime Returns Boolean
+        Integer iCount iColumn iTypeFrom iTypeTo iDataFlexType iIndex iLengthFrom iLengthTo iPrecisionFrom iPrecisionTo iOptionFrom iOptionTo iDbType
+        Boolean bFieldExistsTo bIsSame bSkipTypeChange bIsDateType
+        String sFieldNameFrom sFieldNameTo sDefaultValue
+
+        Get piDbType to iDbType
+        For iCount from 0 to (SizeOfArray(aAPIColumnCompare) - 1)
+            Send DoAdvance of ghoProgressBar
+
+            Move aAPIColumnCompare[iCount].iFieldNumber to iColumn
+            Set Private.piCurrentField                  to iColumn
+            Get UtilColumnCompare sDriverIDFrom sDriverIDTo bIsSQLTableFrom aAPIColumnCompare[iCount].bIsSQLTypeTo aAPIColumnCompare[iCount] bCompareDate_DateTime to bIsSame
+            If (bIsSame = False and aAPIColumnCompare[iCount].bExistsFrom = True) Begin
+                Move aAPIColumnCompare[iCount].bExistsTo        to bFieldExistsTo
+                Move aAPIColumnCompare[iCount].sFieldNameFrom   to sFieldNameFrom
+                Move aAPIColumnCompare[iCount].iLengthFrom      to iLengthFrom
+                Move aAPIColumnCompare[iCount].iPrecisionFrom   to iPrecisionFrom
+                Move aAPIColumnCompare[iCount].iOptionsFrom     to iOptionFrom
+                Move aAPIColumnCompare[iCount].iTypeFrom        to iTypeFrom
+
+                Get UtilSQLColumnTypeToDataFlexType sDriverIDFrom iDbType iTypeFrom iLengthFrom to iDataFlexType
+                If (iTypeFrom < -1490) Begin
+                    Move (iTypeFrom + 1500)                     to iTypeFrom
+                End
+
+                // The table's values first: the translation below works on them.
+                Move aAPIColumnCompare[iCount].sFieldNameTo to sFieldNameTo
+                Move aAPIColumnCompare[iCount].iLengthTo    to iLengthTo
+                Move aAPIColumnCompare[iCount].iPrecisionTo to iPrecisionTo
+                Move aAPIColumnCompare[iCount].iOptionsTo   to iOptionTo
+                Move aAPIColumnCompare[iCount].iTypeTo      to iTypeTo
+
+                // If one of the two tables are SQL and the other Embedded we need to "translate"
+                // data types between Embedded and SQL, else we can't compare the data types.
+                If (bIsSQLTableFrom = True and bIsSQLTableTo = False) Begin
+                    Get UtilSQLColumnTypeToDataFlexType sDriverIDFrom iDbType iTypeFrom iLengthFrom to iTypeFrom
+                    If (iTypeFrom = DF_DATETIME) Begin // DateTime cannot be used by the embedded database.
+                        Move DF_DATE to iTypeFrom
+                    End
+                End
+                Else If (bIsSQLTableFrom = False and bIsSQLTableTo = True) Begin
+                    Get UtilSqlColumnTypeToDataFlexType sDriverIDTo   iDbType iTypeTo   iLengthTo   to iTypeTo
+                End
+
+                Move False to bSkipTypeChange
+                If (bCompareDate_DateTime = False) Begin
+                    Move ((iTypeFrom = SQL_TYPE_DATE or iTypeFrom = SQL_TYPE_TIME or iTypeFrom = SQL_TYPE_TIMESTAMP) and (iTypeTo = SQL_TYPE_DATE or iTypeTo = SQL_TYPE_TIME or iTypeTo = SQL_TYPE_TIMESTAMP)) to bSkipTypeChange
+                    // With one table SQL and the other embedded both types are DataFlex types now.
+                    If (bIsSQLTableFrom <> bIsSQLTableTo) Begin
+                        Move ((iTypeFrom = DF_DATE or iTypeFrom = DF_DATETIME) and (iTypeTo = DF_DATE or iTypeTo = DF_DATETIME)) to bSkipTypeChange
+                    End
+                End
+
+                If (bFieldExistsTo = False) Begin
+                    Move 0 to iColumn
+                    Create_Field hFile At iColumn
+                    Set Private.piCurrentField to iColumn
+                End
+
+                // The plan has brought the columns into the order of the description: a name that differs here
+                // differs in its case only.
+                If (sFieldNameFrom <> sFieldNameTo) Begin
+                    Set_Attribute DF_FIELD_NAME of hFile iColumn to sFieldNameFrom
+                End
+
+                // Note: In MS-SQL it is vital that *nothing* gets changed for e.g. a "datetime" column, else error: 22018 is generated by the SQL backend:
+                //       "Explicit conversion from data type int to datetime2 is not allowed", which will make the update to fail, and all changes for the table is rollbacked.
+                If (bIsSQLTableFrom = True and bIsSQLTableTo = True and aAPIColumnCompare[iCount].iOptionsFrom <> C_tAPIColumn_Identity and bSkipTypeChange = False) Begin
+                    Set_Attribute DF_FIELD_NULL_ALLOWED  of hFile iColumn to aAPIColumnCompare[iCount].bAllowNULLFrom
+                    Move aAPIColumnCompare[iCount].sDefaultValueFrom to sDefaultValue
+                    If (iDataFlexType = DF_BCD and Left(String(sDefaultValue), 1) <> "[") Begin
+                        Move ("[" + String(sDefaultValue) + "]") to sDefaultValue
+                    End
+                    Set_Attribute DF_FIELD_DEFAULT_VALUE of hFile iColumn to sDefaultValue
+                End
+
+                If (bSkipTypeChange = False) Begin
+                    If (iTypeFrom <> iTypeTo) Begin
+                        If (bIsSQLTableTo = True and bIsSQLTableFrom = False) Begin
+                            // A DataFlex type for an SQL table: the driver picks the native type.
+                            Set_Attribute DF_FIELD_TYPE of hFile iColumn to iTypeFrom
+                        End
+                        Else If (bIsSQLTableTo = True) Begin
+                            Set_Attribute DF_FIELD_NATIVE_TYPE of hFile iColumn to iTypeFrom
+                        End
+                        Else Begin
+                            If (iDataFlexType = DF_DATETIME) Begin // DateTime cannot be used by the embedded database.
+                                Move DF_DATE to iDataFlexType  // Date
+                            End
+                            Set_Attribute DF_FIELD_TYPE of hFile iColumn to iDataFlexType
+                        End
+                    End
+                End
+
+                // iTypeFrom is a native SQL type only when both tables are SQL; else it is a DataFlex type.
+                Get UtilColumnIsDateType iTypeFrom (bIsSQLTableFrom = True and bIsSQLTableTo = True) to bIsDateType
+                // We can't set the length or precision for Date type columns (they are fixed).
+                If (bIsDateType = False and iLengthFrom <> iLengthTo) Begin
+                    Set_Attribute DF_FIELD_LENGTH of hFile iColumn to iLengthFrom
+                End
+                // We do want to set the precision for e.g. DateTime2 (can be 3 or 7, but DataFlex can just handle "3").
+                If (iPrecisionFrom <> iPrecisionTo) Begin
+                    Set_Attribute DF_FIELD_PRECISION of hFile iColumn to iPrecisionFrom
+                End
+
+                If (bIsSQLTableTo = True and iOptionFrom = C_tAPIColumn_Identity and iOptionTo <> C_tAPIColumn_Identity) Begin
+                    // Can't set a recnum table to "DF_FIELD_IS_IDENTITY"
+                    If (bRecnumTable = True) Begin
+                        Set_Attribute DF_FILE_RECNUM_TABLE of hTable to False
+                    End
+
+                    // We might need to create an index here.
+                    // To be able to set the DF_FIELD_IS_IDENTITY the index must already exist, but it might not at this stage.
+                    // This should probably fix that problem and if an adjustment is needed, it will get done with the normal
+                    // index update checking logic.
+                    Get_Attribute DF_FIELD_INDEX           of hFile iColumn to iIndex
+                    If (iIndex = 0 and Uppercase(sFieldNameTo) <> "RECNUM") Begin
+                        Create_Index hFile at iIndex
+                        Set_Attribute DF_INDEX_NUMBER_SEGMENTS of hFile iIndex to 1
+                    End
+
+                    Set_Attribute DF_INDEX_SEGMENT_FIELD   of hFile iIndex 1 to iColumn
+                    Set_Attribute DF_FILE_PRIMARY_INDEX    of hFile          to iIndex
+                    // Note: The order here is crucial!
+                    Set_Attribute DF_INDEX_SQL_PRIMARY_KEY of hFile iIndex to True
+                    Set_Attribute DF_FIELD_IS_IDENTITY of hFile iColumn    to True
+                End
+            End
+            If (Err = True) Begin
+                Function_Return False
+            End
+        Loop
+        Function_Return True
+    End_Function
+
+    // Writes the table's .fd file into the workspace's (first) DDSrc folder, when there is one, so that a program
+    // in the development environment sees the new layout. The table is opened for it.
+    Procedure UtilTableWriteFdFile Handle hTable
+        String sDDSrcPath sTableName
+        Integer iCount
+        Boolean bExists
+
+        Open hTable
+        Get psDdSrcPath of (phoWorkspace(ghoApplication)) to sDDSrcPath
+        Get CountOfPaths of (phoWorkspace(ghoApplication)) sDDSrcPath to iCount
+        If (iCount > 1) Begin
+            Get PathAtIndex of (phoWorkspace(ghoApplication)) sDDSrcPath 1 to sDDSrcPath
+        End
+        Get vFolderExists sDDSrcPath to bExists
+        If (bExists = True) Begin
+            Get vFolderFormat sDDSrcPath to sDDSrcPath
+            Get_Attribute DF_FILE_ROOT_NAME of hTable to sTableName
+            Get _TableNameOnly sTableName to sTableName
+            Output_Aux_File DF_AUX_FILE_FD for hTable to (sDDSrcPath + sTableName + ".fd")
+        End
+    End_Procedure
+
+    // Brings the columns of a table into the form of the description: renames, removes, adds and moves columns
+    // and changes their form. The work is planned first (UtilColumnsPlan) and checked: a column of an embedded
+    // table that is to become a Date must hold dates only (UtilColumnsToDateCheck). Then all of it is made in ONE
+    // restructure, which the database takes as a whole or not at all. A plan that cannot be made, a failed check
+    // or an error in the restructure leaves the table as it was, and False is returned. (Each step used to be a
+    // restructure of its own, so a failure half way left the table half changed.)
     Function ApiColumnsUpdate String sDriverIDFrom Handle hTable Boolean bIsSQLTableFrom tAPIColumn[] aColumnsFrom tAPIColumn[] aColumnsTo Boolean bCompareDate_DateTime Returns Boolean
-        Integer iCount iColumns iColumn iTypeFrom iTypeTo iDataFlexType iIndex iLengthFrom iLengthTo iPrecisionFrom iPrecisionTo iOptionFrom iOptionTo iDbType
-        Integer iCount2 iColumn2
+        Integer iCount iPos
         Handle hFile
-        Boolean bFieldExistsFrom bFieldExistsTo bIsSQLDriver bIsSame bOK
-        Boolean bIsSQLTableTo bRecnumTable bIsOpen bSkipTypeChange bIsDateType bMismatch
-        String sFieldNameFrom sFieldNameTo sDriverIDTo sDefaultValue sRemove
-        Integer iRemoved iMaxRemove iRenamedFirst
-        tAPIColumnCompare[] aAPIColumnCompare aApiInsertColumns aAPIMoveColumns aAPIRenameColumns aAPIRenameFirst
+        Boolean bOK bIsSQLTableTo bRecnumTable bIsOpen bIsSame bInserted
+        String sDriverIDTo sLogicalName
+        tAPIColumnSlot[] aSlots
+        tAPIColumnPlan Plan
+        tAPIColumn[] aColumnsPlanned
+        tAPIColumnCompare[] aAPIColumnCompare aDateCompare
 
         Move False to Err
         Close hTable
@@ -4980,281 +5378,89 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         If (bIsOpen = False) Begin
             Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Can't open table number:" * String(hTable))
             Function_Return False
-        End 
-        
-        Get piDbType to iDbType
+        End
+
         Get_Attribute DF_FILE_RECNUM_TABLE of hTable to bRecnumTable
-        Move bIsSQLTableFrom to bIsSQLDriver
         Get _UtilTableIsSql hTable to bIsSQLTableTo
         Get_Attribute DF_FILE_DRIVER of hTable to sDriverIDTo
+        Get_Attribute DF_FILE_LOGICAL_NAME of hTable to sLogicalName
 
-        Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
+        // The plan. Nothing is changed when it cannot be made.
+        Get UtilColumnSlotsFill hTable aColumnsTo to aSlots
+        Get UtilColumnsPlan sDriverIDFrom hTable bIsSQLTableTo sDriverIDTo aColumnsFrom aSlots to Plan
+        If (Plan.bOK = False) Begin
+            Function_Return False
+        End
+        Get UtilColumnSlotsToColumns Plan.aSlots to aColumnsPlanned
+        Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsPlanned to aAPIColumnCompare
 
-        // Before we start to change the table we need to do five things;
-        // 1) Rename the columns that got a new name and a new length in the same version, see
-        //    UtilColumnsCheckForRenamesByNeighbours. This has to come first: the next step removes every
-        //    column whose name the description no longer has, and its values with it.
-        Get UtilColumnsCheckForRenamesByNeighbours aColumnsFrom aColumnsTo to aAPIRenameFirst
-        Move (SizeOfArray(aAPIRenameFirst)) to iRenamedFirst
-        If (iRenamedFirst > 0) Begin
-            Get UtilColumnsRenameByNeighbours hTable aAPIRenameFirst to bOK
+        // A column of an embedded table that becomes a Date must hold dates only: the restructure empties other
+        // values, or makes them into other dates, without an error. Microsoft SQL refuses such a change itself.
+        // The values are read under each column's number before the update; a column the update adds has none.
+        If (bIsSQLTableTo = False) Begin
+            Move aAPIColumnCompare to aDateCompare
+            For iCount from 0 to (SizeOfArray(aDateCompare) - 1)
+                If (aDateCompare[iCount].bExistsTo = True) Begin
+                    Move aDateCompare[iCount].iFieldNumberTo to iPos
+                    Move Plan.aSlots[iPos - 1].iOldNumber to iPos
+                    Move iPos to aDateCompare[iCount].iFieldNumberTo
+                    Move (iPos > 0) to aDateCompare[iCount].bExistsTo
+                End
+            Loop
+            Get UtilColumnsToDateCheck hTable sDriverIDFrom bIsSQLTableFrom aDateCompare to bOK
             If (bOK = False) Begin
                 Function_Return False
             End
-            Get UtilColumnsStructFill hTable to aColumnsTo
-            Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
         End
 
-        // 2) Remove the columns that the description no longer has, one at a time and from the left.
-        //    With a column gone the columns behind it stand where they are described and need not be moved
-        //    up one by one, and a column that only changed its name comes to stand where its new name is.
-        Move 0 to iRemoved
-        Move (SizeOfArray(aColumnsTo)) to iMaxRemove
-        Get UtilColumnsFirstToRemove aAPIColumnCompare to sRemove
-        While (sRemove <> "" and iRemoved < iMaxRemove)
-            Get UtilColumnRemoveByName hTable sRemove to bOK
-            If (bOK = False) Begin
-                Function_Return False
-            End
-            Increment iRemoved
-            Get UtilColumnsStructFill hTable to aColumnsTo
-            Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
-            Get UtilColumnsFirstToRemove aAPIColumnCompare to sRemove
-        Loop
-
-        // 3) Insert any new fields
-        Get UtilColumnsCheckForInserts hTable aAPIColumnCompare to aApiInsertColumns
-        If (SizeOfArray(aApiInsertColumns)) Begin
-            Get UtilColumnsInsert sDriverIDFrom hTable aApiInsertColumns to bOK
-            If (bOK = False) Begin
-                Function_Return False
-            End
-            // Update info with changes made.
-            Get UtilColumnsStructFill hTable to aColumnsTo
-            Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
-        End
-
-        // 4) Move fields with same names
-        Get UtilColumnsCheckForMoves hTable aAPIColumnCompare to aAPIMoveColumns
-        If (SizeOfArray(aAPIMoveColumns)) Begin
-            Get UtilColumnsMove hTable aColumnsFrom aColumnsTo aAPIMoveColumns to bOK
-            If (bOK = False) Begin
-                Function_Return False
-            End
-            Get UtilColumnsStructFill hTable to aColumnsTo
-            Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
-        End
-        
-        // 5) Rename fields
-        Get UtilColumnsCheckForRenames hTable aAPIColumnCompare to aAPIRenameColumns
-        If (SizeOfArray(aAPIRenameColumns)) Begin
-            Get UtilColumnsRename hTable aAPIRenameColumns to bOK
-            If (bOK = False) Begin
-                Function_Return False
-            End
-            Get UtilColumnsStructFill hTable to aColumnsTo
-            Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
-        End
-
-        // If any of the fields were changed by "Remove", "Insert", "Rename" or "Move", we need to compare the fields again:
-        If (iRenamedFirst > 0 or iRemoved > 0 or SizeOfArray(aApiInsertColumns) or SizeOfArray(aAPIRenameColumns) or SizeOfArray(aAPIMoveColumns)) Begin
+        // Nothing to do: no step, and every column has the form of the description.
+        If (SizeOfArray(Plan.aSteps) = 0) Begin
             Get UtilColumnsCompare sDriverIDFrom sDriverIDTo bIsSQLTableFrom bIsSQLTableTo aAPIColumnCompare bCompareDate_DateTime to bIsSame
             If (bIsSame = True) Begin
                 Function_Return True
             End
         End
 
-        // 6) A column of an embedded table that becomes a Date must hold dates only: the restructure empties other
-        //    values, or makes them into other dates, without an error. Microsoft SQL refuses such a change itself.
-        If (bIsSQLTableTo = False) Begin
-            Get UtilColumnsToDateCheck hTable sDriverIDFrom bIsSQLTableFrom aAPIColumnCompare to bOK
-            If (bOK = False) Begin
-                Function_Return False
-            End
-        End
-
         Move False to Err
-        // We can now continue to make standard field changes:
         Get OpenTableExclusive hTable to bIsOpen
+        If (bIsOpen = False) Begin
+            Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Can't open table number:" * String(hTable))
+            Function_Return False
+        End
         Set Private.phCurrentTable to hTable
         Move hTable to hFile
         Structure_Start hFile sDriverIDTo
-
-            Move False to bMismatch
-            Move (SizeOfArray(aAPIColumnCompare)) to iColumns
-            Decrement iColumns
-            for iCount from 0 to iColumns
-                Send DoAdvance of ghoProgressBar
-
-                Move aAPIColumnCompare[iCount].iFieldNumber to iColumn
-                Set Private.piCurrentField                  to iColumn
-                Get UtilColumnCompare sDriverIDFrom sDriverIDTo bIsSQLTableFrom aAPIColumnCompare[iCount].bIsSQLTypeTo aAPIColumnCompare[iCount] bCompareDate_DateTime to bIsSame
-                If (bIsSame = False) Begin
-
-                    Move aAPIColumnCompare[iCount].bExistsFrom          to bFieldExistsFrom
-                    If (bFieldExistsFrom = True) Begin
-                        Move aAPIColumnCompare[iCount].bExistsTo        to bFieldExistsTo
-                        Move aAPIColumnCompare[iCount].sFieldNameFrom   to sFieldNameFrom
-                        Move aAPIColumnCompare[iCount].iLengthFrom      to iLengthFrom
-                        Move aAPIColumnCompare[iCount].iPrecisionFrom   to iPrecisionFrom
-                        Move aAPIColumnCompare[iCount].iOptionsFrom     to iOptionFrom
-                        Move aAPIColumnCompare[iCount].iTypeFrom        to iTypeFrom
-
-                        Get UtilSQLColumnTypeToDataFlexType sDriverIDFrom iDbType iTypeFrom iLengthFrom to iDataFlexType
-                        If (iTypeFrom < -1490) Begin
-                            Move (iTypeFrom + 1500)                     to iTypeFrom
-                        End
-
-                        // The table's values first: the translation below works on them.
-                        Move aAPIColumnCompare[iCount].sFieldNameTo to sFieldNameTo
-                        Move aAPIColumnCompare[iCount].iLengthTo    to iLengthTo
-                        Move aAPIColumnCompare[iCount].iPrecisionTo to iPrecisionTo
-                        Move aAPIColumnCompare[iCount].iOptionsTo   to iOptionTo
-                        Move aAPIColumnCompare[iCount].iTypeTo      to iTypeTo
-
-                        // If one of the two tables are SQL and the other Embedded we need to "translate"
-                        // data types between Embedded and SQL, else we can't compare the data types.
-                        // (The TO type used to be translated before it was read, and then overwritten.)
-                        If (bIsSQLTableFrom = True and bIsSQLTableTo = False) Begin
-                            Get UtilSQLColumnTypeToDataFlexType sDriverIDFrom iDbType iTypeFrom iLengthFrom to iTypeFrom
-                            If (iTypeFrom = DF_DATETIME) Begin // DateTime cannot be used by the embedded database.
-                                Move DF_DATE to iTypeFrom
-                            End
-                        End
-                        Else If (bIsSQLTableFrom = False and bIsSQLTableTo = True) Begin
-                            Get UtilSqlColumnTypeToDataFlexType sDriverIDTo   iDbType iTypeTo   iLengthTo   to iTypeTo
-                        End
-
-                        Move False to bSkipTypeChange
-                        If (bCompareDate_DateTime = False) Begin
-                            Move ((iTypeFrom = SQL_TYPE_DATE or iTypeFrom = SQL_TYPE_TIME or iTypeFrom = SQL_TYPE_TIMESTAMP) and (iTypeTo = SQL_TYPE_DATE or iTypeTo = SQL_TYPE_TIME or iTypeTo = SQL_TYPE_TIMESTAMP)) to bSkipTypeChange
-                            // With one table SQL and the other embedded both types are DataFlex types now.
-                            If (bIsSQLTableFrom <> bIsSQLTableTo) Begin
-                                Move ((iTypeFrom = DF_DATE or iTypeFrom = DF_DATETIME) and (iTypeTo = DF_DATE or iTypeTo = DF_DATETIME)) to bSkipTypeChange
-                            End
-                        End
-
-                        If (bFieldExistsTo = False) Begin
-                            Move 0 to iColumn
-                            Create_Field hFile At iColumn
-                            Set Private.piCurrentField to iColumn
-                        End
-
-                        If (bFieldExistsTo = True and Uppercase(sFieldNameFrom) <> Uppercase(sFieldNameTo)) Begin
-                            // A column of another name stands where this one is described: the steps above did not bring the
-                            // columns into the order of the description. Giving it the described name and form would put one
-                            // column's values under another column's name, so the update of this table stops here.
-                            If (bMismatch = False) Begin
-                                Error DFERR_PROGRAM ("Function 'ApiColumnsUpdate'. Table number:" * String(hTable) * "was left as it was: column number" * String(iColumn) * "is" * sFieldNameTo + ", and the description has" * sFieldNameFrom * "there.")
-                            End
-                            Move True to bMismatch
-                        End
-                        Else If (sFieldNameFrom <> sFieldNameTo) Begin
-                            Set_Attribute DF_FIELD_NAME of hFile iColumn to sFieldNameFrom
-                        End
-
-                        // Note: In MS-SQL it is vital that *nothing* gets changed for e.g. a "datetime" column, else error: 22018 is generated by the SQL backend:
-                        //       "Explicit conversion from data type int to datetime2 is not allowed", which will make the update to fail, and all changes for the table is rollbacked. 
-                        If (bIsSQLTableFrom = True and bIsSQLTableTo = True and aAPIColumnCompare[iCount].iOptionsFrom <> C_tAPIColumn_Identity and bSkipTypeChange = False) Begin
-                            Set_Attribute DF_FIELD_NULL_ALLOWED  of hFile iColumn to aAPIColumnCompare[iCount].bAllowNULLFrom
-                            Move aAPIColumnCompare[iCount].sDefaultValueFrom to sDefaultValue
-                            If (iDataFlexType = DF_BCD and Left(String(sDefaultValue), 1) <> "[") Begin
-                                Move ("[" + String(sDefaultValue) + "]") to sDefaultValue
-                            End
-                            Set_Attribute DF_FIELD_DEFAULT_VALUE of hFile iColumn to sDefaultValue
-                        End
-
-                        If (bSkipTypeChange = False) Begin
-                            If (iTypeFrom <> iTypeTo) Begin
-                                If (bIsSQLTableTo = True and bIsSQLTableFrom = False) Begin
-                                    // A DataFlex type for an SQL table: the driver picks the native type. (The DataFlex
-                                    // type number used to be written as the native type.)
-                                    Set_Attribute DF_FIELD_TYPE of hFile iColumn to iTypeFrom
-                                End
-                                Else If (bIsSQLTableTo = True) Begin
-                                    Set_Attribute DF_FIELD_NATIVE_TYPE of hFile iColumn to iTypeFrom
-                                End
-                                Else Begin                                                   
-                                    If (iDataFlexType = DF_DATETIME) Begin // DateTime cannot be used by the embedded database.
-                                        Move DF_DATE to iDataFlexType  // Date
-                                    End
-                                    Set_Attribute DF_FIELD_TYPE of hFile iColumn to iDataFlexType
-                                End
-                            End
-                        End
-
-                        // iTypeFrom is a native SQL type only when both tables are SQL; else it is a DataFlex type.
-                        Get UtilColumnIsDateType iTypeFrom (bIsSQLTableFrom = True and bIsSQLTableTo = True) to bIsDateType
-                        // We can't set the length or precision for Date type columns (they are fixed).
-                        If (bIsDateType = False and iLengthFrom <> iLengthTo) Begin
-                            Set_Attribute DF_FIELD_LENGTH of hFile iColumn to iLengthFrom
-                        End
-                        // We do want to set the precision for e.g. DateTime2 (can be 3 or 7, but DataFlex can just handle "3").
-                        If (iPrecisionFrom <> iPrecisionTo) Begin
-                            Set_Attribute DF_FIELD_PRECISION of hFile iColumn to iPrecisionFrom
-                        End
-
-                        If (bIsSQLTableTo = True and iOptionFrom =  C_tAPIColumn_Identity and iOptionTo <> C_tAPIColumn_Identity) Begin
-                            // Can't set a recnum table to "DF_FIELD_IS_IDENTITY"
-                            If (bRecnumTable = True) Begin
-                                Set_Attribute DF_FILE_RECNUM_TABLE of hTable to False
-                            End
-
-                            // We might need to create an index here.
-                            // To be able to set the DF_FIELD_IS_IDENTITY the index must already exist, but it might not at this stage.
-                            // This should probably fix that problem and if an adjustment is needed, it will get done with the normal
-                            // index update checking logic.
-                            Get_Attribute DF_FIELD_INDEX           of hFile iColumn to iIndex
-                            If (iIndex = 0 and Uppercase(sFieldNameTo) <> "RECNUM") Begin
-                                Create_Index hFile at iIndex
-                                Set_Attribute DF_INDEX_NUMBER_SEGMENTS of hFile iIndex to 1
-                            End
-
-                            Set_Attribute DF_INDEX_SEGMENT_FIELD   of hFile iIndex 1 to iColumn
-                            Set_Attribute DF_FILE_PRIMARY_INDEX    of hFile          to iIndex
-                            // Note: The order here is crucial!
-                            Set_Attribute DF_INDEX_SQL_PRIMARY_KEY of hFile iIndex to True
-                            Set_Attribute DF_FIELD_IS_IDENTITY of hFile iColumn    to True
-                        End
-                    End
-                    Else Begin
-                        Delete_Field hFile iColumn
-                        Move (RemoveFromArray(aColumnsTo, iCount)) to aColumnsTo
-                        Move (SizeOfArray(aColumnsTo)) to iCount2
-                        Decrement iCount2
-                        // We need to adjust FieldNumbers in the array with one, as we just deleted a field,
-                        // starting with the array number we just deleted the field for.
-                        for iColumn2 from iCount to iCount2
-                            Move (aColumnsTo[iColumn2].iFieldNumber - 1) to aColumnsTo[iColumn2].iFieldNumber
-                        Loop
-                        Decrement iCount
-                        Get UtilColumnCombineFromAndToArrays aColumnsFrom aColumnsTo to aAPIColumnCompare
-                        Move (SizeOfArray(aAPIColumnCompare)) to iColumns
-                        If (SizeOfArray(aColumnsFrom) = SizeOfArray(aColumnsTo)) Begin
-                            Move iColumns to iCount 
-                        End
-                    End
-                End 
-                If (Err = True) Begin 
-                    Move False to bOK
-                    Move iColumns to iCount
-                End
-                If (bMismatch = True) Begin
-                    Move iColumns to iCount
-                End
-            Loop
-
-            If (bMismatch = True) Begin
+            Get UtilColumnStepsApply hFile Plan.aSteps to bOK
+            If (bOK = True) Begin
+                Get UtilColumnsApplyForms hFile hTable sDriverIDFrom sDriverIDTo bIsSQLTableFrom bIsSQLTableTo bRecnumTable aAPIColumnCompare bCompareDate_DateTime to bOK
+            End
+            If (bOK = False or Err = True) Begin
                 Structure_Abort hFile
                 Set Action_Text of ghoStatusPanel to ""
                 Function_Return False
             End
-
             Set Action_Text of ghoStatusPanel to "Restructuring table..."
         Structure_End hFile DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
-
         Set Action_Text of ghoStatusPanel to ""
-        Function_Return (Err = False)
+        If (Err = True) Begin
+            Function_Return False
+        End
+
+        // After the restructure: a line in the log for each column that was taken for a renamed one by its
+        // neighbours, and the table's .fd file when a column was added.
+        Move False to bInserted
+        For iCount from 0 to (SizeOfArray(Plan.aSteps) - 1)
+            If (Plan.aSteps[iCount].bByNeighbours = True) Begin
+                Send LogError ("Table:" * String(sLogicalName) + ". Column" * Plan.aSteps[iCount].sOldName * "was taken for column" * Plan.aSteps[iCount].sFieldName * "of the new layout under its old name: it stands between the same two columns and has the same type. It was renamed and keeps its values. If" * Plan.aSteps[iCount].sFieldName * "is a new column, remove" * Plan.aSteps[iCount].sOldName * "with ApiColumnRemove before the table is updated.") False
+            End
+            If (Plan.aSteps[iCount].iKind = C_tAPIColumnStep_Insert) Begin
+                Move True to bInserted
+            End
+        Loop
+        If (bInserted = True) Begin
+            Send UtilTableWriteFdFile hTable
+        End
+        Function_Return True
     End_Function
 
     // * Dummy function for the Studio's Code Explorer *

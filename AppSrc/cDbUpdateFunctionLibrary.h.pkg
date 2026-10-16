@@ -513,6 +513,49 @@ End_Struct
 Define C_tAPIColumn_None for 0
 Define C_tAPIColumn_Identity for 1
 
+// The column plan of ApiColumnsUpdate. The plan is worked out on the description and on a copy of the table's
+// columns before the table is touched, and then all of it is made in one restructure: the database takes all of
+// it or none of it.
+Define C_tAPIColumnStep_Rename for 1
+Define C_tAPIColumnStep_Delete for 2
+Define C_tAPIColumnStep_Insert for 3
+Define C_tAPIColumnStep_Move   for 4
+
+// One change of the plan. iColumn is the column's number at this point of the plan; for an Insert it is where the
+// column goes, 0 for the end. A Move has the number the column goes to as well, and the number the column had
+// before the update (0 for a column that the update adds). Insert and Move carry the form of the column.
+Struct tAPIColumnStep
+    Integer iKind
+    Integer iColumn
+    Integer iNewColumn
+    Integer iOldNumber
+    String  sFieldName
+    String  sOldName
+    Integer iType
+    Integer iNativeType
+    Boolean bNativeType
+    Integer iLength
+    Integer iPrecision
+    Boolean bIsDate
+    Boolean bByNeighbours
+End_Struct
+
+// A column of the table in the plan: its form as the plan leaves it and its number before the update. A column
+// that the update adds has the step that adds it. An overlap field keeps its place and is not compared.
+Struct tAPIColumnSlot
+    tAPIColumn Column
+    Integer iOldNumber
+    Boolean bOverlap
+    Boolean bNew
+    tAPIColumnStep NewStep
+End_Struct
+
+Struct tAPIColumnPlan
+    Boolean bOK
+    tAPIColumnSlot[] aSlots
+    tAPIColumnStep[] aSteps
+End_Struct
+
 // SQL Key-Word Constants:  CI_SQLSelect CI_SQLName CI_SQLFrom  CI_SQLSys
 // Used by the _SqlFindKeyWord function to return a proper keyword depending on the backend SQL,
 // i.e. one of the EN_DbTypeXXX members from the Enum_list above.
