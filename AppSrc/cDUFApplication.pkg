@@ -13,6 +13,7 @@ Class cDUFApplication is a cRDCApplication
         Set psHelpFile to "Developer5.chm"
 
         Property Handle phoDbUpdateHandler 0
+        // The program's current Filelist: its views and menu items share it on purpose.
         Property String psFilelistFrom ""
         Property String private.psFilelistFromOrg ""
         Property String psOrgOpenPath ""

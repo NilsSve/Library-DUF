@@ -1244,9 +1244,16 @@ Object oCompareDatabases_vw is a dbView
 
     End_Object
 
+    // The program's menu item of this view, set by the program: it is checked when the view gets the focus. (The
+    // view sent Execute to oCompareDatabases_MenuItem, which one program has, by its name.)
+    Property Handle phoViewMenuItem 0
+
     Procedure OnSetFocus
-        If (SizeOfArray(phoActiveUpdates(ghoCommandBars)) <> 0) Begin
-            Send Execute of (oCompareDatabases_MenuItem(ghoCommandBars))
+        Handle hoMenuItem
+
+        Get phoViewMenuItem to hoMenuItem
+        If (hoMenuItem <> 0 and SizeOfArray(phoActiveUpdates(ghoCommandBars)) <> 0) Begin
+            Send Execute of hoMenuItem
         End
     End_Procedure
     

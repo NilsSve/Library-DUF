@@ -1,6 +1,7 @@
 Use DFAllEnt.pkg
 Use cCJStandardCommandBarSystem.pkg
 Use cCJCommandBarSystem.pkg
+Use cDUFMenuItems.pkg
 Use vWin32fh.pkg
 
 Object oHtmlHelp is a cHtmlHelp
@@ -217,72 +218,19 @@ Object oMain is a Panel
                 
             End_Object
 
-            Object oAbout_MenuItem is a cCJMenuItem
-                Set psCaption to "About"
-                Set psToolTip to "About Info"
-                Set psDescription to "About the program"
-                Set psImage to "ActionAbout.ico"
-                Set pbControlBeginGroup to True
-                Procedure OnExecute Variant vCommandBarControl
-                    Forward Send OnExecute vCommandBarControl
-                    Send Activate_About of (Client_Id(ghoCommandBars))
-                End_Procedure
+            Object oAbout_MenuItem is a cDUFAboutMenuItem
             End_Object
 
-            Object oKoFi_MenuItem is a cCJMenuItem
-                Set psToolTip to "Coffee time!"
-                Set psDescription to "Buy me a coffee, to support me"
-                Set psImage to "Ko-fi.ico"
-                Set pbControlBeginGroup to True
-                Procedure OnExecute Variant vCommandBarControl
-                    Runprogram Shell Background "https://ko-fi.com/nilss"
-                End_Procedure
+            Object oKoFi_MenuItem is a cDUFKoFiMenuItem
             End_Object
 
-            Object oSuggestion_MenuItem is a cCJMenuItem
-                Set psTooltip to "Suggest"
-                Set psDescription to "Suggest a feature, or report a bug..."
-                Set psImage to "Suggestion.ico"
-                Set pbControlBeginGroup to True
-
-                Procedure OnExecute Variant vCommandBarControl
-                    Runprogram Shell Background "https://github.com/NilsSve/Library-DUF/issues/1"
-                End_Procedure
-
+            Object oSuggestion_MenuItem is a cDUFSuggestionMenuItem
             End_Object
 
-            Object oHelpMenuItem is a cCJHelpMenuItem
-                Set peControlType to xtpControlSplitButtonPopup
-                Set psImage to "ActionHelp.ico"
-
-                Procedure OnExecute Variant vCommandBarControl
-                    Send ShowProgramHelp
-                End_Procedure
-
-                Object oHelpMenuItemLocal is a cCJMenuItem
-                    Set psCaption to "Local HTML Help"
-                    Set psImage to "ActionHelp.ico"
-                    Procedure OnExecute Variant vCommandBarControl
-                        Send ShowProgramHelp
-                    End_Procedure
-                End_Object
-
-                Object oHelpMenuItemInternetBrowser is a cCJMenuItem
-                    Set psCaption to "Online HTML Help"
-                    Set psImage to "ActionHelpInternet.ico"
-                    Procedure OnExecute Variant vCommandBarControl
-                        Runprogram Shell Background "http://www.rdctools.com/HTMLHelpDUF/Developer5.htm"
-                    End_Procedure
-
-                End_Object
-
+            Object oHelpMenuItem is a cDUFHelpMenuItem
             End_Object
 
-            Object oExitMenuItem is a cCJExitMenuItem
-                Set psToolTip to "Exit application"
-                Set psDescription to "Exit the program (Alt+F4)"
-                Set psImage to "ActionExit.ico"
-                Set pbControlBeginGroup to True
+            Object oExitMenuItem is a cDUFExitMenuItem
             End_Object
 
         End_Object

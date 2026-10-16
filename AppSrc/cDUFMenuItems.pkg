@@ -1,0 +1,153 @@
+// cDUFMenuItems.pkg - the menu items DUF's programs share: About, Ko-fi, Suggest, Help with its local and online
+// items, Exit, and the Shift+Ctrl+Tab action that activates the previous view. They were written into each program
+// and had drifted apart (the action activated the next view).
+//
+// The defaults are set in Construct_Object, so an object's own Set wins. A program gives its Help item the address
+// of its online help (psOnlineHelpURL); Help and its local item send ShowProgramHelp, which each program has.
+
+Use cCJStandardCommandBarSystem.pkg
+
+Class cDUFAboutMenuItem is a cCJMenuItem
+
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set psCaption to "About"
+        Set psToolTip to "About Info"
+        Set psDescription to "About the program"
+        Set psImage to "ActionAbout.ico"
+        Set pbControlBeginGroup to True
+    End_Procedure
+
+    Procedure OnExecute Variant vCommandBarControl
+        Forward Send OnExecute vCommandBarControl
+        Send Activate_About of (Client_Id(ghoCommandBars))
+    End_Procedure
+
+End_Class
+
+Class cDUFKoFiMenuItem is a cCJMenuItem
+
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set psToolTip to "Coffee time!"
+        Set psDescription to "Buy me a coffee, to support me"
+        Set psImage to "Ko-fi.ico"
+        Set pbControlBeginGroup to True
+    End_Procedure
+
+    Procedure OnExecute Variant vCommandBarControl
+        Runprogram Shell Background "https://ko-fi.com/nilss"
+    End_Procedure
+
+End_Class
+
+Class cDUFSuggestionMenuItem is a cCJMenuItem
+
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set psToolTip to "Suggest"
+        Set psDescription to "Suggest a feature, or report a bug..."
+        Set psImage to "Suggestion.ico"
+        Set pbControlBeginGroup to True
+    End_Procedure
+
+    Procedure OnExecute Variant vCommandBarControl
+        Runprogram Shell Background "https://github.com/NilsSve/Library-DUF/issues/1"
+    End_Procedure
+
+End_Class
+
+// The local help of the Help item: the program's ShowProgramHelp.
+Class cDUFLocalHelpMenuItem is a cCJMenuItem
+
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set psToolTip to C_$Help
+        Set psCaption to "Local HTML Help"
+        Set psDescription to "Local HTML Help"
+        Set psImage to "ActionHelp.ico"
+    End_Procedure
+
+    Procedure OnExecute Variant vCommandBarControl
+        Send ShowProgramHelp
+    End_Procedure
+
+End_Class
+
+// The online help of the Help item: psOnlineHelpURL of the Help item, its parent.
+Class cDUFOnlineHelpMenuItem is a cCJMenuItem
+
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set psToolTip to C_$Help
+        Set psCaption to "Online HTML Help"
+        Set psDescription to "Online HTML Help"
+        Set psImage to "ActionHelpInternet.ico"
+    End_Procedure
+
+    Procedure OnExecute Variant vCommandBarControl
+        String sURL
+
+        Get psOnlineHelpURL of (Parent(Self)) to sURL
+        Runprogram Shell Background sURL
+    End_Procedure
+
+End_Class
+
+// Help: a split button with the local help (also what a click on the button itself shows) and the online help.
+Class cDUFHelpMenuItem is a cCJHelpMenuItem
+
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Property String psOnlineHelpURL "http://www.rdctools.com/HTMLHelpDUF/Developer5.htm"
+        Set peControlType to xtpControlSplitButtonPopup
+        Set psToolTip to C_$Help
+        Set psDescription to "Local HTML Help"
+        Set psImage to "ActionHelp.ico"
+
+        Object oHelpMenuItemLocal is a cDUFLocalHelpMenuItem
+        End_Object
+
+        Object oHelpMenuItemInternetBrowser is a cDUFOnlineHelpMenuItem
+        End_Object
+    End_Procedure
+
+    Procedure OnExecute Variant vCommandBarControl
+        Send ShowProgramHelp
+    End_Procedure
+
+End_Class
+
+Class cDUFExitMenuItem is a cCJExitMenuItem
+
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set psToolTip to "Exit application"
+        Set psDescription to "Exit the program (Alt+F4)"
+        Set psImage to "ActionExit.ico"
+        Set pbControlBeginGroup to True
+    End_Procedure
+
+End_Class
+
+// Shift+Ctrl+Tab activates the previous view. (The action of two programs activated the next one, and the On_Key
+// line of the panel for the previous view never got the keys.)
+Class cDUFPreviousViewAction is a cCJAction
+
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set piShortCutKey to (xtpKey_Shift + xtpKey_Ctrl) VK_TAB
+    End_Procedure
+
+    Procedure OnExecute Variant vCommandBarControl
+        Handle hoCommandBars hoClientArea
+
+        Forward Send OnExecute vCommandBarControl
+        Get CommandBarSystemObject to hoCommandBars
+        Get ClientAreaObject of hoCommandBars to hoClientArea
+        If (hoClientArea <> 0) Begin
+            Send Switch_Prior_View of hoClientArea
+        End
+    End_Procedure
+
+End_Class

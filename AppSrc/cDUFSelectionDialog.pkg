@@ -1,0 +1,132 @@
+// cDUFSelectionDialog.pkg - the dialog that lists names to pick one from: the databases of a server, its schemas,
+// the servers or data sources of a driver, the table spaces. DatabaseSelection.dg, SchemasSelection.dg,
+// ServerSelection.dg and TableSpaceSelection.dg were this dialog four times; each is an object of the class now.
+//
+// An object sets Label, Size, Icon and psColumnCaption. The grid and the two buttons are laid out from the size it
+// gives the panel (the status bar of cRDCModalPanel comes below them). The program fills psTheData before the list
+// pops up as a prompt list.
+
+Use Windows.pkg
+Use cCJGridPromptList.pkg
+Use cRDCModalPanel.pkg
+Use cDbUpdateFunctionLibrary.pkg
+Use MSSqldrv.pkg
+Use db2_drv.pkg
+Use odbc_drv.pkg
+
+// The list of a selection dialog: its rows are the psTheData of the dialog, read each time it is activated.
+Class cDUFSelectionList is a cCJGridPromptList
+
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set peAnchors to anAll
+        Set pbAllowColumnRemove to False
+        Set pbUseAlternateRowBackgroundColor to True
+        Set pbGrayIfDisable to False
+        Set pbHeaderReorders to False
+        Set pbHeaderSelectsColumn to False
+        Set pbHeaderTogglesDirection to False
+        Set pbShadeSortColumn to False
+        Set piFocusCellBackColor to clDkGray
+    End_Procedure
+
+    Procedure Activating
+        tDataSourceRow[] MyData
+        Handle hoDataSource
+        String[] sTheData
+        Integer iCount
+
+        Send Cursor_Wait of Cursor_Control
+        Forward Send Activating
+
+        Get psTheData to sTheData
+        For iCount from 0 to (SizeOfArray(sTheData) - 1)
+            Move sTheData[iCount] to MyData[iCount].sValue[0]
+        Loop
+
+        Get phoDataSource to hoDataSource
+        Send InitializeData of hoDataSource MyData
+        Send Cursor_Ready of Cursor_Control
+    End_Procedure
+
+End_Class
+
+// OK of a selection dialog: the row is taken.
+Class cDUFSelectionOKButton is a Button
+
+    Procedure OnClick
+        Send Ok of (oSelList(Parent(Self)))
+    End_Procedure
+
+End_Class
+
+// Cancel of a selection dialog.
+Class cDUFSelectionCancelButton is a Button
+
+    Procedure OnClick
+        Send Close_Panel
+    End_Procedure
+
+End_Class
+
+Class cDUFSelectionDialog is a cRDCModalPanel
+
+    Procedure Construct_Object
+        Handle ho
+
+        Forward Send Construct_Object
+        Set Location to 2 2
+
+        Property String[] psTheData
+        Property String psColumnCaption "Name"
+
+        // A function library for a program that has none. (Two of the four dialogs made one.)
+        If (ghoDbUpdateFunctionLibrary = 0) Begin
+            Get Create (RefClass(cDbUpdateFunctionLibrary)) to ho
+        End
+
+        Object oSelList is a cDUFSelectionList
+            Set Size to 89 167
+            Set Location to 6 6
+
+            Object oName is a cCJGridColumn
+                Set piWidth to 334
+                Set psCaption to "Name"
+            End_Object
+        End_Object
+
+        Object oOK_Btn is a cDUFSelectionOKButton
+            Set Size to 14 50
+            Set Label to "&OK"
+            Set Location to 98 68
+            Set peAnchors to anBottomRight
+        End_Object
+
+        Object oCancel_Btn is a cDUFSelectionCancelButton
+            Set Size to 14 50
+            Set Label to "&Cancel"
+            Set Location to 98 123
+            Set peAnchors to anBottomRight
+        End_Object
+
+        On_Key Key_Alt+Key_O Send KeyAction of (oOK_Btn(Self))
+        On_Key Key_Alt+Key_C Send KeyAction of (oCancel_Btn(Self))
+    End_Procedure
+
+    // The grid and the buttons from the size the object gave the panel, before cRDCModalPanel adds its status bar
+    // below them; the column's caption from psColumnCaption.
+    Procedure End_Construct_Object
+        Integer iSize iHeight iWidth
+
+        Get Size to iSize
+        Move (Hi(iSize))  to iHeight
+        Move (Low(iSize)) to iWidth
+        Set Size     of (oSelList(Self))    to (iHeight - 30) (iWidth - 16)
+        Set Location of (oOK_Btn(Self))     to (iHeight - 21) (iWidth - 115)
+        Set Location of (oCancel_Btn(Self)) to (iHeight - 21) (iWidth - 60)
+        Set psCaption of (oName(oSelList(Self))) to (psColumnCaption(Self))
+
+        Forward Send End_Construct_Object
+    End_Procedure
+
+End_Class

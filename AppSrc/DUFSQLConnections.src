@@ -2,6 +2,7 @@ CompilerLevelWarning All On
 Use DFAllEnt.pkg
 Use cCJStandardCommandBarSystem.pkg
 Use cCJCommandBarSystem.pkg                      
+Use cDUFMenuItems.pkg
 //Use cCJSkinFramework.pkg   
 Use cSQLConnectionIniFile.pkg
 Use vWin32fh.pkg
@@ -277,8 +278,8 @@ Object oMain is a Panel
                 Function IsEnabled Returns Boolean
                     Handle ho              
                     Boolean bRecord
+                    // The status row is the view's own work (its oIdle). (ChangeHeaderText was sent here.)
                     Move (oSQLConnections_grd(phoMainView(ghoApplication))) to ho
-                    Send ChangeHeaderText of ho
                     Get HasRecord of ho to bRecord
                     Function_Return (bRecord = True)
                 End_Function
@@ -343,8 +344,8 @@ Object oMain is a Panel
                 Function IsEnabled Returns Boolean
                     Handle ho              
                     Boolean bRecord
+                    // The status row is the view's own work (its oIdle). (ChangeHeaderText was sent here.)
                     Move (oSQLConnections_grd(phoMainView(ghoApplication))) to ho
-                    Send ChangeHeaderText of ho
                     Get HasRecord of ho to bRecord
                     Function_Return (bRecord = True)
                 End_Function
@@ -365,8 +366,8 @@ Object oMain is a Panel
                 Function IsEnabled Returns Boolean
                     Handle ho              
                     Boolean bRecord
+                    // The status row is the view's own work (its oIdle). (ChangeHeaderText was sent here.)
                     Move (oSQLConnections_grd(phoMainView(ghoApplication))) to ho
-                    Send ChangeHeaderText of ho
                     Get HasRecord of ho to bRecord
                     Function_Return (bRecord = True)
                 End_Function
@@ -390,76 +391,31 @@ Object oMain is a Panel
             
             End_Object
 
-            Object oAbout_MenuItem is a cCJMenuItem
+            Object oAbout_MenuItem is a cDUFAboutMenuItem
                 Set psTooltip to C_$About
                 Set psDescription to "Info about the program..."
-                Set psImage to "ActionAbout.ico"
-        
+                Set pbControlBeginGroup to False
+                
                 Procedure OnExecute Variant vCommandBarControl
                     Send ChangeStatusRowText of (phoMainView(ghoApplication)) ""
-                    Send Activate_About of (Client_Id(phoMainPanel(ghoApplication)))
+                    Forward Send OnExecute vCommandBarControl
                 End_Procedure
-        
-            End_Object     
+            End_Object
             
-            Object oKoFi_MenuItem is a cCJMenuItem
-                Set psToolTip to "Coffee time!"
-                Set psDescription to "Buy me a coffee, to support me"
-                Set psImage to "Ko-fi.ico"
-                Set pbControlBeginGroup to True
-                Procedure OnExecute Variant vCommandBarControl
-                    Runprogram Shell Background "https://ko-fi.com/nilss"
-                End_Procedure
+            Object oKoFi_MenuItem is a cDUFKoFiMenuItem
             End_Object
 
-            Object oSuggestion_MenuItem is a cCJMenuItem
-                Set psTooltip to "Suggest"
-                Set psDescription to "Suggest a feature, or report a bug..."
-                Set psImage to "Suggestion.ico"
-                Set pbControlBeginGroup to True
-
-                Procedure OnExecute Variant vCommandBarControl
-                    Runprogram Shell Background "https://github.com/NilsSve/Library-DUF/issues/1"
-                End_Procedure
-
+            Object oSuggestion_MenuItem is a cDUFSuggestionMenuItem
             End_Object
 
-            Object oHelpMenuItem is a cCJHelpMenuItem
-                Set peControlType to xtpControlSplitButtonPopup
-                Set psToolTip to C_$Help
-                Set psDescription to "Local HTML Help"
-                Set psImage to "ActionHelp.ico"
-
-                Procedure OnExecute Variant vCommandBarControl
-                    Send ShowProgramHelp
-                End_Procedure
-
-                Object oHelpMenuItemLocal is a cCJMenuItem
-                    Set psToolTip to C_$Help
-                    Set psCaption to "Local HTML Help"
-                    Set psDescription to "Local HTML Help"
-                    Set psImage to "ActionHelp.ico"
-                    Procedure OnExecute Variant vCommandBarControl
-                        Send ShowProgramHelp
-                    End_Procedure
-                End_Object
-
-                Object oHelpMenuItemInternetBrowser is a cCJMenuItem
-                    Set psToolTip to C_$Help
-                    Set psCaption to "Online HTML Help"
-                    Set psDescription to "Online HTML Help"
-                    Set psImage to "ActionHelpInternet.ico"
-                    Procedure OnExecute Variant vCommandBarControl
-                        Runprogram Shell Background "https://www.rdctools.com/HTMLHelpDUF/DUFSQLConnectionsTool.html"
-                    End_Procedure
-                End_Object
-
+            Object oHelpMenuItem is a cDUFHelpMenuItem
+                Set psOnlineHelpURL to "https://www.rdctools.com/HTMLHelpDUF/DUFSQLConnectionsTool.html"
             End_Object
 
-            Object oExit_MenuItem is a cCJExitMenuItem
+            Object oExit_MenuItem is a cDUFExitMenuItem
                 Set psToolTip to "Exit"
-                Set psDescription to "Exit application (Alt+F4)"   
-                Set psImage to "ActionExit.ico"
+                Set psDescription to "Exit application (Alt+F4)"
+                Set pbControlBeginGroup to False
             End_Object
 
         End_Object

@@ -9,46 +9,9 @@
 
 Use LanguageText.pkg
 
-#IFSAME Language$Current Language$English
-    // *** cSQLConnectionsIniFile.pkg Class Language Constants ***
-    Define CS_DUF_DuplicateConnectionIDPre  for "Cannot register connection ID"
-    Define CS_DUF_DuplicateConnectionIDPost for "This ID already exists."
-    // *** cSQLConnectionsHandler.pkg Class Language Constants ***
-    Define CS_DUF_CannotLogincConnection    for "Cannot login to the database server as the cConnection hasn't been setup properly. Can't continue. Program will now exit."
-    Define CS_DUF_CannotLoginToServer       for "Could not login to the database server. Can't continue. Program will now exit."
-    Define CS_DUF_ErrorText                 for "\n\nError Text:"
-    // *** cDbUpdateFunctionLibrary.pkg Class Language Constants ***
-    Define CS_DUF_ConnectError              for "SQL error. Could not connect to the SQL database manager"
-    Define CS_DUF_AttachError               for "Could not attach to the database:"
-    Define CS_DUF_DeletingIndex             for "Deleting index"
-    Define CS_DUF_CopyingData               for "Copying data"
-    Define CS_DUF_CreatingIndex             for "Creating index"
-    Define CS_DUF_LoginToDbServerFailed     for  "Login failed to the database server. The following connect string was used:\n"
-    Define CS_DUF_DoYouWantToExit           for "Do you want to stop the database update and exit?"  
-    Define CS_DUF_NoIntFilesFound           for "No .int files found! Nothing was changed."
-    // *** cDbUpdateVersion.pkg Class Language Constants ***
-    Define CS_DUF_UpdateVersion             for "Updating database"
-    Define CS_DUF_UpdateFromVersion         for "from version"
-    Define CS_DUF_UpdateToVersion           for "to version:"
-    Define CS_DUF_DbUpdateTableMissing      for "Cannot open the 'DbVersion' table that is used when updating the database! Cannot continue!"
-    // *** cDbUpdateHandler.h.pkg Language Constants ***
-    Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
-    Define CS_DUF_DatabaseNeedsUpdate       for ("The database needs to be updated." + "\n\nATTENTION! The database may not be in use while this work is performed. Make sure that nobody else is using the application before clicking 'Yes' below.\n\n" + "Start update now?")
-    Define CS_DUF_HeaderUpdateText          for "Important!"
-    Define CS_DUF_DatabaseInUseText         for "There are others using the application/database or at least one table could NOT be opened exclusively. Please close all other applications using the database and try again. The Application will now close."
-    Define CS_DUF_WorkingHeaderText         for "Working!"
-    Define CS_DUF_WorkingUpdateText         for "The database is being updated. Please wait..."
-    Define CS_DUF_DatabaseUpdatedText       for "Ready! The database was updated."
-    Define CS_DUF_DatabaseCheckedText       for "Ready! The database was checked but no updates was needed."
-    Define CS_DUF_DbUpdatedErrorText        for "One or more errors occured while the database was updated. Please check the logfile in the data-folder.\n\nThe program will now close."
-    Define CS_DUF_UpdateInProgressTxt       for ("System locked!\n\nThe database is being updated. Please try again later...\n\n" * "The program will now close.")
-    // *** cDbUpdateHandler.pkg Class Language Constants ***
-    Define CS_DUF_DatabaseConnStringSpec    for "The database specified in the connection string: '"
-    Define CS_DUF_DatabaseDoesntExist       for "' doesn't exist!\n\nYou need to create it with a database management software or by using the 'SqlDatabaseCreate' function, which can be used in the 'OnPreUpdate' event of the cDbUpdateHandler object.\n\nThe program will now exit."
-    // *** cDbUpdateLogFile.pkg Class Language Constants ***   
-    Define CS_DUF_LogFileNotFound           for "Could not locate the log file:\n\n"
-#ENDIF
-
+// One block for each language that has texts of its own. A language without one - English, Dansk, Francais,
+// Italiano, Russian, Polish, Hungarian or any other - gets the English texts of the last #ELSE. (Those six had a
+// copy of the English block each, and the last three were written "#IFSame Language$Current = Language$X".)
 #IFSAME Language$Current Language$Nederlands
     // *** cSQLConnectionsIniFile Class Language Constants ***
     Define CS_DUF_DuplicateConnectionIDPre  for "Kan de connection ID niet registreren"
@@ -87,8 +50,7 @@ Use LanguageText.pkg
     Define CS_DUF_DatabaseDoesntExist       for "' doesn't exist!\n\nYou need to create it with a database management software or by using the 'SqlDatabaseCreate' function, which can be used in the 'OnPreUpdate' event of the cDbUpdateHandler object.\n\nThe program will now exit."
     // *** cDbUpdateLogFile.pkg Class Language Constants ***   
     Define CS_DUF_LogFileNotFound           for "Could not locate the log file:\n\n"
-#ENDIF
-
+#ELSE
 #IFSAME Language$Current Language$Svenska
     // *** cSQLConnectionsIniFile Class Language Constants ***
     Define CS_DUF_DuplicateConnectionIDPre  for "Kan inte registrera anslutnings-ID"
@@ -127,8 +89,7 @@ Use LanguageText.pkg
     Define CS_DUF_DatabaseDoesntExist       for "' doesn't exist!\n\nYou need to create it with a database management software or by using the 'SqlDatabaseCreate' function, which can be used in the 'OnPreUpdate' event of the cDbUpdateHandler object.\n\nThe program will now exit."
     // *** cDbUpdateLogFile.pkg Class Language Constants ***   
     Define CS_DUF_LogFileNotFound           for "Could not locate the log file:\n\n"
-#ENDIF
-
+#ELSE
 #IFSAME Language$Current Language$Deutsch
     // *** cSQLConnectionsIniFile Class Language Constants ***
     Define CS_DUF_DuplicateConnectionIDPre  for "Kann Connection ID nicht registrieren"
@@ -167,48 +128,7 @@ Use LanguageText.pkg
     Define CS_DUF_DatabaseDoesntExist       for "' doesn't exist!\n\nYou need to create it with a database management software or by using the 'SqlDatabaseCreate' function, which can be used in the 'OnPreUpdate' event of the cDbUpdateHandler object.\n\nThe program will now exit."
     // *** cDbUpdateLogFile.pkg Class Language Constants ***   
     Define CS_DUF_LogFileNotFound           for "Could not locate the log file:\n\n"
-#ENDIF
-
-#IFSAME Language$Current Language$Dansk
-    // *** cSQLConnectionsIniFile Class Language Constants ***
-    Define CS_DUF_DuplicateConnectionIDPre  for "Cannot register connection ID"
-    Define CS_DUF_DuplicateConnectionIDPost for "This ID already exists."
-    // *** cSQLConnectionsHandler Class Language Constants ***
-    Define CS_DUF_CannotLogincConnection    for "Cannot login to the database server as the cConnection hasn't been setup properly. Can't continue. Program will now exit."
-    Define CS_DUF_CannotLoginToServer       for "Could not login to the database server. Can't continue. Program will now exit."
-    Define CS_DUF_ErrorText                 for "\n\nError Text:"
-    // *** cDbUpdateFunctionLibrary Class Language Constants ***
-    Define CS_DUF_ConnectError              for "SQL error. Could not connect to the SQL database manager"
-    Define CS_DUF_AttachError               for "Could not attach to the database:"
-    Define CS_DUF_DeletingIndex             for "Deleting index"
-    Define CS_DUF_CopyingData               for "Copying data"
-    Define CS_DUF_CreatingIndex             for "Creating index"
-    Define CS_DUF_LoginToDbServerFailed     for  "Login failed to the database server. The following connect string was used:\n"
-    Define CS_DUF_DoYouWantToExit           for "Do you want to stop the database update and exit?"
-    Define CS_DUF_NoIntFilesFound           for "No .int files found! Nothing was changed."
-    // *** cDbUpdateVersion Class Language Constants ***
-    Define CS_DUF_UpdateVersion             for "Updating database"
-    Define CS_DUF_UpdateFromVersion         for "from version"
-    Define CS_DUF_UpdateToVersion           for "to version:"
-    Define CS_DUF_DbUpdateTableMissing      for "Cannot open the 'DbVersion' table that is used when updating the database! Cannot continue!"
-    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
-    Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
-    Define CS_DUF_DatabaseNeedsUpdate       for ("The database needs to be updated." + "\n\nATTENTION! The database may not be in use while this work is performed. Make sure that nobody else is using the application before clicking 'Yes' below.\n\n" + "Start update now?")
-    Define CS_DUF_HeaderUpdateText          for "Important!"
-    Define CS_DUF_DatabaseInUseText         for "There are others using the application/database or at least one table could NOT be opened exclusively. Please close all other applications using the database and try again. The Application will now close."
-    Define CS_DUF_WorkingHeaderText         for "Working!"
-    Define CS_DUF_WorkingUpdateText         for "The database is being updated. Please wait..."
-    Define CS_DUF_DatabaseUpdatedText       for "Ready! The database was updated."
-    Define CS_DUF_DatabaseCheckedText       for "Ready! The database was checked but no updates was needed."
-    Define CS_DUF_DbUpdatedErrorText        for "One or more errors occured while the database was updated. Please check the logfile in the data-folder.\n\nThe program will now close."
-    Define CS_DUF_UpdateInProgressTxt       for ("System locked!\n\nThe database is being updated. Please try again later...\n\n" * "The program will now close.")
-    // *** cDbUpdateHandler.pkg Class Language Constants ***
-    Define CS_DUF_DatabaseConnStringSpec    for "The database specified in the connection string: '"
-    Define CS_DUF_DatabaseDoesntExist       for "' doesn't exist!\n\nYou need to create it with a database management software or by using the 'SqlDatabaseCreate' function, which can be used in the 'OnPreUpdate' event of the cDbUpdateHandler object.\n\nThe program will now exit."
-    // *** cDbUpdateLogFile.pkg Class Language Constants ***   
-    Define CS_DUF_LogFileNotFound           for "Could not locate the log file:\n\n"
-#ENDIF
-
+#ELSE
 #IFSAME Language$Current Language$Portugues
     // *** cSQLConnectionsIniFile Class Language Constants ***
     Define CS_DUF_DuplicateConnectionIDPre  for "N∆o pìde registar o ID de conex∆o"
@@ -247,88 +167,7 @@ Use LanguageText.pkg
     Define CS_DUF_DatabaseDoesntExist       for "' doesn't exist!\n\nYou need to create it with a database management software or by using the 'SqlDatabaseCreate' function, which can be used in the 'OnPreUpdate' event of the cDbUpdateHandler object.\n\nThe program will now exit."
     // *** cDbUpdateLogFile.pkg Class Language Constants ***   
     Define CS_DUF_LogFileNotFound           for "Could not locate the log file:\n\n"
-#ENDIF
-
-#IFSAME Language$Current Language$Francais
-    // *** cSQLConnectionsIniFile Class Language Constants ***
-    Define CS_DUF_DuplicateConnectionIDPre  for "Cannot register connection ID"
-    Define CS_DUF_DuplicateConnectionIDPost for "This ID already exists."
-    // *** cSQLConnectionsHandler Class Language Constants ***
-    Define CS_DUF_CannotLogincConnection    for "Cannot login to the database server as the cConnection hasn't been setup properly. Can't continue. Program will now exit."
-    Define CS_DUF_CannotLoginToServer       for "Could not login to the database server. Can't continue. Program will now exit."
-    Define CS_DUF_ErrorText                 for "\n\nError Text:"
-    // *** cDbUpdateFunctionLibrary Class Language Constants ***
-    Define CS_DUF_ConnectError              for "SQL error. Could not connect to the SQL database manager"
-    Define CS_DUF_AttachError               for "Could not attach to the database:"
-    Define CS_DUF_DeletingIndex             for "Deleting index"
-    Define CS_DUF_CopyingData               for "Copying data"
-    Define CS_DUF_CreatingIndex             for "Creating index"
-    Define CS_DUF_LoginToDbServerFailed     for  "Login failed to the database server. The following connect string was used:\n"
-    Define CS_DUF_DoYouWantToExit           for "Do you want to stop the database update and exit?"
-    Define CS_DUF_NoIntFilesFound           for "No .int files found! Nothing was changed."
-    // *** cDbUpdateVersion Class Language Constants ***
-    Define CS_DUF_UpdateVersion             for "Updating database"
-    Define CS_DUF_UpdateFromVersion         for "from version"
-    Define CS_DUF_UpdateToVersion           for "to version:"
-    Define CS_DUF_DbUpdateTableMissing      for "Cannot open the 'DbVersion' table that is used when updating the database! Cannot continue!"
-    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
-    Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
-    Define CS_DUF_DatabaseNeedsUpdate       for ("The database needs to be updated." + "\n\nATTENTION! The database may not be in use while this work is performed. Make sure that nobody else is using the application before clicking 'Yes' below.\n\n" + "Start update now?")
-    Define CS_DUF_HeaderUpdateText          for "Important!"
-    Define CS_DUF_DatabaseInUseText         for "There are others using the application/database or at least one table could NOT be opened exclusively. Please close all other applications using the database and try again. The Application will now close."
-    Define CS_DUF_WorkingHeaderText         for "Working!"
-    Define CS_DUF_WorkingUpdateText         for "The database is being updated. Please wait..."
-    Define CS_DUF_DatabaseUpdatedText       for "Ready! The database was updated."
-    Define CS_DUF_DatabaseCheckedText       for "Ready! The database was checked but no updates was needed."
-    Define CS_DUF_DbUpdatedErrorText        for "One or more errors occured while the database was updated. Please check the logfile in the data-folder.\n\nThe program will now close."
-    Define CS_DUF_UpdateInProgressTxt       for ("System locked!\n\nThe database is being updated. Please try again later...\n\n" * "The program will now close.")
-    // *** cDbUpdateHandler.pkg Class Language Constants ***
-    Define CS_DUF_DatabaseConnStringSpec    for "The database specified in the connection string: '"
-    Define CS_DUF_DatabaseDoesntExist       for "' doesn't exist!\n\nYou need to create it with a database management software or by using the 'SqlDatabaseCreate' function, which can be used in the 'OnPreUpdate' event of the cDbUpdateHandler object.\n\nThe program will now exit."
-    // *** cDbUpdateLogFile.pkg Class Language Constants ***   
-    Define CS_DUF_LogFileNotFound           for "Could not locate the log file:\n\n"
-#ENDIF
-
-#IFSAME Language$Current Language$Italiano
-    // *** cSQLConnectionsIniFile Class Language Constants ***
-    Define CS_DUF_DuplicateConnectionIDPre  for "Cannot register connection ID"
-    Define CS_DUF_DuplicateConnectionIDPost for "This ID already exists."
-    // *** cSQLConnectionsHandler Class Language Constants ***
-    Define CS_DUF_CannotLogincConnection    for "Cannot login to the database server as the cConnection hasn't been setup properly. Can't continue. Program will now exit."
-    Define CS_DUF_CannotLoginToServer       for "Could not login to the database server. Can't continue. Program will now exit."
-    Define CS_DUF_ErrorText                 for "\n\nError Text:"
-    // *** cDbUpdateFunctionLibrary Class Language Constants ***
-    Define CS_DUF_ConnectError              for "SQL error. Could not connect to the SQL database manager"
-    Define CS_DUF_AttachError               for "Could not attach to the database:"
-    Define CS_DUF_DeletingIndex             for "Deleting index"
-    Define CS_DUF_CopyingData               for "Copying data"
-    Define CS_DUF_CreatingIndex             for "Creating index"
-    Define CS_DUF_LoginToDbServerFailed     for  "Login failed to the database server. The following connect string was used:\n"
-    Define CS_DUF_DoYouWantToExit           for "Do you want to stop the database update and exit?"
-    Define CS_DUF_NoIntFilesFound           for "No .int files found! Nothing was changed."
-    // *** cDbUpdateVersion Class Language Constants ***
-    Define CS_DUF_UpdateVersion             for "Updating database"
-    Define CS_DUF_UpdateFromVersion         for "from version"
-    Define CS_DUF_UpdateToVersion           for "to version:"
-    Define CS_DUF_DbUpdateTableMissing      for "Cannot open the 'DbVersion' table that is used when updating the database! Cannot continue!"
-    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
-    Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
-    Define CS_DUF_DatabaseNeedsUpdate       for ("The database needs to be updated." + "\n\nATTENTION! The database may not be in use while this work is performed. Make sure that nobody else is using the application before clicking 'Yes' below.\n\n" + "Start update now?")
-    Define CS_DUF_HeaderUpdateText          for "Important!"
-    Define CS_DUF_DatabaseInUseText         for "There are others using the application/database or at least one table could NOT be opened exclusively. Please close all other applications using the database and try again. The Application will now close."
-    Define CS_DUF_WorkingHeaderText         for "Working!"
-    Define CS_DUF_WorkingUpdateText         for "The database is being updated. Please wait..."
-    Define CS_DUF_DatabaseUpdatedText       for "Ready! The database was updated."
-    Define CS_DUF_DatabaseCheckedText       for "Ready! The database was checked but no updates was needed."
-    Define CS_DUF_DbUpdatedErrorText        for "One or more errors occured while the database was updated. Please check the logfile in the data-folder.\n\nThe program will now close."
-    Define CS_DUF_UpdateInProgressTxt       for ("System locked!\n\nThe database is being updated. Please try again later...\n\n" * "The program will now close.")
-    // *** cDbUpdateHandler.pkg Class Language Constants ***
-    Define CS_DUF_DatabaseConnStringSpec    for "The database specified in the connection string: '"
-    Define CS_DUF_DatabaseDoesntExist       for "' doesn't exist!\n\nYou need to create it with a database management software or by using the 'SqlDatabaseCreate' function, which can be used in the 'OnPreUpdate' event of the cDbUpdateHandler object.\n\nThe program will now exit."
-    // *** cDbUpdateLogFile.pkg Class Language Constants ***   
-    Define CS_DUF_LogFileNotFound           for "Could not locate the log file:\n\n"
-#ENDIF
-
+#ELSE
 #IFSAME Language$Current Language$Espanol
     // *** cSQLConnectionsIniFile Class Language Constants ***
     Define CS_DUF_DuplicateConnectionIDPre  for "No se puede registrar conexi¢n ID"
@@ -367,8 +206,7 @@ Use LanguageText.pkg
     Define CS_DUF_DatabaseDoesntExist       for "' doesn't exist!\n\nYou need to create it with a database management software or by using the 'SqlDatabaseCreate' function, which can be used in the 'OnPreUpdate' event of the cDbUpdateHandler object.\n\nThe program will now exit."
     // *** cDbUpdateLogFile.pkg Class Language Constants ***   
     Define CS_DUF_LogFileNotFound           for "Could not locate the log file:\n\n"
-#ENDIF
-
+#ELSE
 #IFSAME Language$Current Language$Norsk
     // *** cSQLConnectionsIniFile Class Language Constants ***
     Define CS_DUF_DuplicateConnectionIDPre  for "Kan ikke registrere tilkoblings-ID"
@@ -407,71 +245,29 @@ Use LanguageText.pkg
     Define CS_DUF_DatabaseDoesntExist       for "' doesn't exist!\n\nYou need to create it with a database management software or by using the 'SqlDatabaseCreate' function, which can be used in the 'OnPreUpdate' event of the cDbUpdateHandler object.\n\nThe program will now exit."
     // *** cDbUpdateLogFile.pkg Class Language Constants ***   
     Define CS_DUF_LogFileNotFound           for "Could not locate the log file:\n\n"
-#ENDIF
-
-#IFSame Language$Current = Language$Russian
-    // *** cSQLConnectionsIniFile Class Language Constants ***
+#ELSE
+    // *** cSQLConnectionsIniFile.pkg Class Language Constants ***
     Define CS_DUF_DuplicateConnectionIDPre  for "Cannot register connection ID"
     Define CS_DUF_DuplicateConnectionIDPost for "This ID already exists."
-    // *** cSQLConnectionsHandler Class Language Constants ***
+    // *** cSQLConnectionsHandler.pkg Class Language Constants ***
     Define CS_DUF_CannotLogincConnection    for "Cannot login to the database server as the cConnection hasn't been setup properly. Can't continue. Program will now exit."
     Define CS_DUF_CannotLoginToServer       for "Could not login to the database server. Can't continue. Program will now exit."
     Define CS_DUF_ErrorText                 for "\n\nError Text:"
-    // *** cDbUpdateFunctionLibrary Class Language Constants ***
-    Define CS_DUF_ConnectError              for "SQL error. Could not connect to the SQL database manager"
-    Define CS_DUF_AttachError               for "Could not attach to the database:"
-    Define CS_DUF_DeletingIndex             for "Deleting index"
-    Define CS_DUF_CopyingData               for "Copying data"
-    Define CS_DUF_CreatingIndex             for "Creating index"
-    Define CS_DUF_LoginToDbServerFailed     for "Login failed to the database server. The following connect string was used:\n"
-    Define CS_DUF_DoYouWantToExit           for "Do you want to stop the database update and exit?"
-    Define CS_DUF_NoIntFilesFound           for "No .int files found! Nothing was changed."
-    // *** cDbUpdateVersion Class Language Constants ***
-    Define CS_DUF_UpdateVersion             for "Updating database"
-    Define CS_DUF_UpdateFromVersion         for "from version"
-    Define CS_DUF_UpdateToVersion           for "to version:"
-    Define CS_DUF_DbUpdateTableMissing      for "Cannot open the 'DbVersion' table that is used when updating the database! Cannot continue!"
-    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
-    Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
-    Define CS_DUF_DatabaseNeedsUpdate       for ("The database needs to be updated." + "\n\nATTENTION! The database may not be in use while this work is performed. Make sure that nobody else is using the application before clicking 'Yes' below.\n\n" + "Start update now?")
-    Define CS_DUF_HeaderUpdateText          for "Important!"
-    Define CS_DUF_DatabaseInUseText         for "There are others using the application/database or at least one table could NOT be opened exclusively. Please close all other applications using the database and try again. The Application will now close."
-    Define CS_DUF_WorkingHeaderText         for "Working!"
-    Define CS_DUF_WorkingUpdateText         for "The database is being updated. Please wait..."
-    Define CS_DUF_DatabaseUpdatedText       for "Ready! The database was updated."
-    Define CS_DUF_DatabaseCheckedText       for "Ready! The database was checked but no updates was needed."
-    Define CS_DUF_DbUpdatedErrorText        for "One or more errors occured while the database was updated. Please check the logfile in the data-folder.\n\nThe program will now close."
-    Define CS_DUF_UpdateInProgressTxt       for ("System locked!\n\nThe database is being updated. Please try again later...\n\n" * "The program will now close.")
-    // *** cDbUpdateHandler.pkg Class Language Constants ***
-    Define CS_DUF_DatabaseConnStringSpec    for "The database specified in the connection string: '"
-    Define CS_DUF_DatabaseDoesntExist       for "' doesn't exist!\n\nYou need to create it with a database management software or by using the 'SqlDatabaseCreate' function, which can be used in the 'OnPreUpdate' event of the cDbUpdateHandler object.\n\nThe program will now exit."
-    // *** cDbUpdateLogFile.pkg Class Language Constants ***   
-    Define CS_DUF_LogFileNotFound           for "Could not locate the log file:\n\n"
-#ENDIF
-
-#IFSame Language$Current = Language$Polish
-    // *** cSQLConnectionsIniFile Class Language Constants ***
-    Define CS_DUF_DuplicateConnectionIDPre  for "Cannot register connection ID"
-    Define CS_DUF_DuplicateConnectionIDPost for "This ID already exists."
-    // *** cSQLConnectionsHandler Class Language Constants ***
-    Define CS_DUF_CannotLogincConnection    for "Cannot login to the database server as the cConnection hasn't been setup properly. Can't continue. Program will now exit."
-    Define CS_DUF_CannotLoginToServer       for "Could not login to the database server. Can't continue. Program will now exit."
-    Define CS_DUF_ErrorText                 for "\n\nError Text:"
-    // *** cDbUpdateFunctionLibrary Class Language Constants ***
+    // *** cDbUpdateFunctionLibrary.pkg Class Language Constants ***
     Define CS_DUF_ConnectError              for "SQL error. Could not connect to the SQL database manager"
     Define CS_DUF_AttachError               for "Could not attach to the database:"
     Define CS_DUF_DeletingIndex             for "Deleting index"
     Define CS_DUF_CopyingData               for "Copying data"
     Define CS_DUF_CreatingIndex             for "Creating index"
     Define CS_DUF_LoginToDbServerFailed     for  "Login failed to the database server. The following connect string was used:\n"
-    Define CS_DUF_DoYouWantToExit           for "Do you want to stop the database update and exit?"
+    Define CS_DUF_DoYouWantToExit           for "Do you want to stop the database update and exit?"  
     Define CS_DUF_NoIntFilesFound           for "No .int files found! Nothing was changed."
-    // *** cDbUpdateVersion Class Language Constants ***
+    // *** cDbUpdateVersion.pkg Class Language Constants ***
     Define CS_DUF_UpdateVersion             for "Updating database"
     Define CS_DUF_UpdateFromVersion         for "from version"
     Define CS_DUF_UpdateToVersion           for "to version:"
     Define CS_DUF_DbUpdateTableMissing      for "Cannot open the 'DbVersion' table that is used when updating the database! Cannot continue!"
-    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
+    // *** cDbUpdateHandler.h.pkg Language Constants ***
     Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
     Define CS_DUF_DatabaseNeedsUpdate       for ("The database needs to be updated." + "\n\nATTENTION! The database may not be in use while this work is performed. Make sure that nobody else is using the application before clicking 'Yes' below.\n\n" + "Start update now?")
     Define CS_DUF_HeaderUpdateText          for "Important!"
@@ -488,43 +284,8 @@ Use LanguageText.pkg
     // *** cDbUpdateLogFile.pkg Class Language Constants ***   
     Define CS_DUF_LogFileNotFound           for "Could not locate the log file:\n\n"
 #ENDIF
-
-#IFSame Language$Current = Language$Hungarian
-    // *** cSQLConnectionsIniFile Class Language Constants ***
-    Define CS_DUF_DuplicateConnectionIDPre  for "Cannot register connection ID"
-    Define CS_DUF_DuplicateConnectionIDPost for "This ID already exists."
-    // *** cSQLConnectionsHandler Class Language Constants ***
-    Define CS_DUF_CannotLogincConnection    for "Cannot login to the database server as the cConnection hasn't been setup properly. Can't continue. Program will now exit."
-    Define CS_DUF_CannotLoginToServer       for "Could not login to the database server. Can't continue. Program will now exit."
-    Define CS_DUF_ErrorText                 for "\n\nError Text:"
-    // *** cDbUpdateFunctionLibrary Class Language Constants ***
-    Define CS_DUF_ConnectError              for "SQL error. Could not connect to the SQL database manager"
-    Define CS_DUF_AttachError               for "Could not attach to the database:"
-    Define CS_DUF_DeletingIndex             for "Deleting index"
-    Define CS_DUF_CopyingData               for "Copying data"
-    Define CS_DUF_CreatingIndex             for "Creating index"
-    Define CS_DUF_LoginToDbServerFailed     for  "Login failed to the database server. The following connect string was used:\n"
-    Define CS_DUF_DoYouWantToExit           for "Do you want to stop the database update and exit?"
-    Define CS_DUF_NoIntFilesFound           for "No .int files found! Nothing was changed."
-    // *** cDbUpdateVersion Class Language Constants ***
-    Define CS_DUF_UpdateVersion             for "Updating database"
-    Define CS_DUF_UpdateFromVersion         for "from version"
-    Define CS_DUF_UpdateToVersion           for "to version:"
-    Define CS_DUF_DbUpdateTableMissing      for "Cannot open the 'DbVersion' table that is used when updating the database! Cannot continue!"
-    // *** cDbUpdateHandler.h.pkg Class Language Constants ***
-    Define CS_DUF_DatabaseInUseShort        for "There are others using the application/database. Are you sure you still want to update the database?"
-    Define CS_DUF_DatabaseNeedsUpdate       for ("The database needs to be updated." + "\n\nATTENTION! The database may not be in use while this work is performed. Make sure that nobody else is using the application before clicking 'Yes' below.\n\n" + "Start update now?")
-    Define CS_DUF_HeaderUpdateText          for "Important!"
-    Define CS_DUF_DatabaseInUseText         for "There are others using the application/database or at least one table could NOT be opened exclusively. Please close all other applications using the database and try again. The Application will now close."
-    Define CS_DUF_WorkingHeaderText         for "Working!"
-    Define CS_DUF_WorkingUpdateText         for "The database is being updated. Please wait..."
-    Define CS_DUF_DatabaseUpdatedText       for "Ready! The database was updated."
-    Define CS_DUF_DatabaseCheckedText       for "Ready! The database was checked but no updates was needed."
-    Define CS_DUF_DbUpdatedErrorText        for "One or more errors occured while the database was updated. Please check the logfile in the data-folder.\n\nThe program will now close."
-    Define CS_DUF_UpdateInProgressTxt       for ("System locked!\n\nThe database is being updated. Please try again later...\n\n" * "The program will now close.")
-    // *** cDbUpdateHandler.pkg Class Language Constants ***
-    Define CS_DUF_DatabaseConnStringSpec    for "The database specified in the connection string: '"
-    Define CS_DUF_DatabaseDoesntExist       for "' doesn't exist!\n\nYou need to create it with a database management software or by using the 'SqlDatabaseCreate' function, which can be used in the 'OnPreUpdate' event of the cDbUpdateHandler object.\n\nThe program will now exit."
-    // *** cDbUpdateLogFile.pkg Class Language Constants ***   
-    Define CS_DUF_LogFileNotFound           for "Could not locate the log file:\n\n"
+#ENDIF
+#ENDIF
+#ENDIF
+#ENDIF
 #ENDIF

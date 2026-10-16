@@ -1303,9 +1303,16 @@ Object oTableDUFCodeGenerator is a cRDCDbView
         Send DoSetCheckboxFooterText of hoGrid
     End_Procedure
 
+    // The program's menu item of this view, set by the program: it is checked when the view gets the focus. (The
+    // view sent Execute to oCodeGenerator_MenuItem, which one program has, by its name.)
+    Property Handle phoViewMenuItem 0
+
     Procedure OnSetFocus
-        If (SizeOfArray(phoActiveUpdates(ghoCommandBars)) <> 0) Begin
-            Send Execute of (oCodeGenerator_MenuItem(ghoCommandBars))
+        Handle hoMenuItem
+
+        Get phoViewMenuItem to hoMenuItem
+        If (hoMenuItem <> 0 and SizeOfArray(phoActiveUpdates(ghoCommandBars)) <> 0) Begin
+            Send Execute of hoMenuItem
         End
     End_Procedure
     
