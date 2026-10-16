@@ -232,6 +232,9 @@ Object oSQLMaintainConnections_dg is a ModalPanel
 
                 Get SqlUtilEnumerateServers of ghoDbUpdateFunctionLibrary sDriverID iODBCType to sTheData
                 Set psTheData of ho to sTheData
+                If (SizeOfArray(sTheData) = 0 and SqlUtilNoServersFoundText(ghoDbUpdateFunctionLibrary, sDriverID) <> "") Begin
+                    Send Info_Box (SqlUtilNoServersFoundText(ghoDbUpdateFunctionLibrary, sDriverID))
+                End
                 Set Label of oShowInfo_tb to ""
 
                 Forward Send Prompt

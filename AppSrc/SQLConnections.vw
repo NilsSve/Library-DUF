@@ -155,6 +155,9 @@ Object oSQLConnections_vw is a dbView
                         Get SqlUtilEnumerateServers of ghoDbUpdateFunctionLibrary sDriverID 2 to sTheData
                         Set psTheData of ho to sTheData
                         Send Cursor_Ready of Cursor_Control
+                        If (SizeOfArray(sTheData) = 0 and SqlUtilNoServersFoundText(ghoDbUpdateFunctionLibrary, sDriverID) <> "") Begin
+                            Send Info_Box (SqlUtilNoServersFoundText(ghoDbUpdateFunctionLibrary, sDriverID))
+                        End
 
                         Forward Send Prompt
                     End_Procedure

@@ -10,6 +10,13 @@
 //               functions to make db changes to Sql databases with DAW drivers,
 //               with the help of Sql-scripts.
 //
+//               The answer of an Api or Sql function is its return value. It is True when the table or database is
+//               as asked afterwards, made so by the call or found so already (a line in the log says which), and
+//               False when it is not. Err after a call is not part of the answer: a function that tests Err for its
+//               own work keeps the caller's Err with _ErrKeep and _ErrGiveBack. The library shows a message box only
+//               when the caller asks for one (bShowResult, bShowErrorDialog, bSilent False); what goes wrong is an
+//               error otherwise, for the error object of the program.
+//
 // $Rev History:
 //    2014-09-05  Module header created
 //
@@ -231,7 +238,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Get _SqlUtilExecuteEmbeddedScript SQLScriptArray sDriverID False "" bShowProgress to bOK
                 Case Break
             Case Else
-                Send Info_Box ("The SqlUtilBackupDatabaseToDisk function is currently not implemented for the driver:" * sDriverID + ". It would be great if you could spend a couple of minutes and add a little ESQL code snippet to make it work for that driver! Thanks for helping out.")
+                // An error, for the program's error object. (The library showed a message box.)
+                Error DFERR_PROGRAM ("The SqlDatabaseBackupToDisk function is not implemented for the driver:" * sDriverID + ".")
+                Move False to bOK
         Case End
         
         Function_Return bOK
@@ -268,7 +277,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Get _SqlUtilExecuteEmbeddedScript SQLScriptArray sDriverID False "" bShowProgress to bOK
                 Case Break
             Case Else
-                Send Info_Box ("The SqlDatabaseDrop function is currently not implemented for the driver:" * sDriverID + ". It would be great if you could spend a couple of minutes and add a little ESQL code snippet to make it work for that driver! Thanks for helping out.")
+                // An error, for the program's error object. (The library showed a message box.)
+                Error DFERR_PROGRAM ("The SqlDatabaseDrop function is not implemented for the driver:" * sDriverID + ".")
+                Move False to bOK
         Case End
         
         Function_Return bOK
@@ -551,54 +562,29 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return (bOK = True)
     End_Function
 
-    // Creates an SQL Table at the SQL end by its filelist number;
-    // Also creates a 'DUMMY' column because SQL doesn't like to create a table with no columns!
+    // Creates an SQL Table at the SQL end by its filelist number; see SqlTableCreateByTableName.
     Function SqlTableCreate Integer hTable Returns Boolean
-        String sTableName sSQLString sPath sCreateTable sDriverID
-        Integer iDbType
-        Boolean bExists
+        String sTableName
+        Boolean bOK
 
-        Get psDriverID to sDriverID
         Get UtilTableHandleToString hTable to sTableName
-        Get _SqlUtilCheckIfTableNameExists sTableName sDriverID to bExists
-        If (bExists = True) Begin
-            Function_Return False
-        End
-
-        Get psDataPathFirstPart to sPath
-        Get vFilePathExists (sPath + String(sTableName) + ".int") to bExists
-
-        Get piDbType to iDbType
-        Get _SqlProperTableName sTableName to sTableName
-        Get _SqlFindKeyWord CI_SQLCreateTable iDbType to sCreateTable
-        Move (sCreateTable * String(sTableName) * "(Dummy Decimal(2,0))") to sSQLString
-
-        Move False to Err
-        Send SqlUtilExecuteQuery sSQLString sDriverID
-
-        If (Err = False) Begin
-            Send ResetFillSQLTables
-        End
-        Function_Return (Err = False)
+        Get SqlTableCreateByTableName sTableName to bOK
+        Function_Return bOK
     End_Function
 
-    // Same as SqlTableCreate but creates an SQL Table at the SQL end by a table name;
-    // Also creates a 'DUMMY' column because SQL doesn't like to create a table with no columns!
-    Function SqlTableCreateByTableName String sTableName  Returns Boolean
-        String sSQLString sPath sCreateTable sDriverID
+    // Creates an SQL Table at the SQL end by a table name, with a 'DUMMY' column: SQL does not make a table without
+    // columns. A table of that name on the server is left as it is, and True is answered. (False was answered, as
+    // for a failure.)
+    Function SqlTableCreateByTableName String sTableName Returns Boolean
+        String sSQLString sCreateTable sDriverID
         Integer iDbType
         Boolean bExists
 
         Get psDriverID to sDriverID
         Get _SqlUtilCheckIfTableNameExists sTableName sDriverID to bExists
         If (bExists = True) Begin
-            Function_Return False
-        End
-
-        Get psDataPathFirstPart to sPath
-        Get vFilePathExists (sPath + String(sTableName) + ".int") to bExists
-        If (bExists = True) Begin
-            // ToDo: What should we do if an .int file already exists?
+            Send LogError ("SQL table" * sTableName * "is there already and was left as it is.") False
+            Function_Return True
         End
 
         Get piDbType to iDbType
@@ -1041,11 +1027,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Function_Return False
         End
 
-        Move Err to bErr
-        Move False to Err
+        Get _ErrKeep to bErr
         Get_Attribute DF_FIELD_NULL_ALLOWED of hTable iColumn to bCurrentState
         If (bNullable = bCurrentState) Begin
-            Move bErr to Err
+            Get _ErrGiveBack bErr to bOK
             Function_Return True
         End
 
@@ -1069,8 +1054,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Set Action_Text of ghoStatusPanel to ""
         End
 
-        Move (not(Err)) to bOK
-        Move bErr to Err
+        Get _ErrGiveBack bErr to bOK
 
         Function_Return bOK
     End_Function
@@ -1274,10 +1258,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Function
 
     Procedure SqlUtilExecuteQuery String sStmt String sDriverID Boolean bShowProgr
-        String sMessage // sConnectionString
         Handle hoSqlHandler hoSQLConnect hoStmt hoError
-        Integer i iMsgs iFetchResult iRowType iRows iErr iMessage iLastErr
-        String[] sMsg aSQLQueryMessages aSQLFetchResults
+        Integer i iMsgs iFetchResult iRowType iRows iErr iLastErr
+        String[] asNoMessages aSQLFetchResults
         DateTime dtQueryExecStart dtQueryExecEnd dtFetchStart dtFetchEnd
         TimeSpan tsQuery tsFetch
         tSqlErrorArray aSqlErrorArray
@@ -1288,6 +1271,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         If (bOK = False) Begin
             Procedure_Return
         End
+        Set paQueryMessages to asNoMessages
 
         If (num_arguments > 2) Begin
             Move bShowProgr to bShowProgress
@@ -1353,27 +1337,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Move (CurrentDateTime()) to dtFetchStart
 
                 If (iMsgs <> 0) Begin
-                    If (ghoDbUpdateHandler > 0) Begin
-                        Get paSQLQueryMessages of ghoDbUpdateHandler to aSQLQueryMessages
-                    End
-                    For i from 1 to iMsgs
-                        Get SqlGetMessage of hoStmt i to sMessage
-                        Get RemoveComponentIdentifier of hoStmt sMessage to sMessage
-                        If (bShowProgress = True) Begin
-                            If (Active_State(ghoStatusPanel)) Begin
-                                Send Update_StatusPanel of ghoStatusPanel (Sformat("  SQLGetMessage iMessage %1 returned [%2]",iMessage,sMessage))
-                            End
-                            Else Begin
-                                Showln (Sformat("  SQLGetMessage iMessage %1 returned [%2]",iMessage,sMessage))
-                            End
-                        End
-                        Move sMessage to sMsg[SizeOfArray(sMsg)]
-                        Move sMessage to aSQLQueryMessages[SizeOfArray(aSQLQueryMessages)]
-                    Loop
-                    If (ghoDbUpdateHandler > 0) Begin
-                        Set paSQLQueryMessages of ghoDbUpdateHandler to aSQLQueryMessages
-                    End
-                    Set paQueryMessages to sMsg
+                    Send _SqlUtilCollectMessages hoStmt iMsgs bShowProgress
                 End
                 Else Begin
                     If (bShowProgress = True) Begin
@@ -1447,7 +1411,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     Function SqlUtilAdjustAuxFiles Handle hTable String sTableName String sColumnName Returns Boolean
         String sDataPath sDDSrcPath sDriverID
         Boolean bOK bExists
-        Integer iCount iPos
+        Integer iPos
 
         // If table name equals e.g. "dbo.MyTable" we need to remove the prefix.
         If (sTableName contains ".") Begin
@@ -1476,14 +1440,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get _UtilUpdateTAGFile (sDataPath + sTableName + ".tag") sColumnName to bOK
 
         // If in development environment; output new .fd file:
-        Get psDdSrcPath of (phoWorkspace(ghoApplication)) to sDDSrcPath
-        Get CountOfPaths of (phoWorkspace(ghoApplication)) sDDSrcPath to iCount
-        If (iCount > 1) Begin
-            Get PathAtIndex of (phoWorkspace(ghoApplication)) sDDSrcPath 1 to sDDSrcPath
-        End
-        Get vFolderExists sDDSrcPath to bExists
-        If (bExists = True) Begin
-            Get vFolderFormat sDDSrcPath to sDDSrcPath
+        Get UtilDDSrcFolder to sDDSrcPath
+        If (sDDSrcPath <> "") Begin
             Move False to Err
             Get AutoConnectionIDLogin to bOK
             If (hTable <> 0) Begin
@@ -1525,7 +1483,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                     Send Stop_StatusPanel of ghoStatusPanel
                 End
             End
-            Send Info_Box CS_DUF_NoIntFilesFound
+            // Only when the caller asks for the result to be shown. (It was shown always.)
+            If (bShowResult = True) Begin
+                Send Info_Box CS_DUF_NoIntFilesFound
+            End
             Function_Return asFileChanges
         End
 
@@ -1750,7 +1711,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // Also pass the file number of the current (embedded?) table number used in development.
     // It will first create the SQL Table & column, then create the .int file and change Filelist.cfg
     Function SqlUtilCreateDbVersionTable Handle hTable String sColumnName String sDriverID Returns Boolean
-        Boolean bOK bOpened
+        Boolean bOK bOpened bExists
         String sTableName sDataType sAlterTable sAddColumn sLengthAndDecimals sStmt
 
         Get_Attribute DF_FILE_ROOT_NAME of hTable to sTableName
@@ -1759,8 +1720,14 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Function_Return False
         End
 
+        // A table of that name on the server: False, as before. (SqlTableCreate answers True for it now, and the
+        // column below would be added to that table.)
+        Get _SqlUtilCheckIfTableNameExists sTableName sDriverID to bExists
+        If (bExists = True) Begin
+            Function_Return False
+        End
         // This just creates the table and a "dummy" column.
-        Get SqlTableCreate hTable sDriverID to bOK
+        Get SqlTableCreate hTable to bOK
         If (bOK = False) Begin
             Function_Return False
         End
@@ -2124,6 +2091,22 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return False
     End_Function
 
+    // The hint a program shows when SqlUtilEnumerateServers found no server of the Microsoft SQL driver; "" for
+    // another driver. (The library showed it in a message box itself.)
+    Function SqlUtilNoServersFoundText String sDriverID Returns String
+        String sText
+
+        If (sDriverID <> MSSQLDRV_ID) Begin
+            Function_Return ""
+        End
+        Move         "No SQL Servers found!\n" to sText
+        Append sText "There can be a multitude of reasons for this:\n"
+        Append sText "1. If on a network, check firewall settings.\n"
+        Append sText "2. Check the SQL Server network protocols, both TCP/IP and Named Pipes needs to be enabled.\n"
+        Append sText "3. Check that the 'SQL Server Browser' service is running - or restart it.\n"
+        Function_Return sText
+    End_Function
+
     // Enumerate SQL Servers.
     // Pass a driver id. Returns a string array.
     // The iDataSourceType (iDatSrcType) parameter is optional and is for the ODBC driver only.
@@ -2131,7 +2114,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     Function SqlUtilEnumerateServers String sDriverID Integer iDatSrcType Returns String[]
         String[] asReturnArray
         Handle hoSQLHandler
-        String sServer sText
+        String sServer
         Integer iCount iNumItems iDataSourceType
 
         If (num_arguments > 1) Begin
@@ -2149,14 +2132,6 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                     Get String_Value of hoSQLHandler iCount to sServer
                     Move (Trim(sServer)) to asReturnArray[iCount]
                 Loop 
-                If (SizeOfArray(asReturnArray) = 0) Begin
-                    Move         "No SQL Servers found!\n" to sText
-                    Append sText "There can be a multitude of reasons for this:\n"
-                    Append sText "1. If on a network, check firewall settings.\n"
-                    Append sText "2. Check the SQL Server network protocols, both TCP/IP and Named Pipes needs to be enabled.\n"
-                    Append sText "3. Check that the 'SQL Server Browser' service is running - or restart it.\n"
-                    Send Info_Box sText
-                End
                 Case Break
 
             Case (sDriverID = DB2_DRV_ID)
@@ -2295,11 +2270,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Function_Return False
         End
 
-        // Then we need to check that the function hasn't been called before; which in case
-        // we do nothing
+        // The table is attached already: nothing to do. (False was answered, as for a failure.)
         Get SQLUtilTableIsAttached sDriverID hTable to bExists
         If (bExists = True) Begin
-            Function_Return False
+            Send LogError ("Table number:" * String(hTable) * "is attached to SQL already; nothing was done.") False
+            Function_Return True
         End
 
         Get psConnectionID     to sConnectionID
@@ -2483,31 +2458,12 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return (Err = False)
     End_Function
 
+    // Relates a column to a column of another table: the same as ApiTableRelate, which it calls.
     Function ApiTableChangeRelation Handle hTable Handle hToTable Integer iFromField Integer iToField Returns Boolean
-        Boolean bOK bIsSQLTable
+        Boolean bOK
 
-        Move False to Err
-        Get AutoConnectionIDLogin to bOK
-        Open hToTable
-        Get OpenTableExclusive hTable to bOK
-        If (bOK = False) Begin
-            Function_Return False
-        End
-
-        Get _UtilTableIsSql hTable to bIsSQLTable
-        If (bIsSQLTable = True) Begin
-            Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
-        End
-
-        Set Private.phCurrentTable to hTable
-        Structure_Start hTable
-            Set_Attribute DF_FIELD_RELATED_FILE  of hTable iFromField to hToTable
-            Set_Attribute DF_FIELD_RELATED_FIELD of hTable iFromField to iToField
-            Set Action_Text of ghoStatusPanel to "Restructures table..."
-        Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
-
-        Set Action_Text of ghoStatusPanel to ""
-        Function_Return (Err = False)
+        Get ApiTableRelate hTable hToTable iFromField iToField to bOK
+        Function_Return bOK
     End_Function
 
     Procedure ApiTableConvertAllAddException Integer hTable
@@ -2930,10 +2886,12 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         tAPIColumn[] aColumns
         tColumnType ColumnType
 
-        // First check if the passed filenumber already exists; in case we do nothing
+        // The table is there already: nothing to do. (False was answered, as for a failure.) ApiTableUpdate brings
+        // a table that is there into the form of a description.
         Get _UtilTableExists hTable to bOk
         If (bOk = True) Begin
-            Function_Return False
+            Send LogError ("Table number:" * String(hTable) * String(sLogicalName) * "is there already and was left as it is.") False
+            Function_Return True
         End
 
         Set Private.phCurrentTable to hTable
@@ -3174,12 +3132,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     End_Procedure
 
     Function ApiTableMoveToFileSlot Integer iFromFileSlot Integer iToFileSlot String sDriverID Returns Boolean
-        Boolean bTmp bErr bOK
+        Boolean bTmp bOK
         String sTableName sDisplayName sFileName
 
-        // We preserve the value of the Err flag, by saving its current state and resetting it before end of function.
-        Move Err to bTmp
-        Move False to Err
+        // The caller's Err is kept.
+        Get _ErrKeep to bTmp
 
         Get AutoConnectionIDLogin to bOK
         // First get the info for the current filelist slot:
@@ -3202,15 +3159,14 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         End
         Close iFromFileSlot
 
-        Move Err to bErr
-        Move bTmp to Err
-        Function_Return (bErr = False)
+        Get _ErrGiveBack bTmp to bOK
+        Function_Return bOK
     End_Function
 
     Function ApiTableRelate Handle hTableFrom Handle hTableTo Integer iColumnFrom Integer iColumnTo Returns Boolean
         Handle hTable
-        Boolean bOK
-        String sDriverID
+        Boolean bOK bIsSQLTable
+        String sDriverID sRootName
 
         Get _UtilTableExists hTableFrom to bOK
         If (bOK = False) Begin
@@ -3237,6 +3193,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Move hTableFrom to hTable
         Get_Attribute DF_FILE_DRIVER of hTable to sDriverID
+        Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
+        Get _UtilTableIsSqlByRootName sRootName to bIsSQLTable
+        If (bIsSQLTable = True) Begin
+            Set_Attribute DF_FILE_ALLOWED_STRUCTURE_CHANGES of hTable to ALL_TABLE_CHANGES_ALLOWED
+        End
         Set Private.phCurrentTable to hTable
 
         Structure_Start hTable sDriverID
@@ -3673,11 +3634,13 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     Function ApiColumnAdd Handle hTable String sFieldName Integer iType Integer iLength Integer iPrec Boolean bInitVal String sColVal Returns Boolean
         Integer iColumn iCount iFile iPrecision iLastErr
         Boolean bExists bOK bInitializeValue bRetval
-        String sDataPath sDdSrcPath sTableName sColumnValue sDriverID
+        String sDataPath sColumnValue sDriverID
 
+        // A column of that name is there already: nothing to do. (False was answered, as for a failure.)
         Get UtilColumnExists hTable sFieldName to bExists
         If (bExists = True) Begin
-            Function_Return False
+            Send LogError ("Table number:" * String(hTable) + ". Column" * sFieldName * "is there already and was left as it is.") False
+            Function_Return True
         End
 
         Move False to Err
@@ -3714,19 +3677,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Set Action_Text of ghoStatusPanel to ""
 
         // If in development environment; create .fd file:
-        Open hTable
-        Get psDdSrcPath  of (phoWorkspace(ghoApplication)) to sDDSrcPath
-        Get CountOfPaths of (phoWorkspace(ghoApplication)) sDDSrcPath to iCount
-        If (iCount > 1) Begin
-            Get PathAtIndex of (phoWorkspace(ghoApplication)) sDDSrcPath 1 to sDDSrcPath
-        End
-        Get vFolderExists sDDSrcPath to bExists
-        If (bExists = True) Begin
-            Get vFolderFormat sDDSrcPath to sDDSrcPath
-            Get_Attribute DF_FILE_ROOT_NAME of hTable to sTableName
-            Get _TableNameOnly sTableName to sTableName
-            Output_Aux_File DF_AUX_FILE_FD for hTable to (sDDSrcPath + sTableName + ".fd")
-        End
+        Send UtilTableWriteFdFile hTable
         If (sDriverID = DATAFLEX_ID) Begin  // We only want a tag if DataFlex embedded db
             Get psDataPath  of (phoWorkspace(ghoApplication)) to sDataPath
             Get CountOfPaths of (phoWorkspace(ghoApplication)) sDataPath to iCount
@@ -3749,14 +3700,15 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // Adds a column name to the passed table number.
     Function ApiColumnInsert String sDriverIDFrom Handle hTable Integer iColumn String sFieldName Integer iType Integer iLength Integer iPrec Boolean bIsSQLType Returns Boolean
-        Integer iCount iFile iPrecision iNumberOfFields iDbType
+        Integer iFile iPrecision iNumberOfFields iDbType
         Boolean bExists bOK bIsDateType bIsSQLTypeTo bNativeType
-        String sDdSrcPath sTableName
 
+        // A column of that name is there already: nothing to do. (False was answered, as for a failure.)
         Get UtilColumnExists hTable sFieldName to bExists
         Move False to Err
         If (bExists = True) Begin
-            Function_Return False
+            Send LogError ("Table number:" * String(hTable) + ". Column" * sFieldName * "is there already and was left as it is.") False
+            Function_Return True
         End
         // The 7th parameter may be left out. (It was read behind a test for the 5th.)
         If (num_arguments > 6) Begin
@@ -3826,19 +3778,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
         Set Action_Text of ghoStatusPanel to ""
         // If in development environment; create .fd file:
-        Open hTable
-        Get psDdSrcPath of (phoWorkspace(ghoApplication)) to sDDSrcPath
-        Get CountOfPaths of (phoWorkspace(ghoApplication)) sDDSrcPath to iCount
-        If (iCount > 1) Begin
-            Get PathAtIndex of (phoWorkspace(ghoApplication)) sDDSrcPath 1 to sDDSrcPath
-        End
-        Get vFolderExists sDDSrcPath to bExists
-        If (bExists = True) Begin
-            Get vFolderFormat sDDSrcPath to sDDSrcPath
-            Get_Attribute DF_FILE_ROOT_NAME of hTable to sTableName
-            Get _TableNameOnly sTableName to sTableName
-            Output_Aux_File DF_AUX_FILE_FD for hTable to (sDDSrcPath + sTableName + ".fd")
-        End
+        Send UtilTableWriteFdFile hTable
 
         // Check for a default value
         Close hTable
@@ -3848,20 +3788,20 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // To update all records for a table column with a fixed value.
     Function ApiColumnUpdateValue Handle hTable String sFieldName String sColumnValue Returns Boolean
-        Integer iRecs iCurrErr iField iRecord
-        Boolean bRetval bOpen
+        Integer iRecs iField iRecord
+        Boolean bRetval bOpen bCallersErr
 
         Move 0 to iRecs
         Move False to bRetval
-        Move Err to iCurrErr
-        Move False to Err
+        Get _ErrKeep to bCallersErr
 
         Get_Attribute DF_FILE_OPENED of hTable to bOpen
         If (bOpen = False) Begin
             Open hTable
             Get_Attribute DF_FILE_OPENED of hTable to bOpen
             If (bOpen = False) Begin
-                Function_Return bRetval
+                Get _ErrGiveBack bCallersErr to bRetval
+                Function_Return False
             End
         End
 
@@ -3885,8 +3825,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
            Until (not(Found))
         End
 
-        Move (Err = False) to bRetval
-        Move iCurrErr to Err
+        Get _ErrGiveBack bCallersErr to bRetval
 
         Function_Return bRetval
     End_Function
@@ -4032,6 +3971,11 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         If (Err = True) Begin
             Function_Return False
         End
+        // A column that is not there is an error. (Field_Map's own error is ignored above, and column 0 was changed.)
+        If (iColumn = 0) Begin
+            Error DFERR_PROGRAM ("Function 'ApiColumnChange'. Table number:" * String(hTable) + ". Column" * sFieldNameFrom * "was not found.")
+            Function_Return False
+        End
 
         Get_Attribute DF_FIELD_NAME                  of hTable iColumn to sFieldNameTo
         Get _UtilTableIsSql hTable to bIsSqlTable
@@ -4045,8 +3989,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get_Attribute DF_FIELD_LENGTH                of hTable iColumn to iLengthTo
         Get_Attribute DF_FIELD_PRECISION             of hTable iColumn to iPrecTo
 
+        // The column has that form already: nothing to do. (False was answered, as for a failure.)
         If (sFieldNameFrom = sFieldNameTo and iTypeFrom = iTypeTo and iLengthFrom = iLengthTo and iPrecFrom = iPrecTo) Begin
-            Function_Return False
+            Send LogError ("Table number:" * String(hTable) + ". Column" * sFieldNameFrom * "has that form already and was left as it is.") False
+            Function_Return True
         End
 
         Set Private.phCurrentTable to hTable
@@ -4071,7 +4017,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
 
     // Changes a field type, length and precision for the passed table number and field name
     Function ApiColumnChangeByColumnNumber String sDriverIDFrom Handle hTable Boolean bIsSQLTableFrom Boolean bIsSQLTableTo String sFieldNameFrom Integer iColumn Integer iTypeFrom Integer iLengthFrom Integer iPrec Integer iOpt Returns Boolean
-        Integer iPrecFrom iTypeTo iLengthTo iPrecTo iDbType iOptionFrom iOptionTo iDataFlexType iIndex iDataFlexTypeTo
+        Integer iPrecFrom iTypeTo iLengthTo iPrecTo iDbType iOptionFrom iOptionTo iDataFlexType iDataFlexTypeTo
         Boolean bOK bCompareDate_DateTime bRecnumTable bIsSameDataType
         String sFieldNameTo sDriverIDTo
 
@@ -4166,26 +4112,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             End
 
             If (bIsSQLTableTo = True and iOptionFrom =  C_tAPIColumn_Identity and iOptionTo <> C_tAPIColumn_Identity) Begin
-                // Can't set a recnum table to "DF_FIELD_IS_IDENTITY"
-                If (bRecnumTable = True) Begin
-                    Set_Attribute DF_FILE_RECNUM_TABLE  of hTable to False
-                End
-
-                // We might need to create an index here.
-                // To be able to set the DF_FIELD_IS_IDENTITY the index must already exist, but it might not at this stage.
-                // This should probably fix that problem and if an adjustment is needed, it will get done with the normal
-                // index update checking logic.
-                Get_Attribute DF_FIELD_INDEX               of hTable iColumn to iIndex
-                If (iIndex = 0 and Uppercase(sFieldNameTo) <> "RECNUM") Begin
-                    Create_Index hTable At iIndex
-                    Set_Attribute DF_INDEX_NUMBER_SEGMENTS of hTable iIndex   to 1
-                End
-                Set_Attribute DF_INDEX_SEGMENT_FIELD       of hTable iIndex 1 to iColumn
-                Set_Attribute DF_FILE_PRIMARY_INDEX        of hTable          to iIndex
-                Set_Attribute DF_FIELD_IS_IDENTITY     of hTable iColumn  to True
-                If (bIsSQLTableTo = True) Begin
-                    Set_Attribute DF_INDEX_SQL_PRIMARY_KEY of hTable iIndex   to True
-                End
+                Send UtilColumnMakeIdentity hTable hTable iColumn sFieldNameTo bRecnumTable
             End
             Set Action_Text of ghoStatusPanel to "Restructures table..."
         Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
@@ -4217,7 +4144,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     Function ApiColumnMove Handle hTable Integer iOld Integer iNew Boolean bIsSQLType Integer iLength Integer iPrecision Returns Boolean
         String sColumn sDriverID
         Integer iType iSQLType
-        Boolean bOK bIsDate
+        Boolean bOK bIsDate bCallersErr
 
         Close hTable
         Get AutoConnectionIDLogin to bOK
@@ -4246,7 +4173,8 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Set Private.phCurrentTable to hTable
         Set Private.piCurrentField to iOld
 
-        Move False to Err
+        // The caller's Err is kept.
+        Get _ErrKeep to bCallersErr
 
         Structure_Start hTable
             Delete_Field hTable iOld
@@ -4274,8 +4202,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
 
         Set Action_Text of ghoStatusPanel to ""
-        Move (not(Err)) to bOK
-        Move False to Err
+        Get _ErrGiveBack bCallersErr to bOK
         Move 0 to LastErr
         Function_Return bOK
     End_Function 
@@ -4299,9 +4226,12 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Field_Map hTable sFieldName to iColumn
             Set Error_Report_Mode to DUF_ERROR_REPORT
             Send Trap_Error of Error_Object_Id DFERR_CANT_FIND_FIELD
+            // The column is gone already: nothing to do. (False was answered, as for a failure.)
             If (iColumn = 0) Begin
                 Move 0 to LastErr
-                Function_Return False
+                Move False to Err
+                Send LogError ("Table number:" * String(hTable) + ". Column" * sFieldName * "is not there; nothing was removed.") False
+                Function_Return True
             End
             Move False to Err
 
@@ -4327,10 +4257,18 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     //   Get ColumnRename Quote.File_Number "ID#" "ID" to bOK
     Function ApiColumnRename Integer hTable String sOldFieldName String sNewFieldName Returns Boolean
         Integer iField
-        Boolean bOK bExists bIsOpen
+        Boolean bOK bExists bIsOpen bOldExists bNotThere
 
+        // The new name is there already. With the old name gone as well the column was renamed before: nothing to
+        // do. With both names there the rename cannot be made. (Both answered False, as for a failure.)
         Get UtilColumnExists hTable sNewFieldName to bExists
         If (bExists = True) Begin
+            Get UtilColumnExists hTable sOldFieldName to bOldExists
+            If (bOldExists = False) Begin
+                Send LogError ("Table number:" * String(hTable) + ". Column" * sOldFieldName * "was renamed to" * sNewFieldName * "before; nothing was done.") False
+                Function_Return True
+            End
+            Send LogError ("Table number:" * String(hTable) + ". Column" * sOldFieldName * "was not renamed: the table has a column" * sNewFieldName * "as well.") False
             Function_Return False
         End
 
@@ -4366,15 +4304,18 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Structure_End hTable DF_STRUCTEND_OPT_NONE "." ghoDbUpdateHandler
         End
         Else Begin
+            // Neither name is there. (True was answered.)
             Move 0 to LastErr
             Move False to Err
+            Move True to bNotThere
+            Send LogError ("Table number:" * String(hTable) + ". Column" * sOldFieldName * "was not renamed to" * sNewFieldName + ": the table has neither of them.") False
         End
 
         Set Action_Text of ghoStatusPanel to ""
         Send Trap_Error of Error_Object_Id DFERR_DUPLICATE_FIELDNAME
         Set Error_Report_Mode to DUF_ERROR_REPORT
 
-        Function_Return (Err = False)
+        Function_Return (Err = False and bNotThere = False)
     End_Function
 
     // Returns a struct array with fields that has the same names but different field numbers.
@@ -5195,12 +5136,37 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return True
     End_Function
 
+    // Makes a column of an SQL table its identity column, inside a restructure (hFile is the table's handle there):
+    // a recnum table stops being one, the column gets an index of its own when it is in none, that index is the
+    // primary index and the SQL primary key, and the column is the identity. The order is crucial: the primary key
+    // before the identity. (The block was written twice, the second time in the other order.)
+    Procedure UtilColumnMakeIdentity Handle hFile Handle hTable Integer iColumn String sFieldName Boolean bRecnumTable
+        Integer iIndex
+
+        // Can't set a recnum table to "DF_FIELD_IS_IDENTITY"
+        If (bRecnumTable = True) Begin
+            Set_Attribute DF_FILE_RECNUM_TABLE of hTable to False
+        End
+
+        // To be able to set the DF_FIELD_IS_IDENTITY the index must already exist, but it might not at this stage.
+        // An adjustment that is needed is made by the normal index update later.
+        Get_Attribute DF_FIELD_INDEX of hFile iColumn to iIndex
+        If (iIndex = 0 and Uppercase(sFieldName) <> "RECNUM") Begin
+            Create_Index hFile At iIndex
+            Set_Attribute DF_INDEX_NUMBER_SEGMENTS of hFile iIndex to 1
+        End
+        Set_Attribute DF_INDEX_SEGMENT_FIELD   of hFile iIndex 1 to iColumn
+        Set_Attribute DF_FILE_PRIMARY_INDEX    of hFile          to iIndex
+        Set_Attribute DF_INDEX_SQL_PRIMARY_KEY of hFile iIndex   to True
+        Set_Attribute DF_FIELD_IS_IDENTITY     of hFile iColumn  to True
+    End_Procedure
+
     // The last pass of ApiColumnsUpdate, inside its restructure: each column of the description gets the form of
     // the description - name, type, length, precision, the NULL rule and default value of an SQL column, identity.
     // The steps of the plan have brought the columns into the order of the description. Returns False at the
     // first column that raised an error.
     Function UtilColumnsApplyForms Handle hFile Handle hTable String sDriverIDFrom String sDriverIDTo Boolean bIsSQLTableFrom Boolean bIsSQLTableTo Boolean bRecnumTable tAPIColumnCompare[] aAPIColumnCompare Boolean bCompareDate_DateTime Returns Boolean
-        Integer iCount iColumn iTypeFrom iTypeTo iDataFlexType iIndex iLengthFrom iLengthTo iPrecisionFrom iPrecisionTo iOptionFrom iOptionTo iDbType
+        Integer iCount iColumn iTypeFrom iTypeTo iDataFlexType iLengthFrom iLengthTo iPrecisionFrom iPrecisionTo iOptionFrom iOptionTo iDbType
         Boolean bFieldExistsTo bIsSame bSkipTypeChange bIsDateType
         String sFieldNameFrom sFieldNameTo sDefaultValue
 
@@ -5305,26 +5271,7 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 End
 
                 If (bIsSQLTableTo = True and iOptionFrom = C_tAPIColumn_Identity and iOptionTo <> C_tAPIColumn_Identity) Begin
-                    // Can't set a recnum table to "DF_FIELD_IS_IDENTITY"
-                    If (bRecnumTable = True) Begin
-                        Set_Attribute DF_FILE_RECNUM_TABLE of hTable to False
-                    End
-
-                    // We might need to create an index here.
-                    // To be able to set the DF_FIELD_IS_IDENTITY the index must already exist, but it might not at this stage.
-                    // This should probably fix that problem and if an adjustment is needed, it will get done with the normal
-                    // index update checking logic.
-                    Get_Attribute DF_FIELD_INDEX           of hFile iColumn to iIndex
-                    If (iIndex = 0 and Uppercase(sFieldNameTo) <> "RECNUM") Begin
-                        Create_Index hFile at iIndex
-                        Set_Attribute DF_INDEX_NUMBER_SEGMENTS of hFile iIndex to 1
-                    End
-
-                    Set_Attribute DF_INDEX_SEGMENT_FIELD   of hFile iIndex 1 to iColumn
-                    Set_Attribute DF_FILE_PRIMARY_INDEX    of hFile          to iIndex
-                    // Note: The order here is crucial!
-                    Set_Attribute DF_INDEX_SQL_PRIMARY_KEY of hFile iIndex to True
-                    Set_Attribute DF_FIELD_IS_IDENTITY of hFile iColumn    to True
+                    Send UtilColumnMakeIdentity hFile hTable iColumn sFieldNameTo bRecnumTable
                 End
             End
             If (Err = True) Begin
@@ -5334,22 +5281,33 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return True
     End_Function
 
-    // Writes the table's .fd file into the workspace's (first) DDSrc folder, when there is one, so that a program
-    // in the development environment sees the new layout. The table is opened for it.
-    Procedure UtilTableWriteFdFile Handle hTable
-        String sDDSrcPath sTableName
+    // The workspace's first DDSrc folder, with a backslash at the end, or "" when it is not there.
+    Function UtilDDSrcFolder Returns String
+        String sDDSrcPath
         Integer iCount
         Boolean bExists
 
-        Open hTable
         Get psDdSrcPath of (phoWorkspace(ghoApplication)) to sDDSrcPath
         Get CountOfPaths of (phoWorkspace(ghoApplication)) sDDSrcPath to iCount
         If (iCount > 1) Begin
             Get PathAtIndex of (phoWorkspace(ghoApplication)) sDDSrcPath 1 to sDDSrcPath
         End
         Get vFolderExists sDDSrcPath to bExists
-        If (bExists = True) Begin
-            Get vFolderFormat sDDSrcPath to sDDSrcPath
+        If (bExists = False) Begin
+            Function_Return ""
+        End
+        Get vFolderFormat sDDSrcPath to sDDSrcPath
+        Function_Return sDDSrcPath
+    End_Function
+
+    // Writes the table's .fd file into the workspace's (first) DDSrc folder, when there is one, so that a program
+    // in the development environment sees the new layout. The table is opened for it.
+    Procedure UtilTableWriteFdFile Handle hTable
+        String sDDSrcPath sTableName
+
+        Get UtilDDSrcFolder to sDDSrcPath
+        If (sDDSrcPath <> "") Begin
+            Open hTable
             Get_Attribute DF_FILE_ROOT_NAME of hTable to sTableName
             Get _TableNameOnly sTableName to sTableName
             Output_Aux_File DF_AUX_FILE_FD for hTable to (sDDSrcPath + sTableName + ".fd")

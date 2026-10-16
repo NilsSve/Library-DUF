@@ -3115,12 +3115,47 @@ Class cBaseDbUpdateFuncLib is a cObject
         Function_Return SqlScriptArray
     End_Function
 
+    // The messages of an SQL statement that ran: each is added to the update handler's list (paSQLQueryMessages) and
+    // to this library's (paQueryMessages, emptied by the caller when its statement starts); with bShowProgress each
+    // is shown in the status panel, or on the screen when the panel is not up. SqlUtilExecuteQuery and
+    // _SqlUtilExecuteEmbeddedScript share it. (Each had a copy, and both showed message number 0 for every message.)
+    Procedure _SqlUtilCollectMessages Handle hoStmt Integer iMsgs Boolean bShowProgress
+        String[] asMsg asSQLQueryMessages
+        String sMessage
+        Integer iMessage
+
+        If (iMsgs < 1) Begin
+            Procedure_Return
+        End
+        Get paQueryMessages to asMsg
+        If (ghoDbUpdateHandler > 0) Begin
+            Get paSQLQueryMessages of ghoDbUpdateHandler to asSQLQueryMessages
+        End
+        For iMessage from 1 to iMsgs
+            Get SqlGetMessage of hoStmt iMessage to sMessage
+            Get RemoveComponentIdentifier of hoStmt sMessage to sMessage
+            If (bShowProgress = True) Begin
+                If (Active_State(ghoStatusPanel)) Begin
+                    Send Update_StatusPanel of ghoStatusPanel (Sformat("  SQLGetMessage iMessage %1 returned [%2]", iMessage, sMessage))
+                End
+                Else Begin
+                    Showln (Sformat("  SQLGetMessage iMessage %1 returned [%2]", iMessage, sMessage))
+                End
+            End
+            Move sMessage to asMsg[SizeOfArray(asMsg)]
+            Move sMessage to asSQLQueryMessages[SizeOfArray(asSQLQueryMessages)]
+        Loop
+        If (ghoDbUpdateHandler > 0) Begin
+            Set paSQLQueryMessages of ghoDbUpdateHandler to asSQLQueryMessages
+        End
+        Set paQueryMessages to asMsg
+    End_Procedure
+
     Function _SqlUtilExecuteEmbeddedScript tSQLScriptArray SQLScriptArray String sDriverID Boolean bCreateScriptFile String sMemFileName Boolean bShowProgr Returns Boolean
-        String sSQLVal sStmt sCR sGOKeyWord sNoCountKeyWord sMessage sExportFile sLineUpper
+        String sSQLVal sStmt sCR sGOKeyWord sNoCountKeyWord sExportFile sLineUpper
         Handle hoSql hoSQLConnect hoStmt hoError
-        Integer iMsgs iRows jRows iRowType iCount jCount iChunkCounter iChunkMax iCh iNextSet iMessage iPos
-        String[] asMsg 
-        String[][] asSQLQueryMessages
+        Integer iMsgs iRows jRows iRowType iCount iChunkCounter iChunkMax iCh iNextSet iPos
+        String[] asNoMessages
         DateTime dtQueryExecStart dtQueryExecEnd
         TimeSpan tsQuery
         tSqlErrorArray aSqlErrorArray
@@ -3139,7 +3174,8 @@ Class cBaseDbUpdateFuncLib is a cObject
         // To guard from this we set a max number of lines (iChunkMax) that can be processed
         // at a time. Testing with the Create Chinook Database script; 500 seems like a number that works fine.
         // A bonus of this is that it turns out that it is actually faster to run in chunks!
-        Get piChunkMax to iChunkMax 
+        Get piChunkMax to iChunkMax
+        Set paQueryMessages to asNoMessages
         Move False to Err
         Move 0 to iChunkCounter
         Move "" to sStmt
@@ -3238,30 +3274,7 @@ Class cBaseDbUpdateFuncLib is a cObject
                     Set piRows    to jRows
                     Set piRowType to iRowType
 
-                    If (iMsgs <> 0) Begin
-                        If (ghoDbUpdateHandler > 0) Begin
-                            Get paSQLQueryMessages of ghoDbUpdateHandler to asSQLQueryMessages
-                        End
-                        for jCount from 1 to iMsgs
-                            Get SqlGetMessage of hoStmt jCount to sMessage
-                            Get RemoveComponentIdentifier of hoStmt sMessage to sMessage
-                            If (bShowProgress = True) Begin
-                                If (Active_State(ghoStatusPanel)) Begin
-                                    Send Update_StatusPanel of ghoStatusPanel (Sformat("  SQLGetMessage iMessage %1 returned [%2]", iMessage, sMessage))
-                                End
-                                Else Begin
-                                    Showln (Sformat("  SQLGetMessage iMessage %1 returned [%2]", iMessage, sMessage))
-                                End
-                            End
-                            Move sMessage to asMsg[SizeOfArray(asMsg)]
-                            Move sMessage to asSQLQueryMessages[SizeOfArray(asSQLQueryMessages)]
-                        Loop
-
-                        If (ghoDbUpdateHandler > 0) Begin
-                            Set paSQLQueryMessages of ghoDbUpdateHandler to asSQLQueryMessages
-                        End
-                        Set paQueryMessages to asMsg
-                    End
+                    Send _SqlUtilCollectMessages hoStmt iMsgs bShowProgress
 
                     Get SQLNextResultSet of hoStmt to iNextSet
                 Until (iNextSet = 0)
@@ -3861,6 +3874,25 @@ Class cBaseDbUpdateFuncLib is a cObject
         Send LogError of hoLogFile nCurrentVersionUpdate 0 sText 0 bError
         Set Error_Report_Mode to iMode
     End_Procedure
+
+    // The caller's Err, kept while a function does work of its own and tests Err for it. _ErrKeep answers the
+    // caller's Err and clears it; _ErrGiveBack answers whether that work raised no error, and gives the caller its
+    // Err back. A function that uses the pair leaves Err as its caller had it.
+    Function _ErrKeep Returns Boolean
+        Boolean bCallersErr
+
+        Move Err to bCallersErr
+        Move False to Err
+        Function_Return bCallersErr
+    End_Function
+
+    Function _ErrGiveBack Boolean bCallersErr Returns Boolean
+        Boolean bOK
+
+        Move (Err = False) to bOK
+        Move bCallersErr to Err
+        Function_Return bOK
+    End_Function
 
     Function pbContinueOnError Returns Boolean
         Boolean bContinueOnError

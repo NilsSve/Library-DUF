@@ -1503,4 +1503,115 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Send Assert (iCount > 1) "The test Filelist has more than one table."
         Send AssertIAreEqual iCount iTables "The same count."
     End_Procedure
+
+    // A call that finds its work done answers True and leaves the table as it is. (Each answered False, as for a
+    // failure: the code that calls them could not tell the two apart.)
+    { Published=True }
+    Procedure Test_A_Call_That_Finds_Its_Work_Done_Answers_True
+        Boolean bOK
+        Integer iErrors
+        Handle h
+        tAPIColumn[] aColumns
+
+        Send MakeBaseTable "DUFTT42" 5 False
+        Move (phTable(Self)) to h
+
+        Send BeginCatch
+        Get ApiColumnAdd of ghoDbUpdateFunctionLibrary h "Name" DF_ASCII 30 0 to bOK
+        Get EndCatch to iErrors
+        Send Assert bOK "ApiColumnAdd: Name is there already."
+        Send AssertIAreEqual 0 iErrors ("ApiColumnAdd raises no error." + psErrors(oErrors(Self)))
+
+        Send BeginCatch
+        Get ApiColumnInsert of ghoDbUpdateFunctionLibrary DATAFLEX_ID h 2 "Code" DF_ASCII 5 0 False to bOK
+        Get EndCatch to iErrors
+        Send Assert bOK "ApiColumnInsert: Code is there already."
+        Send AssertIAreEqual 0 iErrors ("ApiColumnInsert raises no error." + psErrors(oErrors(Self)))
+
+        Send BeginCatch
+        Get ApiColumnRemove of ghoDbUpdateFunctionLibrary h "NoSuchColumn" to bOK
+        Get EndCatch to iErrors
+        Send Assert bOK "ApiColumnRemove: the column is not there."
+        Send AssertIAreEqual 0 iErrors ("ApiColumnRemove raises no error." + psErrors(oErrors(Self)))
+
+        Send BeginCatch
+        Get ApiColumnRename of ghoDbUpdateFunctionLibrary h "Name" "FullName" to bOK
+        Get EndCatch to iErrors
+        Send Assert bOK "ApiColumnRename: the first call renames."
+        Send BeginCatch
+        Get ApiColumnRename of ghoDbUpdateFunctionLibrary h "Name" "FullName" to bOK
+        Get EndCatch to iErrors
+        Send Assert bOK "ApiColumnRename: the second call finds the column renamed."
+        Send AssertIAreEqual 0 iErrors ("ApiColumnRename raises no error." + psErrors(oErrors(Self)))
+
+        Send BeginCatch
+        Get ApiColumnChange of ghoDbUpdateFunctionLibrary h "Code" DF_ASCII 5 0 to bOK
+        Get EndCatch to iErrors
+        Send Assert bOK "ApiColumnChange: Code has that form already."
+        Send AssertIAreEqual 0 iErrors ("ApiColumnChange raises no error." + psErrors(oErrors(Self)))
+
+        Get BaseColumns to aColumns
+        Send BeginCatch
+        Get ApiTableCreate of ghoDbUpdateFunctionLibrary h (psTable(Self)) (psTable(Self)) (psTable(Self)) False False False aColumns to bOK
+        Get EndCatch to iErrors
+        Send Assert bOK "ApiTableCreate: the table is there."
+        Send AssertIAreEqual 0 iErrors ("ApiTableCreate raises no error." + psErrors(oErrors(Self)))
+
+        Send AssertSAreEqual "Id,Code,FullName,Created,Amount" (ColumnNames(Self)) "The columns are as the rename left them."
+        Send AssertSAreEqual (String(DF_ASCII) + "|Anna") (ColumnTypeAndFirstValue(Self, "FullName")) "FullName holds the names."
+        Send AssertIAreEqual 2 (RecordCount(Self)) "The table keeps its records."
+    End_Procedure
+
+    // A call that cannot do its work answers False and changes nothing. ApiColumnRename with both names there, or
+    // neither (that answered True). ApiColumnChange of a column that is not there is an error. (Field_Map's own
+    // error is ignored there, and column 0 was changed.)
+    { Published=True }
+    Procedure Test_A_Call_That_Cannot_Do_Its_Work_Answers_False
+        Boolean bOK
+        Integer iErrors
+        Handle h
+
+        Send MakeBaseTable "DUFTT43" 5 False
+        Move (phTable(Self)) to h
+
+        Send BeginCatch
+        Get ApiColumnRename of ghoDbUpdateFunctionLibrary h "Code" "Name" to bOK
+        Get EndCatch to iErrors
+        Send AssertFalse bOK "ApiColumnRename: both names are there."
+        Send AssertIAreEqual 0 iErrors ("ApiColumnRename raises no error." + psErrors(oErrors(Self)))
+
+        Send BeginCatch
+        Get ApiColumnRename of ghoDbUpdateFunctionLibrary h "NoSuchColumn" "Other" to bOK
+        Get EndCatch to iErrors
+        Send AssertFalse bOK "ApiColumnRename: neither name is there."
+        Send AssertIAreEqual 0 iErrors ("ApiColumnRename raises no error." + psErrors(oErrors(Self)))
+
+        Send BeginCatch
+        Get ApiColumnChange of ghoDbUpdateFunctionLibrary h "NoSuchColumn" DF_ASCII 10 0 to bOK
+        Get EndCatch to iErrors
+        Send AssertFalse bOK "ApiColumnChange: the column is not there."
+        Send AssertIAreEqual 1 iErrors ("ApiColumnChange raises one error." + psErrors(oErrors(Self)))
+
+        Send AssertSAreEqual "Id,Code,Name,Created,Amount" (ColumnNames(Self)) "The columns are as they were."
+        Send AssertSAreEqual (String(DF_BCD) + "|1") (ColumnTypeAndFirstValue(Self, "Id")) "Id is a number column with its number."
+        Send AssertIAreEqual 2 (RecordCount(Self)) "The table keeps its records."
+    End_Procedure
+
+    // _ErrKeep clears Err for the work of a function and answers the caller's Err; _ErrGiveBack answers whether that
+    // work raised no error and gives the caller its Err back.
+    { Published=True }
+    Procedure Test_The_Callers_Err_Comes_Back
+        Boolean bKept bOK bErrForTheWork bErrAfter
+
+        Move True to Err
+        Get _ErrKeep of ghoDbUpdateFunctionLibrary to bKept
+        Move Err to bErrForTheWork
+        Get _ErrGiveBack of ghoDbUpdateFunctionLibrary bKept to bOK
+        Move Err to bErrAfter
+        Move False to Err
+        Send Assert bKept "_ErrKeep answers the caller's Err."
+        Send AssertFalse bErrForTheWork "Err is clear for the work."
+        Send Assert bOK "No error in between: _ErrGiveBack answers True."
+        Send Assert bErrAfter "The caller has its Err back."
+    End_Procedure
 End_Object
