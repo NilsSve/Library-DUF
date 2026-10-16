@@ -11,6 +11,7 @@
 Use DFUnit\Fixturing\Fixture.pkg
 Use cDbUpdateFunctionLibrary.pkg
 Use cDbUpdateHandler.h.pkg
+Use cDbUpdateIntFileBackup.pkg
 
 Object oDbUpdateTableUpdate_Tests is a cTestFixture
     Set psTestFixtureName to "ApiTableUpdate on embedded tables"
@@ -1635,22 +1636,24 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         Send AssertFalse (_UtilTableIsSqlByRootName(ho, "Customer")) "A plain name: an embedded table."
     End_Procedure
 
-    // An embedded table whose root name has its folder, drive and all, is there and is no SQL table. (The ":" of the
-    // drive made it an SQL table: it was looked for on a server, with an error, and was not there.)
+    // A table whose root name has a drive in it is an embedded table, and asking whether it is there raises no
+    // error. (The ":" of the drive made it an SQL table: it was looked for on a server, with an error.) The root
+    // name is short: the Filelist keeps 40 characters of it.
     { Published=True }
-    Procedure Test_An_Embedded_Table_With_A_Drive_In_Its_Root_Name_Is_There
+    Procedure Test_A_Root_Name_With_A_Drive_Is_An_Embedded_Table
         Handle h
         Boolean bExists bSQL
         Integer iErrors
+        String sRoot
 
-        Send MakeBaseTable "DUFTT44" 5 False
-        Get phTable to h
-        Set_Attribute DF_FILE_ROOT_NAME of h to (psFolder(Self) + "\DUFTT44")
+        Get AddFilelistEntry "C:\NoSuchFolder\DUFTT44" "DUFTT44" to h
+        Get_Attribute DF_FILE_ROOT_NAME of h to sRoot
+        Send AssertSAreEqual "C:\NoSuchFolder\DUFTT44" sRoot "The Filelist has the root name."
         Send BeginCatch
         Get _UtilTableExists of ghoDbUpdateFunctionLibrary h to bExists
         Get _IsSQLEntry of ghoDbUpdateFunctionLibrary h to bSQL
         Get EndCatch to iErrors
-        Send Assert bExists "The table is there."
+        Send AssertFalse bExists "There is no such table."
         Send AssertFalse bSQL "It is no SQL table."
         Send AssertIAreEqual 0 iErrors ("No error." + psErrors(oErrors(Self)))
     End_Procedure
@@ -1668,6 +1671,44 @@ Object oDbUpdateTableUpdate_Tests is a cTestFixture
         If (ho <> 0) Begin
             Send AssertSAreEqual "Encrypt=Mandatory;" (EncryptOptionToText(ho, eMandatory)) "The handler: the part of a connection string."
             Send AssertSAreEqual "" (EncryptOptionToText(ho, 9)) "The handler, an option that is not known: nothing."
+        End
+    End_Procedure
+
+    // The .int file backup of the handler lists the Filelist's tables of every data folder, with the .int file of
+    // each table of a database driver: MSSQLDRV:DUFTI60 has DUFTI60.int, a table with a drive in its root name has
+    // none. (The handler walked the data path and the Filelist three times, each its own way.)
+    { Published=True }
+    Procedure Test_The_Int_File_Backup_Lists_The_Driver_Tables
+        Handle hoBackup hSql hEmb
+        tDbUpdateIntFileEntry[] aEntries
+        Integer iCount iSql iEmb
+
+        Get AddFilelistEntry "MSSQLDRV:DUFTI60" "DUFTI60" to hSql
+        // A short root name: the Filelist keeps 40 characters of it.
+        Get AddFilelistEntry "C:\NoSuchFolder\DUFTI61" "DUFTI61" to hEmb
+        Get Create of ghoDbUpdateFunctionLibrary (RefClass(cDbUpdateIntFileBackup)) to hoBackup
+        Get IntFileEntries of hoBackup to aEntries
+        Send Destroy of hoBackup
+
+        Move -1 to iSql
+        Move -1 to iEmb
+        For iCount from 0 to (SizeOfArray(aEntries) - 1)
+            If (aEntries[iCount].hTable = hSql) Begin
+                Move iCount to iSql
+            End
+            If (aEntries[iCount].hTable = hEmb) Begin
+                Move iCount to iEmb
+            End
+        Loop
+        Send Assert (iSql >= 0) "The driver table is listed."
+        Send Assert (iEmb >= 0) "The table with a drive in its root name is listed."
+        If (iSql >= 0) Begin
+            Send Assert (aEntries[iSql].bIsDriverTable) "MSSQLDRV:DUFTI60 is a table of a database driver."
+            Send AssertSAreEqual "DUFTI60.int" aEntries[iSql].sIntFileName "Its .int file."
+        End
+        If (iEmb >= 0) Begin
+            Send AssertFalse (aEntries[iEmb].bIsDriverTable) "A drive in the root name: an embedded table."
+            Send AssertSAreEqual "" aEntries[iEmb].sIntFileName "It has no .int file."
         End
     End_Procedure
 End_Object
