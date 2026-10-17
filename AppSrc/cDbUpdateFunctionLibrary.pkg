@@ -45,6 +45,14 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     Procedure Construct_Object
         Forward Send Construct_Object
         Move Self to ghoDbUpdateFunctionLibrary
+
+        // UtilTableIsSafeToOpen: what it found for the tables and servers of one Filelist and open path.
+        Property String    private.psSafeOpenKey ""
+        Property Integer[] private.paiSafeOpenChecked
+        Property Boolean[] private.pabSafeOpen
+        Property String[]  private.pasSafeOpenServers
+        Property String[]  private.pasSafeOpenTables
+        Property Integer[] private.paiSafeOpenCounts
     End_Procedure
 
     Procedure End_Construct_Object
@@ -6853,6 +6861,279 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return (bIsSame = True)
     End_Function
 
+    // *** A table whose .int file would crash the MS SQL driver ***
+    //
+    // NEXT_COLUMN_HIDDEN in an .int file says that the server table has a hidden column (an uppercased copy) right
+    // after that column. When the server table does not have the columns this asks for, DataFlex 26's MSSQLDRV
+    // damages the program's memory while it opens the table, and the program crashes then or later - often at the
+    // next Close (measured 2026-10-17). The functions that read a table's structure ask UtilTableIsSafeToOpen
+    // first and leave such a table closed: they answer as for a table that did not open, and an error and a log
+    // line name the table, once per Filelist.
+
+    // The least number of columns the server table needs for the hidden columns of an .int file: the record number
+    // column (RECNUM_TABLE YES), the column the hidden line belongs to, and the hidden columns up to that one.
+    // 0 when the .int file names no hidden column. A hidden line after the first INDEX_NUMBER is no column's.
+    Function UtilIntFileHiddenColumnsNeeded String[] asIntFile Returns Integer
+        Integer iLine iLines iPos iColumn iHidden iRecnum iNeeded
+        String sLine sWord sValue
+        Boolean bInColumns
+
+        Move 0 to iRecnum
+        Move 0 to iColumn
+        Move 0 to iHidden
+        Move 0 to iNeeded
+        Move True to bInColumns
+        Move (SizeOfArray(asIntFile)) to iLines
+        For iLine from 0 to (iLines - 1)
+            Move (Uppercase(Trim(Replaces(Character(9), asIntFile[iLine], " ")))) to sLine
+            Move (Pos(" ", sLine)) to iPos
+            If (iPos = 0) Begin
+                Move sLine to sWord
+                Move "" to sValue
+            End
+            Else Begin
+                Move (Left(sLine, (iPos - 1))) to sWord
+                Move (Trim(Mid(sLine, Length(sLine), (iPos + 1)))) to sValue
+            End
+            Case Begin
+                Case (sWord = "RECNUM_TABLE")
+                    Move (If(sValue = "YES", 1, 0)) to iRecnum
+                    Case Break
+                Case (sWord = "FIELD_NUMBER")
+                    Move sValue to iColumn
+                    Case Break
+                Case (sWord = "INDEX_NUMBER")
+                    Move False to bInColumns
+                    Case Break
+                Case (sWord = "NEXT_COLUMN_HIDDEN")
+                    If (bInColumns = True and iColumn > 0) Begin
+                        Increment iHidden
+                        Move (iNeeded max (iRecnum + iColumn + iHidden)) to iNeeded
+                    End
+                    Case Break
+            Case End
+        Loop
+        Function_Return iNeeded
+    End_Function
+
+    // The value of a keyword of an .int file: the rest of its line, with the blanks inside it. "" when the file
+    // does not have the keyword.
+    Function _UtilIntFileValue String[] asIntFile String sKeyWord Returns String
+        Integer iLine iLines iLength
+        String sLine
+
+        Move (Length(sKeyWord)) to iLength
+        Move (SizeOfArray(asIntFile)) to iLines
+        For iLine from 0 to (iLines - 1)
+            Move (Trim(Replaces(Character(9), asIntFile[iLine], " "))) to sLine
+            If (Uppercase(Left(sLine, iLength)) = Uppercase(sKeyWord)) Begin
+                If (Mid(sLine, 1, (iLength + 1)) = " ") Begin
+                    Function_Return (Trim(Mid(sLine, Length(sLine), (iLength + 1))))
+                End
+            End
+        Loop
+        Function_Return ""
+    End_Function
+
+    // The lines of a text file, the last one also when it has no line end. None when the file is not there.
+    Function _UtilIntFileLines String sFileName Returns String[]
+        String[] asLines
+        String sLine
+        Integer iCh
+        Boolean bExists bEof
+
+        Get vFilePathExists sFileName to bExists
+        If (bExists = False) Begin
+            Function_Return asLines
+        End
+        Get Seq_New_Channel to iCh
+        If (iCh = DF_SEQ_CHANNEL_NOT_AVAILABLE) Begin
+            Function_Return asLines
+        End
+        Direct_Input channel iCh sFileName
+        Move (SeqEof) to bEof
+        While (bEof = False)
+            Readln channel iCh sLine
+            Move (SeqEof) to bEof
+            If (bEof = False or sLine <> "") Begin
+                Move sLine to asLines[SizeOfArray(asLines)]
+            End
+        Loop
+        Close_Input channel iCh
+        Send Seq_Release_Channel iCh
+        Function_Return asLines
+    End_Function
+
+    // The .int file of a driver table, from the folders of the open path - where the driver looks. "" when the
+    // table is no driver table or no folder has its .int file.
+    Function _UtilIntFileOfTable Handle hTable Returns String
+        String sRootName sFileName sOpenPath sFolder
+        Integer iPaths iPath
+        Boolean bDriverTable bExists
+
+        If (ghoApplication = 0) Begin
+            Function_Return ""
+        End
+        Get_Attribute DF_FILE_ROOT_NAME of hTable to sRootName
+        Get _UtilRootNameIsDriverTable sRootName to bDriverTable
+        If (bDriverTable = False) Begin
+            Function_Return ""
+        End
+        Get _TableNameOnly sRootName to sFileName
+        If (Lowercase(Right(sFileName, 4)) <> ".int") Begin
+            Move (sFileName + ".int") to sFileName
+        End
+        Get_Attribute DF_OPEN_PATH to sOpenPath
+        Get CountOfPaths of (phoWorkspace(ghoApplication)) sOpenPath to iPaths
+        For iPath from 1 to iPaths
+            Get PathAtIndex of (phoWorkspace(ghoApplication)) sOpenPath iPath to sFolder
+            Get vFolderFormat sFolder to sFolder
+            Get vFilePathExists (sFolder + sFileName) to bExists
+            If (bExists = True) Begin
+                Function_Return (sFolder + sFileName)
+            End
+        Loop
+        Function_Return ""
+    End_Function
+
+    // The number of columns of a table or view on a server, "schema.table"; -1 when it is not known (no such table,
+    // or the server could not be asked). The tables of a server are read once per Filelist, in one query. MS SQL.
+    Function _SqlUtilServerColumnCount String sDriverID String sServer String sTable Returns Integer
+        String[] asServers asTables
+        Integer[] aiCounts
+        String sKey sName sCount sSelect
+        Handle hoSQLHandler hoSQLConnect hStmt
+        Integer iFetchResult iPos
+
+        Move (sDriverID + ":" + sServer) to sKey
+        Get private.pasSafeOpenServers to asServers
+        If (SearchArray(sKey, asServers) < 0) Begin
+            Move sKey to asServers[SizeOfArray(asServers)]
+            Set private.pasSafeOpenServers to asServers
+            Get private.pasSafeOpenTables to asTables
+            Get private.paiSafeOpenCounts to aiCounts
+            Move "select lower(s.name) + '.' + lower(o.name), count(*) from sys.objects o" to sSelect
+            Move (sSelect * "join sys.schemas s on s.schema_id = o.schema_id") to sSelect
+            Move (sSelect * "join sys.columns c on c.object_id = o.object_id") to sSelect
+            Move (sSelect * "where o.type in ('U', 'V') group by s.name, o.name") to sSelect
+            Get phoSQLManager to hoSQLHandler
+            If (hoSQLHandler <> 0) Begin
+                Get SQLConnect of hoSQLHandler sDriverID sServer to hoSQLConnect
+                If (hoSQLConnect <> 0) Begin
+                    Get SQLOpen of hoSQLConnect to hStmt
+                    If (hStmt <> 0) Begin
+                        Send SqlExecDirect of hStmt sSelect
+                        Repeat
+                            Get SQLFetch of hStmt to iFetchResult
+                            If (iFetchResult <> 0) Begin
+                                Get SQLColumnValue of hStmt 1 to sName
+                                Get SQLColumnValue of hStmt 2 to sCount
+                                Move (sKey + "|" + Trim(sName)) to asTables[SizeOfArray(asTables)]
+                                Move sCount to aiCounts[SizeOfArray(aiCounts)]
+                            End
+                        Until (iFetchResult = 0)
+                        Send SQLClose of hStmt
+                    End
+                    Send SQLDisconnect of hoSQLConnect
+                End
+            End
+            Set private.pasSafeOpenTables to asTables
+            Set private.paiSafeOpenCounts to aiCounts
+        End
+
+        Get private.pasSafeOpenTables to asTables
+        Move (SearchArray((sKey + "|" + Lowercase(sTable)), asTables)) to iPos
+        If (iPos < 0) Begin
+            Function_Return -1
+        End
+        Get private.paiSafeOpenCounts to aiCounts
+        Function_Return aiCounts[iPos]
+    End_Function
+
+    // Forgets what UtilTableIsSafeToOpen found: another Filelist or open path.
+    Procedure _UtilSafeOpenForget
+        String[] asEmpty
+        Integer[] aiEmpty
+        Boolean[] abEmpty
+
+        Set private.paiSafeOpenChecked to aiEmpty
+        Set private.pabSafeOpen        to abEmpty
+        Set private.pasSafeOpenServers to asEmpty
+        Set private.pasSafeOpenTables  to asEmpty
+        Set private.paiSafeOpenCounts  to aiEmpty
+    End_Procedure
+
+    // True: the table can be opened. False: its .int file names hidden columns that the MS SQL table does not have
+    // (see above), and the table is to stay closed; the first time an error and a log line say so. A table that is
+    // open already, an embedded table, another driver's, or one the server cannot be asked about: True.
+    Function UtilTableIsSafeToOpen Handle hTable Returns Boolean
+        Boolean bOpen bSafe
+        String sKey sOpenPath sIntFile sDriverID sServer sSchema sTable sLogicalName sText
+        String[] asIntFile
+        Integer[] aiChecked
+        Boolean[] abSafe
+        Integer iPos iNeeded iHave
+
+        If (hTable <= 0) Begin
+            Function_Return True
+        End
+        Get_Attribute DF_FILE_OPENED of hTable to bOpen
+        If (bOpen = True) Begin
+            Function_Return True
+        End
+
+        Get_Attribute DF_FILELIST_NAME to sKey
+        Get_Attribute DF_OPEN_PATH to sOpenPath
+        Move (sKey + "|" + sOpenPath) to sKey
+        If (sKey <> private.psSafeOpenKey(Self)) Begin
+            Send _UtilSafeOpenForget
+            Set private.psSafeOpenKey to sKey
+        End
+        Get private.paiSafeOpenChecked to aiChecked
+        Move (SearchArray(hTable, aiChecked)) to iPos
+        If (iPos >= 0) Begin
+            Get private.pabSafeOpen to abSafe
+            Function_Return abSafe[iPos]
+        End
+
+        Move True to bSafe
+        Get _UtilIntFileOfTable hTable to sIntFile
+        If (sIntFile <> "") Begin
+            Get _UtilIntFileLines sIntFile to asIntFile
+            Get _UtilIntFileValue asIntFile "DRIVER_NAME" to sDriverID
+            Get UtilIntFileHiddenColumnsNeeded asIntFile to iNeeded
+            If (Uppercase(sDriverID) = MSSQLDRV_ID and iNeeded > 0) Begin
+                Get _UtilIntFileValue asIntFile "SERVER_NAME" to sServer
+                Get _UtilIntFileValue asIntFile "SCHEMA_NAME" to sSchema
+                If (sSchema = "") Begin
+                    Move "dbo" to sSchema
+                End
+                Get _UtilIntFileValue asIntFile "DATABASE_NAME" to sTable
+                Get _SqlUtilServerColumnCount MSSQLDRV_ID sServer (sSchema + "." + sTable) to iHave
+                If (iHave >= 0 and iHave < iNeeded) Begin
+                    Move False to bSafe
+                    Get_Attribute DF_FILE_LOGICAL_NAME of hTable to sLogicalName
+                    Move ("Table" * sLogicalName * "(number" * String(hTable) + ") was not opened.") to sText
+                    Move (sText * "Its .int file" * sIntFile * "names hidden columns") to sText
+                    Move (sText * "that need" * String(iNeeded) * "columns on the server,") to sText
+                    Move (sText * "and the SQL table" * sTable * "has" * String(iHave) + ".") to sText
+                    Move (sText * "Opening it would crash the MS SQL driver.") to sText
+                    Move (sText * "Make the .int file match the table.") to sText
+                    Send LogError sText True
+                    Error DFERR_CANT_OPEN_DATA_FILE sText
+                End
+            End
+        End
+
+        Get private.paiSafeOpenChecked to aiChecked
+        Get private.pabSafeOpen to abSafe
+        Move hTable to aiChecked[SizeOfArray(aiChecked)]
+        Move bSafe  to abSafe[SizeOfArray(abSafe)]
+        Set private.paiSafeOpenChecked to aiChecked
+        Set private.pabSafeOpen        to abSafe
+        Function_Return bSafe
+    End_Function
+
     // To fill a complete Table array structure (tAPITable[]) with data.
     // The data + filelist.cfg path, login et al must have been setup properly first.
     // Pass a True as first parameter if the ghoStatusPanel is active and progress info should be shown.
@@ -6888,7 +7169,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Get_Attribute DF_FILE_NEXT_USED of hTable to hTable
             If (hTable > 0 and hTable <> 50) Begin
 
-                Open hTable
+                If (UtilTableIsSafeToOpen(Self, hTable)) Begin
+                    Open hTable
+                End
                 // ToDo: Needs to be revised
                 // For some reason tables may be reported as "unopened", while in
                 // fact the open was successful (!)
@@ -6924,7 +7207,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         tAPIRelation[]   aApiRelations
         Boolean bIsOpen
 
-        Open hTable
+        If (UtilTableIsSafeToOpen(Self, hTable)) Begin
+            Open hTable
+        End
         Get_Attribute DF_FILE_OPENED of hTable to bIsOpen
         If (bIsOpen = False) Begin
             Move True to ApiTableEmpty.bError
@@ -6981,7 +7266,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         tAPITableNameInfo APITableNameInfo APITableNameInfoEmpty
         Boolean bIsOpen
 
-        Open hTable
+        If (UtilTableIsSafeToOpen(Self, hTable)) Begin
+            Open hTable
+        End
         Get_Attribute DF_FILE_OPENED of hTable to bIsOpen
         If (bIsOpen = False) Begin
             Move True   to APITableNameInfoEmpty.bError
@@ -7644,7 +7931,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get_Attribute DF_FILE_OPENED of hTable to bIsOpen
         If (bIsOpen = False) Begin
             Send Ignore_Error of Error_Object_Id DFERR_CANT_OPEN_DATA_FILE
-            Open hTable
+            If (UtilTableIsSafeToOpen(Self, hTable)) Begin
+                Open hTable
+            End
             Send Trap_Error of Error_Object_Id DFERR_CANT_OPEN_DATA_FILE
             Get_Attribute DF_FILE_OPENED of hTable to bIsOpen
             If (bIsOpen = False) Begin
@@ -8127,7 +8416,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         If (bIsOpen = False) Begin
             Send Ignore_Error of Error_Object_Id DFERR_CANT_OPEN_DATA_FILE
             Set Error_Report_Mode to DUF_ERROR_NO_REPORT
-            Open hTable
+            If (UtilTableIsSafeToOpen(Self, hTable)) Begin
+                Open hTable
+            End
             Set Error_Report_Mode to DUF_ERROR_REPORT
             Send Trap_Error of Error_Object_Id DFERR_CANT_OPEN_DATA_FILE
             Get_Attribute DF_FILE_OPENED of hTable to bIsOpen
@@ -8387,7 +8678,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Get_Attribute DF_FILE_OPENED of hTable to bIsOpen
         If (bIsOpen = False) Begin
             Send Ignore_Error of Error_Object_Id DFERR_CANT_OPEN_DATA_FILE
-            Open hTable
+            If (UtilTableIsSafeToOpen(Self, hTable)) Begin
+                Open hTable
+            End
             Send Trap_Error of Error_Object_Id DFERR_CANT_OPEN_DATA_FILE
             Get_Attribute DF_FILE_OPENED of hTable to bIsOpen
             If (bIsOpen = False) Begin
@@ -8403,7 +8696,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             If (hParent <> 0) Begin
                 // A parent table the program had open stays open. (It was closed in any case.)
                 Get_Attribute DF_FILE_OPENED of hParent to bParentWasOpen
-                Open hParent
+                If (UtilTableIsSafeToOpen(Self, hParent)) Begin
+                    Open hParent
+                End
                 Move hTable                                             to APIRelations[iCount].hTableFrom
                 Get_Attribute DF_FILE_LOGICAL_NAME of hTable            to APIRelations[iCount].sLogicalNameFrom
                 Move iColumn                                            to APIRelations[iCount].iColumnFrom

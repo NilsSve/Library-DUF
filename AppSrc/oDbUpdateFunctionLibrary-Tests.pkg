@@ -412,4 +412,106 @@ Object oDbUpdateFunctionLibrary_Tests is a cTestFixture
         Get _UtilColumnType of ghoDbUpdateFunctionLibrary DB2_DRV_ID EN_DbTypeDB2 0 "timestamp" False to ColumnType
         Send AssertIAreEqual DF_DATETIME ColumnType.iDataFlexType "DB2 timestamp is a DateTime."
     End_Procedure
+
+    // A NEXT_COLUMN_HIDDEN line says the server table has a hidden column right after that column. The least number
+    // of server columns: the record number column (RECNUM_TABLE YES) + the column + the hidden columns so far.
+    // The two cases are the .int files that crashed DataFlex 26's MS SQL driver (2026-10-17).
+    { Published=True }
+    Procedure Test_The_Server_Columns_The_Hidden_Columns_Of_An_Int_File_Need
+        String[] asInt asEmpty
+        Integer iNeeded
+
+        // one hidden column after column 3 (as GKZ.int): RECNUM, 1, 2, 3, hidden
+        Move "DRIVER_NAME MSSQLDRV" to asInt[0]
+        Move "RECNUM_TABLE YES"     to asInt[1]
+        Move ""                     to asInt[2]
+        Move "FIELD_NUMBER 1"       to asInt[3]
+        Move "FIELD_INDEX 1"        to asInt[4]
+        Move "FIELD_NUMBER 2"       to asInt[5]
+        Move "FIELD_NUMBER 3"       to asInt[6]
+        Move "NEXT_COLUMN_HIDDEN UPPERCASED" to asInt[7]
+        Move "FIELD_INDEX 3"        to asInt[8]
+        Move "INDEX_NUMBER 0"       to asInt[9]
+        Move "INDEX_NAME GKZ000"    to asInt[10]
+        Get UtilIntFileHiddenColumnsNeeded of ghoDbUpdateFunctionLibrary asInt to iNeeded
+        Send AssertIAreEqual 5 iNeeded "Hidden after column 3: RECNUM, three columns and the hidden one."
+
+        // two hidden columns, after columns 1 and 2 (as SYSTAB.int): RECNUM, 1, hidden, 2, hidden
+        Move asEmpty to asInt
+        Move "RECNUM_TABLE YES"     to asInt[0]
+        Move "FIELD_NUMBER 1"       to asInt[1]
+        Move "NEXT_COLUMN_HIDDEN UPPERCASED" to asInt[2]
+        Move "FIELD_NUMBER 2"       to asInt[3]
+        Move "NEXT_COLUMN_HIDDEN UPPERCASED" to asInt[4]
+        Move "FIELD_NUMBER 3"       to asInt[5]
+        Get UtilIntFileHiddenColumnsNeeded of ghoDbUpdateFunctionLibrary asInt to iNeeded
+        Send AssertIAreEqual 5 iNeeded "Hidden after columns 1 and 2: RECNUM, 1, hidden, 2, hidden."
+
+        // no record number column; lower case, a tab and blanks in front
+        Move asEmpty to asInt
+        Move "RECNUM_TABLE NO"      to asInt[0]
+        Move ("field_number" + Character(9) + "2") to asInt[1]
+        Move "   next_column_hidden uppercased" to asInt[2]
+        Get UtilIntFileHiddenColumnsNeeded of ghoDbUpdateFunctionLibrary asInt to iNeeded
+        Send AssertIAreEqual 3 iNeeded "No record number column: two columns and the hidden one."
+
+        // no hidden column at all, and a hidden line in the index part does not count
+        Move asEmpty to asInt
+        Move "RECNUM_TABLE YES"     to asInt[0]
+        Move "FIELD_NUMBER 7"       to asInt[1]
+        Get UtilIntFileHiddenColumnsNeeded of ghoDbUpdateFunctionLibrary asInt to iNeeded
+        Send AssertIAreEqual 0 iNeeded "No hidden column: nothing is needed."
+        Move "INDEX_NUMBER 1"       to asInt[2]
+        Move "NEXT_COLUMN_HIDDEN UPPERCASED" to asInt[3]
+        Get UtilIntFileHiddenColumnsNeeded of ghoDbUpdateFunctionLibrary asInt to iNeeded
+        Send AssertIAreEqual 0 iNeeded "A hidden line after the columns is not a column's."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_An_Int_File_Is_Read_Line_By_Line
+        String[] asLines
+        String sTemp sFile
+        Integer iCh
+
+        Get_Environment "TEMP" to sTemp
+        If (Right(sTemp, 1) <> "\") Begin
+            Move (sTemp + "\") to sTemp
+        End
+        Move (sTemp + "DUFTestIntFile_GKZ.int") to sFile
+        Get Seq_New_Channel to iCh
+        Direct_Output channel iCh sFile
+        Writeln channel iCh "DRIVER_NAME MSSQLDRV"
+        Writeln channel iCh "SERVER_NAME SERVER=A ;DATABASE=B"
+        Write channel iCh "FIELD_NUMBER 3"
+        Close_Output channel iCh
+        Send Seq_Release_Channel iCh
+
+        Get _UtilIntFileLines of ghoDbUpdateFunctionLibrary sFile to asLines
+        EraseFile sFile
+        Send AssertIAreEqual 3 (SizeOfArray(asLines)) "Three lines, the last one without a line end."
+        If (SizeOfArray(asLines) = 3) Begin
+            Send AssertSAreEqual "SERVER_NAME SERVER=A ;DATABASE=B" asLines[1] "A line as it is."
+            Send AssertSAreEqual "FIELD_NUMBER 3" asLines[2] "The last line."
+        End
+        Get _UtilIntFileLines of ghoDbUpdateFunctionLibrary (sTemp + "DUFTestIntFile_NoSuchFile.int") to asLines
+        Send AssertIAreEqual 0 (SizeOfArray(asLines)) "A file that is not there: no lines."
+    End_Procedure
+
+    { Published=True }
+    Procedure Test_The_Value_Of_An_Int_File_Keyword
+        String[] asInt
+        String sValue
+
+        Move "DRIVER_NAME MSSQLDRV" to asInt[0]
+        Move ("server_name" + Character(9) + "SERVER=A ;DATABASE=B ;UID=x") to asInt[1]
+        Move "SCHEMA_NAME dbo"      to asInt[2]
+        Get _UtilIntFileValue of ghoDbUpdateFunctionLibrary asInt "SERVER_NAME" to sValue
+        // the rest of the line, with the blanks inside it; the keyword in any case
+        Send AssertSAreEqual "SERVER=A ;DATABASE=B ;UID=x" sValue "The server string."
+        Get _UtilIntFileValue of ghoDbUpdateFunctionLibrary asInt "DRIVER_NAME" to sValue
+        Send AssertSAreEqual "MSSQLDRV" sValue "The driver."
+        Get _UtilIntFileValue of ghoDbUpdateFunctionLibrary asInt "DATABASE_NAME" to sValue
+        Send AssertSAreEqual "" sValue "A keyword the file does not have: empty."
+    End_Procedure
+
 End_Object
