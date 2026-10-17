@@ -37,6 +37,30 @@ These sections can be found in the `Developer5.chm` Help file located in the `/H
 
 The workspace also uses three other libraries from Nils Sve's GitHub page — DFAbout, RDCToolsLib and vwin32fh. As of the flattening described below, they are **no longer nested submodules of DUF**; they are separate sibling libraries. See the Dependencies section for why, and what a consuming application must do.
 
+## What is new in 1.0.6
+
+A guard against a crash of the MS SQL driver, and restructures that work wherever the program was started.
+
+Reading the structure of SQL tables (Compare Databases, the Code Generator):
+
+- A table whose .int file has `NEXT_COLUMN_HIDDEN` lines that the server table has no columns for is not opened.
+  DataFlex 26's MS SQL driver damages the program's memory when it opens such a table, and the program crashes
+  then or later - often at the next Close. DUF now compares the columns the hidden lines need with the server
+  table (one query per server) before it opens a table to read its structure, leaves such a table closed, and
+  names it, its .int file and both column counts in error 75 and the log. Make the .int file match the table to
+  read it again. MS SQL only.
+
+The update run:
+
+- A restructure that writes a table's data anew makes its work file beside the data file. It made it in the folder
+  the program was started in, so started from a read-only folder every such restructure failed with error 4254.
+
+Libraries:
+
+- RDCToolsLib 1.0.13 (taken by the range `^1.0.11`) fixes the suggestion forms of the Compare Databases view and
+  other dialogs: on DataFlex 23 and up every key pressed in them raised error 98. DUF's own DataFlex 26 workspace
+  uses 1.0.13.
+
 ## What is new in 1.0.5
 
 The review findings that 1.0.4 left for later, and a fix for the SQL Repair Utility on DataFlex 19.1 and 20.1.
@@ -328,12 +352,13 @@ vwin32fh come with it. A package brings the sources of DUF's programs, but no pr
 Add it with the version after a `#`:
 
 ```
-https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.5
+https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.6
 ```
 
-Each release has a version tag (`1.0.0`, `1.0.1`, `1.0.2`, `1.0.3`, `1.0.4`, `1.0.5`, ...), listed under Tags on
-GitHub. Without the `#` part the workspace gets a commit. A workspace that also names RDCToolsLib or DFAbout
-itself lists them before DUF, in a version DUF accepts: RDCToolsLib 1.0.11 or later, DFAbout 1.0.2 or later.
+Each release has a version tag (`1.0.0`, `1.0.1`, `1.0.2`, `1.0.3`, `1.0.4`, `1.0.5`, `1.0.6`, ...), listed under
+Tags on GitHub. Without the `#` part the workspace gets a commit. A workspace that also names RDCToolsLib or
+DFAbout itself lists them before DUF, in a version DUF accepts: RDCToolsLib 1.0.11 or later, DFAbout 1.0.2 or
+later.
 
 The package puts **`BuildDUFUtilities.bat`** into the workspace folder. Start it there. It compiles
 `DUFCodeGenerator` and `DUFSQLRepairUtility` into the workspace's `Programs` folder:
