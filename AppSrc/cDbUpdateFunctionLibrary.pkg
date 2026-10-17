@@ -6780,6 +6780,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Move True to bFilelistError
             Function_Return False
         End
+        // A table that could not be opened, on either side, is a difference; nothing else of it can be compared.
+        If (APITableCompare.bOpenErrorFrom = True or APITableCompare.bOpenErrorTo = True) Begin
+            Function_Return False
+        End
 
         Move APITableCompare.hTable to hTable
         Move True  to bIsSame
@@ -7211,9 +7215,19 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
             Open hTable
         End
         Get_Attribute DF_FILE_OPENED of hTable to bIsOpen
+        // A table that does not open keeps its number, its side and its Filelist names, with bError: a compare
+        // reports it as a table that could not be opened. (With table number 0 it was taken for a table without
+        // columns - every column "doesn't exist" - or it was left out.)
         If (bIsOpen = False) Begin
-            Move True to ApiTableEmpty.bError
-            Move hTable to ApiTableEmpty.ApiTableInfo.iTableNumber
+            Move True               to ApiTableEmpty.bError
+            Move hTable             to ApiTableEmpty.hTable
+            Move bFromTables        to ApiTableEmpty.bFromTable
+            Move (not(bFromTables)) to ApiTableEmpty.bToTable
+            Move hTable             to ApiTableEmpty.ApiTableInfo.iTableNumber
+            Move True               to ApiTableEmpty.ApiTableInfo.bError
+            Get_Attribute DF_FILE_ROOT_NAME    of hTable to ApiTableEmpty.ApiTableInfo.sRootName
+            Get_Attribute DF_FILE_LOGICAL_NAME of hTable to ApiTableEmpty.ApiTableInfo.sLogicalName
+            Get_Attribute DF_FILE_DISPLAY_NAME of hTable to ApiTableEmpty.ApiTableInfo.sDisplayName
             Function_Return ApiTableEmpty
         End
 
@@ -7398,6 +7412,9 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
                 Move APITableNameInfoCompare.bExistsFrom                                to aAPITableCompare[iItem].bExistsFrom
                 Move APITableNameInfoCompare.bExistsTo                                  to aAPITableCompare[iItem].bExistsTo
                 Move APITableNameInfoCompare                                            to aAPITableCompare[iItem].APITableNameInfoCompare
+                // A side whose table did not open (UtilTableStructFill's bError):
+                Move APITableFrom.bError                                                to aAPITableCompare[iItem].bOpenErrorFrom
+                Move APITableTo.bError                                                  to aAPITableCompare[iItem].bOpenErrorTo
 
                 // Column info:
                 Get UtilColumnCombineFromAndToArrays aApiColumnsFrom aApiColumnsTo      to aAPIColumnCompare

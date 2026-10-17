@@ -490,8 +490,10 @@ Struct tAPITableCompare
     Handle hTable
     // FROM database:
     Boolean bExistsFrom
+    Boolean bOpenErrorFrom  // In the Filelist, but the table could not be opened: nothing of it is compared
     // TO database:
     Boolean bExistsTo
+    Boolean bOpenErrorTo    // The same for the TO database
     // Both:
     tAPITableNameInfoCompare APITableNameInfoCompare
     tAPIColumnCompare[]     aAPIColumnsCompare

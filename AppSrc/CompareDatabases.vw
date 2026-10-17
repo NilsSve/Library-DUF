@@ -17,6 +17,7 @@ Define CS_ReportFileName                for "DUFCompareReport"
 Define CS_ReportFileNameExtenstion      for ".txt"
 Define CS_ReportDifferenceNote          for "(*)"
 Define CS_ReportTableNotFound           for "Table doesn't exist!"
+Define CS_ReportTableNotOpened          for "Table couldn't be opened!"
 Define CS_ReportFieldNotFound           for "Field doesn't exist!"
 Define CS_ReportIndexNotFound           for "Index doesn't exist!"
 Define CS_ReportIndexSegmentNotFound    for "Index segment doesn't exist!"
@@ -249,6 +250,10 @@ Object oCompareDatabases_vw is a dbView
 
     End_Object
 
+    // The tables of the last compare that could not be opened, on either side. (Not in piaDifferences of
+    // ghoApplication: those are the tables to tag for code generation.)
+    Property Integer[] piaTablesNotOpened
+
     Procedure MainProcess
         String sFilelistFrom sFilelistTo
         Integer[] iaDifferences
@@ -289,15 +294,31 @@ Object oCompareDatabases_vw is a dbView
     End_Procedure
     
     Procedure HandleComparisonResult Integer iSize Integer[] iaDifferences TimeSpan tsTotalTime
-        Integer iRetval hTable
-        String sMessage
-    
+        Integer iRetval iNotOpened
+        Integer[] iaNotOpened
+        String sMessage sNotOpened
+
+        Get piaTablesNotOpened to iaNotOpened
+        Move (SizeOfArray(iaNotOpened)) to iNotOpened
+        If (iNotOpened > 0) Begin
+            Move ("\n" + String(iNotOpened) + " table(s) couldn't be opened. The report names them.") to sNotOpened
+        End
+
         Case Begin
-            Case (iSize = 0)
+            Case (iSize = 0 and iNotOpened = 0)
                 Send Info_Box "No differences found. The two databases are identical."
                 Case Break
+            Case (iSize = 0)
+                Move ("Ready! (Time elapsed:" + String(tsTotalTime) + ")\nNo differences found in the tables that could be opened." + ;
+                    sNotOpened + "\nView the report now?") to sMessage
+                Get YesNo_Box sMessage to iRetval
+                If (iRetval = MBR_Yes) Begin
+                    Send DoShowReport of oViewReport_Btn
+                End
+                Case Break
             Case (iaDifferences[0] >= 1)
-                Move ("Ready! (Time elapsed:" + String(tsTotalTime) + ")\n" + String(iSize) + " Differences found. View the report now?") to sMessage
+                Move ("Ready! (Time elapsed:" + String(tsTotalTime) + ")\n" + String(iSize) + " Differences found." + sNotOpened + ;
+                    "\nView the report now?") to sMessage
                 Get YesNo_Box sMessage to iRetval
                 If (iRetval = MBR_Yes) Begin
                     Send DoShowReport of oViewReport_Btn
@@ -306,25 +327,21 @@ Object oCompareDatabases_vw is a dbView
             Case (iaDifferences[0] = -1)
                 Send Info_Box "Process interrupted."
                 Case Break
-            Case (iaDifferences[0] < -1)
-                Move (999999 + iaDifferences[0] * -1) to hTable
-                Send Info_Box ("Process not complete. Couldn't open table number:" + String(hTable))
-                Send DoShowReport of oViewReport_Btn
-                Case Break
             Case Else
                 Send Info_Box "An unknown error occurred. Process interrupted."
         Case End
     End_Procedure
 
     Function CompareAndOutputDiffs String sFilelistFrom String sFilelistTo tAPITableBooleans CompareCheckBoxes DateTime dtExecStart Returns Integer[]
-        Integer iSize iCount iNoOfTablesFrom iNoOfTablesTo iCh
+        Integer iSize iCount iNoOfTablesFrom iNoOfTablesTo iCh iCompared iIdentical
         Boolean bIsSame bFilelistError bUserCancel bOK bCollationDiff bIsEmbedded
         Handle hTable
         String sLogicalName sDatabaseCollationFrom sDatabaseCollationTo sDatabase
         tAPITable[] aFromStructure aToStructure
         tAPITableCompare[] aAPITableCompare
-        Integer[] iaDifferences iaDifferencesEmpty 
+        Integer[] iaDifferences iaDifferencesEmpty iaNotOpened
 
+        Set piaTablesNotOpened to iaNotOpened
         Set Message_Text of ghoStatusPanel to ""
         // Set up the pathing correctly for the 'FROM' Filelist.cfg so we can open tables:
         Get ChangeFilelistPathing of ghoApplication sFilelistFrom to bOK
@@ -359,12 +376,7 @@ Object oCompareDatabases_vw is a dbView
             Function_Return iaDifferencesEmpty
         End
         
-        // Error while filling struct array (Table could not be opened)?
-        If (aFromStructure[0].bError = True) Begin
-            Move aFromStructure[0].ApiTableInfo.iTableNumber to hTable
-            Move (-999999 - hTable) to iaDifferencesEmpty[0]
-            Function_Return iaDifferencesEmpty
-        End
+        // A table that could not be opened is in the array, marked bError, and the report names it.
 
         // Set up the pathing correctly for the 'TO' Filelist.cfg so we can open tables from the other workspace:
         Get ChangeFilelistPathing of ghoApplication sFilelistTo to bOK
@@ -394,12 +406,6 @@ Object oCompareDatabases_vw is a dbView
             Move -1 to iaDifferencesEmpty[0]
             Function_Return iaDifferencesEmpty
         End
-        // Error while filling struct array (Table could not be opened)?
-        If (aToStructure[0].bError = True) Begin
-            Move aToStructure[0].ApiTableInfo.iTableNumber to hTable
-            Move (-999999 - hTable) to iaDifferencesEmpty[0]
-        End
-
         Set Message_Text of ghoStatusPanel to "Comparing and Writing Differences: (3 of 3)"
         Move 0 to hTable
         Move 0 to iCount
@@ -425,10 +431,25 @@ Object oCompareDatabases_vw is a dbView
             Set Action_Text of ghoStatusPanel to ("Name:" * sLogicalName * String("Number:") * String(hTable))
 
             Get UtilTableCompare_Ex of ghoDbUpdateFunctionLibrary aAPITableCompare[iCount] CompareCheckBoxes False (&bFilelistError) to bIsSame
+            // Compared: in both Filelists and opened on both sides.
+            If (aAPITableCompare[iCount].bExistsFrom = True and aAPITableCompare[iCount].bExistsTo = True and ;
+                aAPITableCompare[iCount].bOpenErrorFrom = False and aAPITableCompare[iCount].bOpenErrorTo = False) Begin
+                Increment iCompared
+                If (bIsSame = True) Begin
+                    Increment iIdentical
+                End
+            End
 
             If (bIsSame = False) Begin
-                Send MainReport (&aAPITableCompare[iCount]) (&CompareCheckBoxes) iCh
-                Move hTable to iaDifferences[SizeOfArray(iaDifferences)]
+                If (aAPITableCompare[iCount].bOpenErrorFrom = True or aAPITableCompare[iCount].bOpenErrorTo = True) Begin
+                    Send WriteTableNotOpened aAPITableCompare[iCount].APITableNameInfoCompare ;
+                        aAPITableCompare[iCount].bOpenErrorFrom aAPITableCompare[iCount].bOpenErrorTo iCh
+                    Move hTable to iaNotOpened[SizeOfArray(iaNotOpened)]
+                End
+                Else Begin
+                    Send MainReport (&aAPITableCompare[iCount]) (&CompareCheckBoxes) iCh
+                    Move hTable to iaDifferences[SizeOfArray(iaDifferences)]
+                End
             End
 
             Get Check_StatusPanel of ghoStatusPanel to bUserCancel
@@ -442,7 +463,8 @@ Object oCompareDatabases_vw is a dbView
         If (Uppercase(sDatabaseCollationFrom) <> Uppercase(sDatabaseCollationTo)) Begin
             Move True to bCollationDiff
         End
-        Send WriteReportFooter (SizeOfArray(iaDifferences)) bCollationDiff iCh dtExecStart
+        Send WriteReportFooter (SizeOfArray(iaDifferences)) iaNotOpened iCompared iIdentical bCollationDiff iCh dtExecStart
+        Set piaTablesNotOpened to iaNotOpened
         Close DF_ALL DF_PERMANENT
 
         Function_Return iaDifferences
@@ -613,6 +635,56 @@ Object oCompareDatabases_vw is a dbView
         If (bExistsFrom = False or bExistsTo = False) Begin
             Writeln channel iCh
         End
+        Writeln channel iCh
+    End_Procedure
+
+    // A line with a label, the FROM side in the first column and the TO side in the second.
+    Function NotOpenedLine String sLabel String sFrom String sTo Returns String
+        String sLine
+
+        Get MakeStringLength sLabel CI_ReportColumn1 to sLine
+        Get MakeStringLength (sLine + sFrom) CI_ReportColumn2 to sLine
+        Function_Return (sLine + sTo)
+    End_Function
+
+    // A table that is in a Filelist but could not be opened, on one side or both: its names and the side that did
+    // not open. Nothing else of it can be compared, so no columns, indexes or relations are listed.
+    Procedure WriteTableNotOpened tAPITableNameInfoCompare Info Boolean bOpenErrorFrom Boolean bOpenErrorTo Integer iCh
+        String sLogicalName sFrom sTo
+        String sNameFrom sNameTo sRootFrom sRootTo sOpenFrom sOpenTo
+
+        Move CS_ReportTableNotFound to sNameFrom
+        Move CS_ReportTableNotFound to sRootFrom
+        Move ""                     to sOpenFrom
+        If (Info.bExistsFrom = True) Begin
+            Move Info.sLogicalNameFrom to sNameFrom
+            Move Info.sRootNameFrom    to sRootFrom
+            Move (If(bOpenErrorFrom, CS_ReportTableNotOpened * CS_ReportDifferenceNote, "Yes")) to sOpenFrom
+        End
+        Move CS_ReportTableNotFound to sNameTo
+        Move CS_ReportTableNotFound to sRootTo
+        Move ""                     to sOpenTo
+        If (Info.bExistsTo = True) Begin
+            Move Info.sLogicalNameTo to sNameTo
+            Move Info.sRootNameTo    to sRootTo
+            Move (If(bOpenErrorTo, CS_ReportTableNotOpened * CS_ReportDifferenceNote, "Yes")) to sOpenTo
+        End
+        Move (If(Info.bExistsFrom, Info.sLogicalNameFrom, Info.sLogicalNameTo)) to sLogicalName
+
+        Writeln channel iCh
+        Writeln channel iCh "Table Number: " (String(Info.iTableNumber)) " - " sLogicalName " - couldn't be opened"
+        Writeln channel iCh CS_ReportHeaderUnderWrite
+        Move "FROM Database:" to sFrom
+        Get MakeStringLength sFrom CI_ReportColumn2 to sFrom
+        Move (sFrom + "TO Database:") to sFrom
+        Writeln channel iCh sFrom
+        Move (Repeat("-", Length(sFrom))) to sFrom
+        Writeln channel iCh sFrom
+        Writeln channel iCh (NotOpenedLine(Self, "Logical Name:", sNameFrom, sNameTo))
+        Writeln channel iCh (NotOpenedLine(Self, "Root Name:",    sRootFrom, sRootTo))
+        Writeln channel iCh (NotOpenedLine(Self, "Opened:",       sOpenFrom, sOpenTo))
+        Writeln channel iCh
+        Writeln channel iCh "Its fields, indexes and relations are not compared. Check the table's .int file and its database."
         Writeln channel iCh
     End_Procedure
 
@@ -975,9 +1047,12 @@ Object oCompareDatabases_vw is a dbView
         End
     End_Procedure
 
-    Procedure WriteReportFooter Integer iSize Boolean bCollationDiff Integer iCh DateTime dtExecStart
+    Procedure WriteReportFooter Integer iSize Integer[] iaNotOpened Integer iCompared Integer iIdentical Boolean bCollationDiff ;
+        Integer iCh DateTime dtExecStart
         DateTime dtExecEnd
         TimeSpan tsTotalTime
+        Integer iNotOpened iCount iLast
+        String sLine
 
         Move (CurrentDateTime()) to dtExecEnd
         Move (dtExecEnd - dtExecStart) to tsTotalTime
@@ -985,6 +1060,9 @@ Object oCompareDatabases_vw is a dbView
         Writeln channel iCh
         Writeln channel iCh "SUMMARY:  [Total Elapsed Time: " tsTotalTime "]"
         Writeln channel iCh CS_ReportHeaderUnderWrite               
+        // The tables in both Filelists that opened on both sides, and those of them without a difference.
+        Writeln channel iCh "Number of Tables compared: " (String(iCompared))
+        Writeln channel iCh "Number of Tables identical: " (String(iIdentical))
         If (bCollationDiff = False) Begin
             Writeln channel iCh "Number of Tables with differences: " (String(iSize))
         End 
@@ -996,8 +1074,30 @@ Object oCompareDatabases_vw is a dbView
             Writeln channel iCh 
         End
         
-        If (iSize = 0) Begin
+        // The tables that could not be opened, by number.
+        Move (SizeOfArray(iaNotOpened)) to iNotOpened
+        If (iNotOpened > 0) Begin
+            Writeln channel iCh "Number of Tables that couldn't be opened: " (String(iNotOpened))
+            Move "Table Numbers:   " to sLine
+            Move (iNotOpened - 1) to iLast
+            For iCount from 0 to iLast
+                If (Length(sLine) > 100) Begin
+                    Writeln channel iCh sLine
+                    Move (Repeat(" ", 17)) to sLine
+                End
+                Move (sLine + String(iaNotOpened[iCount])) to sLine
+                If (iCount < iLast) Begin
+                    Move (sLine + ", ") to sLine
+                End
+            Loop
+            Writeln channel iCh sLine
+        End
+
+        If (iSize = 0 and iNotOpened = 0) Begin
             Writeln channel iCh "*** No table differences found. All tables should be identical! ***"
+        End
+        Else If (iSize = 0) Begin
+            Writeln channel iCh "*** No differences found in the tables that could be opened. ***"
         End
 
         Send Seq_Close_Channel iCh
@@ -1115,6 +1215,7 @@ Object oCompareDatabases_vw is a dbView
         Set Value of oReportFileName_fm     to ""
         Set psFilelistFrom of ghoApplication to ""
         Set piaDifferences of ghoApplication to iDifferencesEmpty
+        Set piaTablesNotOpened to iDifferencesEmpty
 
         Send Activate of oFilelistPathFrom_fm
     End_Procedure

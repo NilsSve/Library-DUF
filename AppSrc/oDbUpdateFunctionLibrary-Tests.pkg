@@ -514,4 +514,80 @@ Object oDbUpdateFunctionLibrary_Tests is a cTestFixture
         Send AssertSAreEqual "" sValue "A keyword the file does not have: empty."
     End_Procedure
 
+    // A table that does not open stays in the result: its number, its side and bError. (It came back with table
+    // number 0, so a compare took it for a table with no columns - every column "doesn't exist" - or left it out.)
+    // Table number 4000 is not used in the test Filelist.
+    { Published=True }
+    Procedure Test_A_Table_That_Does_Not_Open_Keeps_Its_Number
+        tAPITable ApiTable
+        Handle hoOld
+
+        Set piErrors of oNoErrors to 0
+        Move Error_Object_Id to hoOld
+        Move (oNoErrors(Self)) to Error_Object_Id
+        Get UtilTableStructFill of ghoDbUpdateFunctionLibrary 4000 False to ApiTable
+        Move hoOld to Error_Object_Id
+        Move False to Err
+        Send Assert ApiTable.bError "An error."
+        Send AssertIAreEqual 4000 ApiTable.hTable "The table number."
+        Send AssertIAreEqual 4000 ApiTable.ApiTableInfo.iTableNumber "The table number of the name info."
+        Send Assert ApiTable.bToTable "A TO table."
+        Send AssertFalse ApiTable.bFromTable "Not a FROM table."
+        Send AssertIAreEqual 0 (SizeOfArray(ApiTable.aApiColumns)) "No columns."
+    End_Procedure
+
+    // A table that opened on one side and not on the other is one row of the compare, marked for the side that did
+    // not open, and a difference - its columns are not compared.
+    { Published=True }
+    Procedure Test_A_Table_That_Did_Not_Open_Is_Marked_In_The_Compare
+        tAPITable[] aFrom aTo
+        tAPITableCompare[] aCompare
+        tAPITableBooleans CompareBooleans
+        Boolean bFilelistError bIsSame
+
+        Move 12         to aFrom[0].hTable
+        Move True       to aFrom[0].bFromTable
+        Move 12         to aFrom[0].ApiTableInfo.iTableNumber
+        Move "CUSTOMER" to aFrom[0].ApiTableInfo.sLogicalName
+        Move 1          to aFrom[0].aApiColumns[0].iFieldNumber
+        Move "NAME"     to aFrom[0].aApiColumns[0].sFieldName
+        Move 12         to aTo[0].hTable
+        Move True       to aTo[0].bToTable
+        Move True       to aTo[0].bError
+        Move 12         to aTo[0].ApiTableInfo.iTableNumber
+        Move "CUSTOMER" to aTo[0].ApiTableInfo.sLogicalName
+        Get UtilTableCombineFromAndToArrays of ghoDbUpdateFunctionLibrary aFrom aTo to aCompare
+        Send AssertIAreEqual 1 (SizeOfArray(aCompare)) "One row."
+        If (SizeOfArray(aCompare) = 1) Begin
+            Send AssertIAreEqual 12 aCompare[0].hTable "The table number."
+            Send Assert aCompare[0].bExistsFrom "In the FROM Filelist."
+            Send Assert aCompare[0].bExistsTo "In the TO Filelist."
+            Send AssertFalse aCompare[0].bOpenErrorFrom "The FROM table opened."
+            Send Assert aCompare[0].bOpenErrorTo "The TO table did not open."
+            Get UtilTableCompare_Ex of ghoDbUpdateFunctionLibrary aCompare[0] CompareBooleans False ;
+                (&bFilelistError) to bIsSame
+            Send AssertFalse bIsSame "A difference."
+        End
+    End_Procedure
+
+    // Both sides opened: neither is marked.
+    { Published=True }
+    Procedure Test_Tables_That_Opened_Are_Not_Marked_In_The_Compare
+        tAPITable[] aFrom aTo
+        tAPITableCompare[] aCompare
+
+        Move 12   to aFrom[0].hTable
+        Move True to aFrom[0].bFromTable
+        Move 12   to aFrom[0].ApiTableInfo.iTableNumber
+        Move 12   to aTo[0].hTable
+        Move True to aTo[0].bToTable
+        Move 12   to aTo[0].ApiTableInfo.iTableNumber
+        Get UtilTableCombineFromAndToArrays of ghoDbUpdateFunctionLibrary aFrom aTo to aCompare
+        Send AssertIAreEqual 1 (SizeOfArray(aCompare)) "One row."
+        If (SizeOfArray(aCompare) = 1) Begin
+            Send AssertFalse aCompare[0].bOpenErrorFrom "FROM opened."
+            Send AssertFalse aCompare[0].bOpenErrorTo "TO opened."
+        End
+    End_Procedure
+
 End_Object
