@@ -40,6 +40,8 @@ Object oFilelistFixerView is a cRDCDbView
     Property String psConnIdFile ""
     Property Boolean pbOpenLogFile False
     Property Integer piChannel -1  
+    // The errors written to the log file since the last button was clicked (WriteError counts them).
+    Property Integer piLoggedErrors 0
     
     Object oFilelist_fm is a cRDCForm
         Set Size to 12 382
@@ -90,7 +92,6 @@ Object oFilelistFixerView is a cRDCDbView
                 If (bOK = True) Begin
                     Set psFilelistFrom of ghoApplication to sFileList
                     Send UpdateConnIdData of oConnidInfo_edt
-                    Get ChangeFilelistPathing of ghoApplication sFileList to bOK
                     Send UpdateDriverIniFile of oDriver_fm
                     Get ParseFolderName sFileList to sPath
                     Move (Right(sPath, 1)) to sChar
@@ -154,7 +155,14 @@ Object oFilelistFixerView is a cRDCDbView
         Set piImageSize to 24
         Set pbAutoEnable to True
         
+        // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
         Procedure OnClick
+            Send ResetLoggedErrors
+            Send DoClick
+            Send OfferErrorLog
+        End_Procedure
+
+        Procedure DoClick
             String sDataPath sConnectionID
             String[] asFileChanges
             Boolean bActive
@@ -226,7 +234,14 @@ Object oFilelistFixerView is a cRDCDbView
         Set pbAutoEnable to True
         Set peAnchors to anNone
         
+        // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
         Procedure OnClick
+            Send ResetLoggedErrors
+            Send DoClick
+            Send OfferErrorLog
+        End_Procedure
+
+        Procedure DoClick
             Send RefreshData
         End_Procedure
     
@@ -480,7 +495,14 @@ Object oFilelistFixerView is a cRDCDbView
             Set pbAutoEnable to True
             Set psToolTip to "Make a backup copy of the SQL database. The file will be created in the SQL Server standard Backup folder, with a file name that is the database name followed by the todays date and time."
             
+            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
+                Send ResetLoggedErrors
+                Send DoClick
+                Send OfferErrorLog
+            End_Procedure
+
+            Procedure DoClick
                 Boolean bOK
 
                 // Show SQLDatabaseBackup dialog:
@@ -604,7 +626,14 @@ Object oFilelistFixerView is a cRDCDbView
             Set pbAutoEnable to True
             Set psToolTip to "To change the collating sequence for the SQL database to use a new collating sequence."
 
+            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
+                Send ResetLoggedErrors
+                Send DoClick
+                Send OfferErrorLog
+            End_Procedure
+
+            Procedure DoClick
                 String sDatabase sCurrentCollatingSequence sCollatingSequence sSteps
                 Integer iRetval
                 Boolean bOK bBackup
@@ -872,7 +901,14 @@ Object oFilelistFixerView is a cRDCDbView
             Set pbAutoEnable to True
             Set psToolTip to "The fix will spin through the Filelist and \n1. Removes non Alias entries that does not have a corresponding .Dat file.\nNote:This only applies to non Alias tables."
         
+            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
+                Send ResetLoggedErrors
+                Send DoClick
+                Send OfferErrorLog
+            End_Procedure
+
+            Procedure DoClick
                 Integer iRetval iCounter
                 Get YesNo_Box "The fix will spin through the Filelist and \n1. Removes non Alias entries that does not have a corresponding .Dat file.\nNote:This only applies to non Alias tables.\n\nA backup copy of the Filelist.cfg file is made first.\n\nContinue?" to iRetval
                 If (iRetval <> MBR_Yes) Begin
@@ -912,7 +948,14 @@ Object oFilelistFixerView is a cRDCDbView
             Set pbAutoEnable to True
             Set psToolTip to "The fix will spin through Filelist.cfg and \n1. either add or remove driver prefixes for ALIAS rootnames, depending on the Master RootName\n2. Change all ALIAS table Descriptions to the ROOTNAME + 'ALIAS'"
         
+            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
+                Send ResetLoggedErrors
+                Send DoClick
+                Send OfferErrorLog
+            End_Procedure
+
+            Procedure DoClick
                 Integer iRetval iCounter
                 Get YesNo_Box "The fix will spin through Filelist.cfg and \n1. either add or remove driver prefixes for ALIAS rootnames, depending on the Master RootName\n2. Change all ALIAS table Descriptions to the ROOTNAME + 'ALIAS'\n\nA backup copy of the Filelist.cfg file is made first.\n\nContinue?" to iRetval
                 If (iRetval <> MBR_Yes) Begin
@@ -954,7 +997,14 @@ Object oFilelistFixerView is a cRDCDbView
             Set pbAutoEnable to True
             Set psToolTip to "The fix will spin through Filelist.cfg and \n1. Remove all driver prefixes for Master tables that does NOT exist in the SQL Database\n2. OR Add driver prefix for Master filelist entries that are missing a driver prefix."
         
+            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
+                Send ResetLoggedErrors
+                Send DoClick
+                Send OfferErrorLog
+            End_Procedure
+
+            Procedure DoClick
                 Integer iRetval iCounter
                 Get YesNo_Box "The fix will spin through Filelist.cfg and \n1. Remove all driver prefixes for tables that does NOT exist in the SQL Database\n2. OR Add driver prefix for Master filelist entries that are missing a driver prefix.\n\nA backup copy of the Filelist.cfg file is made first.\n\nContinue?" to iRetval
                 If (iRetval <> MBR_Yes) Begin
@@ -996,7 +1046,14 @@ Object oFilelistFixerView is a cRDCDbView
             Set pbAutoEnable to True
             Set psToolTip to "The fix will spin through the Filelist and \n1. Try to fix or removes Non SQL entries for tables that cannot be opened."
         
+            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
+                Send ResetLoggedErrors
+                Send DoClick
+                Send OfferErrorLog
+            End_Procedure
+
+            Procedure DoClick
                 Integer iRetval iCounter iOpenErrors
                 
                 Get YesNo_Box "The fix will spin through the Filelist and: \n- Try to fix or remove Non SQL Filelist entries for tables that cannot be opened.\n\nA backup copy of the Filelist.cfg file is made first\n\nContinue?" to iRetval
@@ -1049,7 +1106,14 @@ Object oFilelistFixerView is a cRDCDbView
             Set psToolTip to "This will try recreate the .int files listed in the 'Open Table Errors' list."
             Set pbAutoEnable to True
             
+            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
+                Send ResetLoggedErrors
+                Send DoClick
+                Send OfferErrorLog
+            End_Procedure
+
+            Procedure DoClick
                 Integer iRetval iCounter 
                 Boolean bExtractRelations bRemoveUCol
                 
@@ -1156,7 +1220,14 @@ Object oFilelistFixerView is a cRDCDbView
             Set piImageSize to 24
             Set pbAutoEnable to True
             
+            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
+                Send ResetLoggedErrors
+                Send DoClick
+                Send OfferErrorLog
+            End_Procedure
+
+            Procedure DoClick
                 Integer iRetval iCounter
                 Boolean bExtractRelations bRemoveUCol
                 String sDataPath sBackup
@@ -1204,7 +1275,14 @@ Object oFilelistFixerView is a cRDCDbView
             Set piImageSize to 24
             Set pbAutoEnable to True
             
+            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
+                Send ResetLoggedErrors
+                Send DoClick
+                Send OfferErrorLog
+            End_Procedure
+
+            Procedure DoClick
                 Integer iRetval iCounter
                 Boolean bBackup
                 String sDataPath sBackup
@@ -1252,7 +1330,14 @@ Object oFilelistFixerView is a cRDCDbView
             Set piImageSize to 24
             Set pbAutoEnable to True
             
+            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
+                Send ResetLoggedErrors
+                Send DoClick
+                Send OfferErrorLog
+            End_Procedure
+
+            Procedure DoClick
                 Integer iRetval iCounter 
                 
                 Get YesNo_Box "Move all *.dat related files that is not in the 'Rootname *.dat' list, to the workspace's '.\Data\Backup' folder.\n\nContinue?" to iRetval
@@ -1599,10 +1684,41 @@ Object oFilelistFixerView is a cRDCDbView
         Send Update_StatusPanel of ghoStatusPanel sMessage
     End_Procedure
     
+    Procedure ResetLoggedErrors
+        Set piLoggedErrors to 0
+    End_Procedure
+
+    // When errors were written to the log file during the run, a question offers to show it.
+    Procedure OfferErrorLog
+        Integer iErrors iRetval
+        String sLogFile
+
+        Get piLoggedErrors to iErrors
+        Set piLoggedErrors to 0
+        If (iErrors = 0) Begin
+            Procedure_Return
+        End
+        // Closed first, so that all that was written is in the file.
+        Send CloseLogFile
+        Get Value of oLogFile_fm to sLogFile
+        Get YesNo_Box (String(iErrors) * "error message(s) were written to the log file:\n" + sLogFile + "\n\nWould you like to see the log file?") to iRetval
+        If (iRetval = MBR_Yes) Begin
+            Runprogram Shell Background sLogFile
+        End
+    End_Procedure
+
+    // F5: Refresh Data, with the log offered as after a button.
+    Procedure RefreshDataByKey
+        Send ResetLoggedErrors
+        Send RefreshData
+        Send OfferErrorLog
+    End_Procedure
+
     Procedure WriteError String sErrorText
         Integer iCh
         Boolean bOpenLogFile
         
+        Set piLoggedErrors to (piLoggedErrors(Self) + 1)
         Get pbOpenLogFile to bOpenLogFile
         If (bOpenLogFile = False) Begin
             Send OpenLogFile
@@ -1796,5 +1912,5 @@ Object oFilelistFixerView is a cRDCDbView
 
     End_Object  
 
-    On_Key kClear Send RefreshData
+    On_Key kClear Send RefreshDataByKey
 End_Object    
