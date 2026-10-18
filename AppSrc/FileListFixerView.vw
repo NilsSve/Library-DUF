@@ -926,6 +926,10 @@ Object oFilelistFixerView is a cRDCDbView
                     Procedure_Return    
                 End
                 Get FixFileListSQLMissingTables to iCounter               
+                If (iCounter = -2) Begin
+                    Send Stop_Box "The list of the tables of the SQL database could not be read, so nothing was changed.\n\nCheck the connection: 'Tot SQL tables' shows how many tables were read. Then click 'Refresh Data!' and try again."
+                    Procedure_Return
+                End
                 If (iCounter < 0) Begin
                     Send Stop_Box (BackupStoppedText(Self, "", 0))
                     Procedure_Return
@@ -1011,7 +1015,7 @@ Object oFilelistFixerView is a cRDCDbView
             
             Procedure OnClick
                 Integer iRetval iCounter 
-                Boolean bExtractRelations
+                Boolean bExtractRelations bRemoveUCol
                 
                 Get YesNo_Box "This will recreate the .int files listed in the 'Open Table Errors' list.\n\nContinue?" to iRetval
                 If (iRetval <> MBR_Yes) Begin
@@ -1019,8 +1023,10 @@ Object oFilelistFixerView is a cRDCDbView
                 End
                 Get YesNo_Box "Would you like to extract relation ships from the current .int file, and add that info to the new .int file?" to iRetval
                 Move (iRetval = MBR_Yes) to bExtractRelations
+                Get YesNo_Box "Would you also like to remove the uppercased (U_) columns of these tables? Each table that has them is restructured on the SQL server." to iRetval
+                Move (iRetval = MBR_Yes) to bRemoveUCol
                 
-                Get FixAllIntFileErrors bExtractRelations to iCounter
+                Get FixAllIntFileErrors bExtractRelations bRemoveUCol to iCounter
                 If (psBackupError(Self) <> "") Begin
                     Send Stop_Box (BackupStoppedText(Self, ".int files recreated", iCounter))
                     Procedure_Return
@@ -1485,9 +1491,9 @@ Object oFilelistFixerView is a cRDCDbView
         Function_Return iRetval
     End_Function
 
-    Function FixAllIntFileErrors Boolean bExtractRelations Returns Integer
+    Function FixAllIntFileErrors Boolean bExtractRelations Boolean bRemoveUCol Returns Integer
         Integer iRetval
-        Get FixAllIntFileErrors of (oFilelistRepair(Self)) bExtractRelations to iRetval
+        Get FixAllIntFileErrors of (oFilelistRepair(Self)) bExtractRelations bRemoveUCol to iRetval
         Function_Return iRetval
     End_Function
 
@@ -1658,6 +1664,8 @@ Object oFilelistFixerView is a cRDCDbView
     End_Procedure
     
     Procedure ClearData
+        // The log file of the Filelist before is closed: its channel was dropped open, and the file stayed locked.
+        Send CloseLogFile
         Set psConnId to ""
         Set psConnIdFile to ""
         Set psBackupFolder to ""

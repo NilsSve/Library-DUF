@@ -229,6 +229,11 @@ Class cDUFFilelistRepair is a cObject
             Send UtilFillSQLTables of ghoDUF
             Get pasSQLDataTables of ghoDUF to asSQLTables
         End
+        // -2: the database gave no list of its tables. Every table would look missing from it, and every driver
+        // prefix would be taken away, so nothing is changed. (It took them all away.)
+        If (SizeOfArray(asSQLTables) = 0) Begin
+            Function_Return -2
+        End
         Get pFileListArray of ghoDUF to FileListArray
         If (SizeOfArray(FileListArray) = 0) Begin
             Send RefreshData
@@ -389,7 +394,9 @@ Class cDUFFilelistRepair is a cObject
         Function_Return iCounter
     End_Function
 
-    Function FixAllIntFileErrors Boolean bExtractRelations Returns Integer
+    // bRemoveUCol: the uppercased (U_) columns of the tables are removed as well - a restructure of each table that
+    // has them. (They were removed always, without a question.)
+    Function FixAllIntFileErrors Boolean bExtractRelations Boolean bRemoveUCol Returns Integer
         Integer iSize iCount iCounter iDriver
         tFilelist[] ErrorFilesArray FileListArray
         String sDriver sRootName sIntFileName sConnectionID
@@ -436,7 +443,7 @@ Class cDUFFilelistRepair is a cObject
                 Get _IsSystemFile of ghoDUF hTable to bIsSystem
                 Send UpdateStatusPanel ("Fixing .int file problems for table:" * String(ErrorFilesArray[iCount].sNoDriverRootname))
     
-                Get CreateSingleIntFile hTable sDriver sConnectionID bIsSystem sIntFileName bExtractRelations True to bOK
+                Get CreateSingleIntFile hTable sDriver sConnectionID bIsSystem sIntFileName bExtractRelations bRemoveUCol to bOK
                 
                 Close hTable
                 If (bOK) Begin
@@ -786,36 +793,45 @@ Class cDUFFilelistRepair is a cObject
     End_Function
 
     Function CollectTableRelations String sIntFile Returns String[]
-        Integer iSize iCount
         String[] asIntFile asData
-        String sLine sFieldTxt
-        
+
         Get FullDataPathFileName sIntFile to sIntFile
         Get ReadFileToArray sIntFile to asIntFile
+        Get IntFileRelationLines asIntFile to asData
+        Function_Return asData
+    End_Function
+
+    // The FIELD_RELATED_ lines of an .int file, those of each field after an empty line and its FIELD_NUMBER line.
+    // A field's lines end at an empty line - also one of blanks -, at the next FIELD_NUMBER line or at the first
+    // INDEX_NUMBER line. (A line of blanks did not end them, so a relation of the next field was given to this one,
+    // and a FIELD_NUMBER line right after another was skipped, 2026-10-18.)
+    Function IntFileRelationLines String[] asIntFile Returns String[]
+        Integer iSize iCount
+        String[] asData
+        String sLine sUpper sField
+        Boolean bWritten
+
+        Move "" to sField
+        Move False to bWritten
         Move (SizeOfArray(asIntFile)) to iSize
-        Decrement iSize
-        
-        For iCount from 0 to iSize
-            Move (Trim(asIntFile[iCount])) to sLine  
-            If (Uppercase(Left(sLine, 13)) = "FIELD_NUMBER ") Begin
-                Move sLine to sFieldTxt
-                Repeat
-                    If (iCount < iSize) Begin
-                        Increment iCount               
-                        // Try to find both: FIELD_RELATED_FILE & FIELD_RELATED_FIELD
-                        // Note that we can't be sure in whitch order they are in.
-                        If (Uppercase(Left(asIntFile[iCount], 14)) = "FIELD_RELATED_") Begin
-                            If (sFieldTxt <> "") Begin  
-                                Move ""    to asData[SizeOfArray(asData)]
-                                Move sLine to asData[SizeOfArray(asData)]
-                                Move "" to sFieldTxt
-                            End
-                            Move asIntFile[iCount] to asData[SizeOfArray(asData)]
-                        End
-                    End
-                Until (Trim(asIntFile[iCount] = "") or iCount >= iSize)
+        For iCount from 0 to (iSize - 1)
+            Move (Trim(Replaces(Character(9), asIntFile[iCount], " "))) to sLine
+            Move (Uppercase(sLine)) to sUpper
+            If (Left(sUpper, 13) = "FIELD_NUMBER ") Begin
+                Move sLine to sField
+                Move False to bWritten
             End
-            
+            Else If (sLine = "" or Left(sUpper, 13) = "INDEX_NUMBER ") Begin
+                Move "" to sField
+            End
+            Else If (sField <> "" and Left(sUpper, 14) = "FIELD_RELATED_") Begin
+                If (bWritten = False) Begin
+                    Move ""     to asData[SizeOfArray(asData)]
+                    Move sField to asData[SizeOfArray(asData)]
+                    Move True to bWritten
+                End
+                Move sLine to asData[SizeOfArray(asData)]
+            End
         Loop
         Function_Return asData
     End_Function
@@ -1508,6 +1524,14 @@ Class cDUFFilelistRepair is a cObject
                 Function_Return -1
             End
         End
+        // The data files in use come from the tables Refresh Data read. Without them every data file would look
+        // unused and be moved, so nothing is moved then.
+        If (SizeOfArray(pFileListArray(ghoDUF)) = 0) Begin
+            Send RefreshData
+        End
+        If (SizeOfArray(pFileListArray(ghoDUF)) = 0) Begin
+            Function_Return 0
+        End
         Send StartStatusPanel "Moving *.dat files to backup folder:" sBackupFolder 1
 
         Move "dat,hdr,vld,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,k20" to sFilter
@@ -1624,11 +1648,9 @@ Class cDUFFilelistRepair is a cObject
         Integer iSize iCount
         Boolean bIsIntTable
         
+        // The tables Refresh Data read; none when it has not been read. (It sent Refresh Data then, and Refresh Data
+        // asks this function: with a Filelist without tables the two called each other until the program crashed.)
         Get pFileListArray of ghoDUF to FileListTables
-        If (SizeOfArray(FilelistTables) = 0) Begin
-            Send RefreshData
-            Get pFileListArray of ghoDUF to FileListTables
-        End
         Move (SizeOfArray(FilelistTables)) to iSize
         Decrement iSize
         For iCount from 0 to iSize

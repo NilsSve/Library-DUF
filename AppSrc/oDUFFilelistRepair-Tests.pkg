@@ -50,6 +50,35 @@ Object oDUFFilelistRepair_Tests is a cTestFixture
         Send AssertIAreEqual 4 (SizeOfArray(asColumns)) "U_Name at the end is a field."
     End_Procedure
 
+    // The relations of an old .int file: a line of blanks ends a field's lines, so the relation of field 5 stays
+    // field 5's, and a FIELD_NUMBER line right after another one is not skipped (2026-10-18).
+    { Published=True }
+    Procedure Test_The_Relations_Of_An_Int_File_Stay_With_Their_Field
+        String[] asInt asData
+        Handle ho
+        Move (oRepair(Self)) to ho
+        Move "FIELD_NUMBER 4"         to asInt[0]
+        Move "FIELD_RELATED_FILE 15"  to asInt[1]
+        Move "FIELD_RELATED_FIELD 1"  to asInt[2]
+        Move "   "                    to asInt[3]
+        Move "FIELD_NUMBER 5"         to asInt[4]
+        Move "FIELD_INDEX 7"          to asInt[5]
+        Move "FIELD_NUMBER 6"         to asInt[6]
+        Move "FIELD_RELATED_FILE 216" to asInt[7]
+        Move "FIELD_RELATED_FIELD 27" to asInt[8]
+        Move ""                       to asInt[9]
+        Move "INDEX_NUMBER 0"         to asInt[10]
+        Move "FIELD_RELATED_FILE 99"  to asInt[11]
+        Get IntFileRelationLines of ho asInt to asData
+        Send AssertIAreEqual 8 (SizeOfArray(asData)) "Two fields with two relation lines each."
+        If (SizeOfArray(asData) = 8) Begin
+            Send AssertSAreEqual "FIELD_NUMBER 4"         asData[1] "Field 4 first."
+            Send AssertSAreEqual "FIELD_RELATED_FILE 15"  asData[2] "Its related file."
+            Send AssertSAreEqual "FIELD_NUMBER 6"         asData[5] "Then field 6, not field 5."
+            Send AssertSAreEqual "FIELD_RELATED_FIELD 27" asData[7] "Its related field."
+        End
+    End_Procedure
+
     { Published=True }
     Procedure Test_An_Attribute_Of_A_Field_Is_Found_Once
         String[] asData
