@@ -9,4 +9,4 @@ DDSrcPath=DDSrc
 HelpPath=Help
 ProgramPath=Programs
 FileList=Data\Filelist.cfg
-Description=Database Update Framework - Development
+Description=DUFDev26.0
