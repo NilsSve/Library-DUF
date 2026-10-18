@@ -26,6 +26,9 @@
 *.rv  text eol=crlf
 *.dd  text eol=crlf
 *.frm text eol=crlf
+# Config.ws: df-cli writes it with LF line ends; this keeps it CRLF on disk, and
+# line ends alone are no change.
+*.ws  text eol=crlf
 
 # Windows helper scripts must stay CRLF so cmd.exe runs them correctly
 *.bat text eol=crlf
