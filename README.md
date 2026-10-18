@@ -37,6 +37,16 @@ These sections can be found in the `Developer5.chm` Help file located in the `/H
 
 The workspace also uses three other libraries from Nils Sve's GitHub page — DFAbout, RDCToolsLib and vwin32fh. As of the flattening described below, they are **no longer nested submodules of DUF**; they are separate sibling libraries. See the Dependencies section for why, and what a consuming application must do.
 
+## What is new in 1.0.9
+
+The SQL Repair Utility says when errors were written to its log.
+
+SQL Repair Utility:
+
+- The errors that occur during a run are written to the log file and not shown on screen. When a button or F5
+  wrote errors, a question at the end now gives their number and offers to open the log file.
+- Choosing a Filelist logs in to the database once; it logged in twice in a row.
+
 ## What is new in 1.0.8
 
 A SQL Repair Utility that no longer crashes on a broken .int file, recreates .int files that open, and says when
@@ -399,13 +409,13 @@ vwin32fh come with it. A package brings the sources of DUF's programs, but no pr
 Add it with the version after a `#`:
 
 ```
-https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.8
+https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.9
 ```
 
 Each release has a version tag (`1.0.0`, `1.0.1`, `1.0.2`, `1.0.3`, `1.0.4`, `1.0.5`, `1.0.6`, `1.0.7`, `1.0.8`,
-...), listed under Tags on GitHub. Without the `#` part the workspace gets a commit. A workspace that also names
-RDCToolsLib or DFAbout itself lists them before DUF, in a version DUF accepts: RDCToolsLib 1.0.11 or later,
-DFAbout 1.0.2 or later.
+`1.0.9`, ...), listed under Tags on GitHub. Without the `#` part the workspace gets a commit. A workspace that
+also names RDCToolsLib or DFAbout itself lists them before DUF, in a version DUF accepts: RDCToolsLib 1.0.11 or
+later, DFAbout 1.0.2 or later.
 
 The package puts **`BuildDUFUtilities.bat`** into the workspace folder. Start it there. It compiles
 `DUFCodeGenerator` and `DUFSQLRepairUtility` into the workspace's `Programs` folder:
