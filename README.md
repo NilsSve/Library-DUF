@@ -37,6 +37,40 @@ These sections can be found in the `Developer5.chm` Help file located in the `/H
 
 The workspace also uses three other libraries from Nils Sve's GitHub page — DFAbout, RDCToolsLib and vwin32fh. As of the flattening described below, they are **no longer nested submodules of DUF**; they are separate sibling libraries. See the Dependencies section for why, and what a consuming application must do.
 
+## What is new in 1.0.8
+
+A SQL Repair Utility that no longer crashes on a broken .int file, recreates .int files that open, and says when
+something fails.
+
+Refresh Data and the repair buttons:
+
+- Refresh Data crashed the program (a GPF) on a table whose .int file names a hidden U_ column that the SQL table
+  does not have. The guard of 1.0.6 now also protects the Filelist read and the repair buttons: such a table is
+  not opened, is listed under "Open table errors" with an error that names it, and "5. Recreate *.int files" makes
+  its .int file anew.
+- Recreating an .int file marks a U_ column hidden only when it comes right after its own column. A U_ column at
+  the end of the table, or one without its column, is an ordinary field. (Each U_ column made its column hidden,
+  by name, so the field numbers after it went wrong and the table did not open.)
+- The relations of the old .int file stay with their own field: a line of blanks did not end a field's lines.
+- The errors that occur reach the code again: the view's error handler cleared Err, so a failed Open or
+  restructure counted as done. Such tables are now counted as failed.
+
+Safer buttons:
+
+- "3. Make Filelist RootNames equal to SQL database" changes nothing when the database gives no list of its
+  tables. It took every driver prefix away.
+- "5. Recreate *.int files" asks before it removes the U_ columns of the tables; it removed them always.
+- A Filelist without tables no longer makes Refresh Data call itself until the program crashes, and "Move *.Dat
+  files to backup" moves nothing before the tables are read.
+- "1.", "2.", "4." and "Move *.Dat files" work without DFConnId.ini, for embedded tables too. "Recreate all *.int
+  files" includes root names like `Customer.int`.
+
+Smaller fixes:
+
+- The cache files are erased in each folder of the data path; the log file is closed when another Filelist is
+  chosen; the "Driver .int file" box names MSSQLDRV.int; the connection box shows "***" for a password; the U_
+  setting is no longer set on the DataFlex driver; two status panels get their number of steps.
+
 ## What is new in 1.0.7
 
 A Compare Databases report that names the tables that do not open.
@@ -365,11 +399,11 @@ vwin32fh come with it. A package brings the sources of DUF's programs, but no pr
 Add it with the version after a `#`:
 
 ```
-https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.7
+https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.8
 ```
 
-Each release has a version tag (`1.0.0`, `1.0.1`, `1.0.2`, `1.0.3`, `1.0.4`, `1.0.5`, `1.0.6`, `1.0.7`, ...),
-listed under Tags on GitHub. Without the `#` part the workspace gets a commit. A workspace that also names
+Each release has a version tag (`1.0.0`, `1.0.1`, `1.0.2`, `1.0.3`, `1.0.4`, `1.0.5`, `1.0.6`, `1.0.7`, `1.0.8`,
+...), listed under Tags on GitHub. Without the `#` part the workspace gets a commit. A workspace that also names
 RDCToolsLib or DFAbout itself lists them before DUF, in a version DUF accepts: RDCToolsLib 1.0.11 or later,
 DFAbout 1.0.2 or later.
 
