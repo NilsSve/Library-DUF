@@ -6921,6 +6921,38 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return iNeeded
     End_Function
 
+    // The field numbers that have a hidden uppercased column, from the columns of the server table in their order.
+    // The driver counts the columns in their order, so a U_ column is hidden only when it comes right after its
+    // column: U_NAME after NAME. A U_ column elsewhere - added at the end of the table, or one without its column -
+    // is an ordinary field. RECNUM is no field. (Each U_ column was taken for a hidden one by its name; the field
+    // numbers after it went wrong and the table did not open, 2026-10-18.)
+    Function UtilHiddenColumnFields String[] asColumns Returns Integer[]
+        Integer[] aiFields
+        Integer iColumns iColumn iField
+        String sColumn sNext
+
+        Move 0 to iField
+        Move 0 to iColumn
+        Move (SizeOfArray(asColumns)) to iColumns
+        While (iColumn < iColumns)
+            Move (Uppercase(Trim(asColumns[iColumn]))) to sColumn
+            If (sColumn <> "RECNUM") Begin
+                Increment iField
+                Move "" to sNext
+                If (iColumn < (iColumns - 1)) Begin
+                    Move (Uppercase(Trim(asColumns[iColumn + 1]))) to sNext
+                End
+                If (sNext = ("U_" + sColumn)) Begin
+                    Move iField to aiFields[SizeOfArray(aiFields)]
+                    // The hidden column is no field.
+                    Increment iColumn
+                End
+            End
+            Increment iColumn
+        Loop
+        Function_Return aiFields
+    End_Function
+
     // The value of a keyword of an .int file: the rest of its line, with the blanks inside it. "" when the file
     // does not have the keyword.
     Function _UtilIntFileValue String[] asIntFile String sKeyWord Returns String

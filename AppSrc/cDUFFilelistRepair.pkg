@@ -820,16 +820,22 @@ Class cDUFFilelistRepair is a cObject
         Function_Return asData
     End_Function
     
-    // The column names without RECNUM and the uppercased (U_) columns. (It removed while counting up, so the
-    // column after a removed one was never looked at.)
+    // The column names of the fields, in the order of their field numbers: without RECNUM and without the hidden
+    // uppercased columns - a U_ column right after its column (UtilHiddenColumnFields). Another U_ column is a
+    // field. (Every U_ column went, so a field after one at the wrong place got the number of the field before it,
+    // 2026-10-18. Before that it removed while counting up, so the column after a removed one was never looked at.)
     Function SanitizeColumnNames String[] asColumns Returns String[]
         Integer iCount
-        String sColName
+        String sColName sBefore
 
         Move (SizeOfArray(asColumns) - 1) to iCount
         While (iCount >= 0)
-            Move asColumns[iCount] to sColName
-            If (Left(Uppercase(sColName), 2) = "U_" or Uppercase(sColName) = "RECNUM") Begin
+            Move (Uppercase(Trim(asColumns[iCount]))) to sColName
+            Move "" to sBefore
+            If (iCount > 0) Begin
+                Move (Uppercase(Trim(asColumns[iCount - 1]))) to sBefore
+            End
+            If (sColName = "RECNUM" or (sBefore <> "" and sColName = ("U_" + sBefore))) Begin
                 Move (RemoveFromArray(asColumns, iCount)) to asColumns
             End
             Decrement iCount
@@ -900,39 +906,31 @@ Class cDUFFilelistRepair is a cObject
     End_Function
 
     // To add HIDDEN FIELD_NUMBER settings.
+    // NEXT_COLUMN_HIDDEN lines for the hidden uppercased columns of the server table (UtilHiddenColumnFields): only a
+    // U_ column right after its column is hidden.
     Function CollectHiddenAttributes Handle hTable String sDriver String[] asIntFileData Boolean ByRef bIsHidden Returns String[]
-        Integer iSize iCount iField iDbType
-        String sFieldNoTxt sLine sFieldHiddenTxt sFieldName
+        Integer iSize iCount
+        String sFieldNoTxt sFieldHiddenTxt
         Boolean bFound
-        String[] asColumnsNamesOrg asColumnsNames asFieldHidden
-        
-        Move False to bIsHidden
-        Get piDbType of ghoDUF to iDbType
-        Get _SqlUtilEnumerateColumnsByHandle of ghoDUF sDriver hTable to asColumnsNamesOrg
-        Get SanitizeColumnNames asColumnsNamesOrg to asColumnsNames
+        String[] asColumns asFieldHidden
+        Integer[] aiFields
 
-        Move (SizeOfArray(asColumnsNamesOrg)) to iSize
-        Decrement iSize
-        For iCount from 0 to iSize
-            Move "" to sFieldHiddenTxt
-            If (iCount <= iSize) Begin
-                Move (Trim(Uppercase(asColumnsNamesOrg[iCount]))) to sLine
-                If (Left(sLine, 2) = "U_") Begin
-                    Move (Replace("U_", sLine, "")) to sFieldName
-                    Move (SearchArray(sFieldName, asColumnsNames, Desktop, (RefFunc(DFSTRICMP)))) to iField
-                    Move ("FIELD_NUMBER" * String(iField +1)) to sFieldNoTxt
-                    Move "NEXT_COLUMN_HIDDEN UPPERCASED"      to sFieldHiddenTxt
-                    Get IsDuplicateAttribute asIntFileData sFieldNoTxt sFieldHiddenTxt to bFound
-                    If (iField <> -1 and bFound = False) Begin
-                        Move ""              to asFieldHidden[SizeOfArray(asFieldHidden)]
-                        Move sFieldNoTxt     to asFieldHidden[SizeOfArray(asFieldHidden)]
-                        Move sFieldHiddenTxt to asFieldHidden[SizeOfArray(asFieldHidden)]
-                    End
-                End
+        Move False to bIsHidden
+        Get _SqlUtilEnumerateColumnsByHandle of ghoDUF sDriver hTable to asColumns
+        Get UtilHiddenColumnFields of ghoDUF asColumns to aiFields
+        Move "NEXT_COLUMN_HIDDEN UPPERCASED" to sFieldHiddenTxt
+        Move (SizeOfArray(aiFields)) to iSize
+        For iCount from 0 to (iSize - 1)
+            Move ("FIELD_NUMBER" * String(aiFields[iCount])) to sFieldNoTxt
+            Get IsDuplicateAttribute asIntFileData sFieldNoTxt sFieldHiddenTxt to bFound
+            If (bFound = False) Begin
+                Move ""              to asFieldHidden[SizeOfArray(asFieldHidden)]
+                Move sFieldNoTxt     to asFieldHidden[SizeOfArray(asFieldHidden)]
+                Move sFieldHiddenTxt to asFieldHidden[SizeOfArray(asFieldHidden)]
             End
         Loop
         If (SizeOfArray(asFieldHidden) <> 0) Begin
-            Get CombineArrays asIntFileData asFieldHidden to asIntFileData      
+            Get CombineArrays asIntFileData asFieldHidden to asIntFileData
             Move True to bIsHidden
         End
 

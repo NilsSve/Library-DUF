@@ -467,6 +467,52 @@ Object oDbUpdateFunctionLibrary_Tests is a cTestFixture
         Send AssertIAreEqual 0 iNeeded "A hidden line after the columns is not a column's."
     End_Procedure
 
+    // Only a U_ column right after its column is hidden; one at the end of the table is an ordinary field. The
+    // columns are those of two tables whose .int files were made wrong (2026-10-18).
+    { Published=True }
+    Procedure Test_Only_A_U_Column_Right_After_Its_Column_Is_Hidden
+        String[] asColumns asEmpty
+        Integer[] aiFields
+
+        // U_ORT right after ORT: field 3 has a hidden column
+        Move "RECNUM" to asColumns[0]
+        Move "GKZ"    to asColumns[1]
+        Move "PLZ"    to asColumns[2]
+        Move "ORT"    to asColumns[3]
+        Move "u_ort"  to asColumns[4]
+        Get UtilHiddenColumnFields of ghoDbUpdateFunctionLibrary asColumns to aiFields
+        Send AssertIAreEqual 1 (SizeOfArray(aiFields)) "U_ORT right after ORT is hidden."
+        If (SizeOfArray(aiFields) = 1) Begin
+            Send AssertIAreEqual 3 aiFields[0] "ORT is field 3."
+        End
+
+        // two hidden columns: the field numbers do not count them
+        Move asEmpty to asColumns
+        Move "RECNUM" to asColumns[0]
+        Move "MODUL"  to asColumns[1]
+        Move "U_MODUL" to asColumns[2]
+        Move "KEY"    to asColumns[3]
+        Move "U_KEY"  to asColumns[4]
+        Get UtilHiddenColumnFields of ghoDbUpdateFunctionLibrary asColumns to aiFields
+        Send AssertIAreEqual 2 (SizeOfArray(aiFields)) "Two hidden columns."
+        If (SizeOfArray(aiFields) = 2) Begin
+            Send AssertIAreEqual 1 aiFields[0] "MODUL is field 1."
+            Send AssertIAreEqual 2 aiFields[1] "KEY is field 2."
+        End
+
+        // U_WG and U_SATZART at the end, and U_VORNAME without VORNAME: none is hidden
+        Move asEmpty to asColumns
+        Move "RECNUM"    to asColumns[0]
+        Move "ID"        to asColumns[1]
+        Move "WG"        to asColumns[2]
+        Move "SATZART"   to asColumns[3]
+        Move "U_WG"      to asColumns[4]
+        Move "U_SATZART" to asColumns[5]
+        Move "U_VORNAME" to asColumns[6]
+        Get UtilHiddenColumnFields of ghoDbUpdateFunctionLibrary asColumns to aiFields
+        Send AssertIAreEqual 0 (SizeOfArray(aiFields)) "U_ columns at the end are ordinary fields."
+    End_Procedure
+
     { Published=True }
     Procedure Test_An_Int_File_Is_Read_Line_By_Line
         String[] asLines

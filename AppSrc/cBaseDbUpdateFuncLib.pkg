@@ -1054,14 +1054,14 @@ Class cBaseDbUpdateFuncLib is a cObject
                     Move ("select column_name, data_type, character_maximum_length from INFORMATION_SCHEMA.COLUMNS where table_name = '" +sTableName + "'") to sSelect
                 End
                 If (iDbType = EN_DbTypeMSSQL) Begin
-                    Move ("select name from sys.columns where [object_id] = object_id('" + sSchema + "." + sTableName + "')") to sSelect
+                    Move ("select name from sys.columns where [object_id] = object_id('" + sSchema + "." + sTableName + "') order by column_id") to sSelect
                 End
 
                 Get _SqlEnumerateEsqlDAW sSelect 1 to sReturnArray
                 Case Break
 
             Case (sDriverID = MSSQLDRV_ID)
-                Move ("select name from sys.columns where [object_id] = object_id('" + sSchema + "." + sTableName + "')") to sSelect
+                Move ("select name from sys.columns where [object_id] = object_id('" + sSchema + "." + sTableName + "') order by column_id") to sSelect
                 Get _SqlEnumerateEsqlDAW sSelect 1 to sReturnArray
                 Case Break
 

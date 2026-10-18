@@ -25,18 +25,29 @@ Object oDUFFilelistRepair_Tests is a cTestFixture
 
     { Published=True }
     Procedure Test_The_Column_Names_Lose_Recnum_And_The_Uppercased_Columns
-        String[] asColumns
+        String[] asColumns asEmpty
         Handle ho
         Move (oRepair(Self)) to ho
-        Move "Id"     to asColumns[0]
-        Move "U_Name" to asColumns[1]
-        Move "U_Code" to asColumns[2]
-        Move "Name"   to asColumns[3]
-        Move "RECNUM" to asColumns[4]
+        Move "RECNUM" to asColumns[0]
+        Move "Id"     to asColumns[1]
+        Move "Name"   to asColumns[2]
+        Move "U_Name" to asColumns[3]
+        Move "Code"   to asColumns[4]
+        Move "u_code" to asColumns[5]
         Get SanitizeColumnNames of ho asColumns to asColumns
-        Send AssertIAreEqual 2 (SizeOfArray(asColumns)) "Two columns are left: two uppercased ones in a row go too."
+        Send AssertIAreEqual 3 (SizeOfArray(asColumns)) "Three columns are left: the hidden ones go."
         Send AssertSAreEqual "Id" asColumns[0] "Id."
         Send AssertSAreEqual "Name" asColumns[1] "Name."
+        Send AssertSAreEqual "Code" asColumns[2] "Code."
+
+        // a U_ column that is not right after its column is a field (it is no hidden column)
+        Move asEmpty to asColumns
+        Move "Id"     to asColumns[0]
+        Move "Name"   to asColumns[1]
+        Move "Code"   to asColumns[2]
+        Move "U_Name" to asColumns[3]
+        Get SanitizeColumnNames of ho asColumns to asColumns
+        Send AssertIAreEqual 4 (SizeOfArray(asColumns)) "U_Name at the end is a field."
     End_Procedure
 
     { Published=True }
