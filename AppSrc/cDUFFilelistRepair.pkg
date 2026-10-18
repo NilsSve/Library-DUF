@@ -522,7 +522,10 @@ Class cDUFFilelistRepair is a cObject
             If (bIsSQL = True and bIsAlias = False) Begin
                 Move (FileListArray[iCount].sNoDriverRootname + ".int") to sIntFileName
                 If (sDriver <> DATAFLEX_ID) Begin
-                    Open hTable
+                    // A table whose .int file would crash the MS SQL driver is not opened; its .int file is made anew.
+                    If (UtilTableIsSafeToOpen(ghoDUF, hTable)) Begin
+                        Open hTable
+                    End
                     Get _IsSystemFile of ghoDUF hTable to bIsSystem
                     Send UpdateStatusPanel ("Recreating file:" * String(FileListArray[iCount].sNoDriverRootname) + ".int")
                     
@@ -665,7 +668,10 @@ Class cDUFFilelistRepair is a cObject
             If (bIsSQL = True and bIsAlias = False) Begin
                 Move (FileListArray[iCount].sNoDriverRootname + ".int") to sIntFileName
                 If (sDriver <> DATAFLEX_ID) Begin
-                    Open hTable
+                    // A table whose .int file would crash the MS SQL driver is not opened.
+                    If (UtilTableIsSafeToOpen(ghoDUF, hTable)) Begin
+                        Open hTable
+                    End
                     Get _IsSystemFile of ghoDUF hTable to bIsSystem
                     Send UpdateStatusPanel ("Searching Table:" * String(FileListArray[iCount].sNoDriverRootname))
                     
@@ -862,7 +868,9 @@ Class cDUFFilelistRepair is a cObject
         Boolean bFound bOpen
         String[] asColumnsNames asFieldTimeDates
 
-        Open hTable
+        If (UtilTableIsSafeToOpen(ghoDUF, hTable)) Begin
+            Open hTable
+        End
         Get_Attribute DF_FILE_OPENED of hTable to bOpen
         If (bOpen = False) Begin
             Function_Return asIntFileData
@@ -1334,7 +1342,9 @@ Class cDUFFilelistRepair is a cObject
         Else Begin
             Get_Attribute DF_FILE_OPENED of hTable to bOpen
             If (bOpen = False) Begin
-                Open hTable
+                If (UtilTableIsSafeToOpen(ghoDUF, hTable)) Begin
+                    Open hTable
+                End
                 Get_Attribute DF_FILE_OPENED of hTable to bOpen
                 If (bOpen = False) Begin
                     Function_Return ""

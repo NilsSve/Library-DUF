@@ -6870,9 +6870,10 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
     // NEXT_COLUMN_HIDDEN in an .int file says that the server table has a hidden column (an uppercased copy) right
     // after that column. When the server table does not have the columns this asks for, DataFlex 26's MSSQLDRV
     // damages the program's memory while it opens the table, and the program crashes then or later - often at the
-    // next Close (measured 2026-10-17). The functions that read a table's structure ask UtilTableIsSafeToOpen
-    // first and leave such a table closed: they answer as for a table that did not open, and an error and a log
-    // line name the table, once per Filelist.
+    // next Close (measured 2026-10-17). The functions that read a table's structure, the Filelist read of the SQL
+    // Repair Utility (UtilFillFileListStruct) and its repairs ask UtilTableIsSafeToOpen first and leave such a
+    // table closed: they answer as for a table that did not open, and an error and a log line name the table,
+    // once per Filelist. (Refresh Data crashed on such a table, 2026-10-18.)
 
     // The least number of columns the server table needs for the hidden columns of an .int file: the record number
     // column (RECNUM_TABLE YES), the column the hidden line belongs to, and the hidden columns up to that one.
