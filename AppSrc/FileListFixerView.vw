@@ -194,7 +194,7 @@ Object oFilelistFixerView is a cRDCDbView
                 Loop       
                 Send Beginning_of_Data of ho
                 // Note: Remove all cache-files:
-                EraseFile (sDataPath + "\*.cch")
+                Send EraseCacheFiles
                 Send RefreshData
                 Send Info_Box ("Ready!" * String(iSize + 1) * ".int files contained errors and were changed to be using DFConnID's.")
             End
@@ -258,6 +258,34 @@ Object oFilelistFixerView is a cRDCDbView
                 Send UpdateConnIdData
             End_Procedure
             
+            // The connection string with "***" for the value of PWD= and PASSWORD=. (The password was shown.)
+            Function ConnectionStringWithoutPassword String sConnection Returns String
+                String sUpper sRest
+                String[] asKeys
+                Integer iKey iStart iEnd
+
+                Move "PWD=" to asKeys[0]
+                Move "PASSWORD=" to asKeys[1]
+                For iKey from 0 to 1
+                    Move (Uppercase(sConnection)) to sUpper
+                    Move (Pos(asKeys[iKey], sUpper)) to iStart
+                    If (iStart > 0) Begin
+                        // the first character of the value, and the ";" after it, if any
+                        Move (iStart + Length(asKeys[iKey])) to iStart
+                        Move (Mid(sConnection, Length(sConnection), iStart)) to sRest
+                        Move (Pos(";", sRest)) to iEnd
+                        If (iEnd > 0) Begin
+                            Move (Mid(sRest, Length(sRest), iEnd)) to sRest
+                        End
+                        Else Begin
+                            Move "" to sRest
+                        End
+                        Move (Left(sConnection, (iStart - 1)) + "***" + sRest) to sConnection
+                    End
+                Loop
+                Function_Return sConnection
+            End_Function
+
             Procedure UpdateConnIdData
                 String sDFConnidFile sDatapath sServer sDatabase
                 Boolean bExists
@@ -286,7 +314,7 @@ Object oFilelistFixerView is a cRDCDbView
                     Send AppendTextLn ""
                     Send AppendTextLn ("id=" + String(Connections[0].sId))
                     Send AppendTextLn ("driver=" + String(Connections[0].sDriver))
-                    Send AppendTextLn ("connection=" + String(Connections[0].sString))
+                    Send AppendTextLn ("connection=" + ConnectionStringWithoutPassword(Self, Connections[0].sString))
                     Send AppendTextLn ("trusted_connection=" + String(Connections[0].bTrustedConnection))
                     Send AppendTextLn ("disabled=" + String(Connections[0].bDisabled)) 
                     Send Beginning_of_Data
@@ -358,8 +386,13 @@ Object oFilelistFixerView is a cRDCDbView
                     Set Value to ""
                     Procedure_Return    
                 End 
+                // The driver id - MSSQLDRV - names the file; a name with an extension is cut there. (Without a "." in
+                // the id the name was "", and ".int" was looked for.)
+                Move sDriver to sFileName
                 Move (Pos(".", sDriver)) to iPos
-                Move (Left(sDriver, iPos -1)) to sFileName
+                If (iPos > 0) Begin
+                    Move (Left(sDriver, iPos -1)) to sFileName
+                End
                 Move (sFileName + ".int") to sFileName
                 
                 File_Exist (sPath + sFileName) bExists
@@ -859,10 +892,11 @@ Object oFilelistFixerView is a cRDCDbView
                 End
             End_Procedure
                           
+            // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
             Function IsEnabled Returns Boolean
                 Boolean bExists
                 String sFileName
-                Get psConnIdFile to sFileName
+                Get Value of oFilelist_fm to sFileName
                 File_Exist sFileName bExists
                 Function_Return bExists
             End_Function
@@ -900,10 +934,11 @@ Object oFilelistFixerView is a cRDCDbView
                 End
             End_Procedure
                           
+            // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
             Function IsEnabled Returns Boolean
                 Boolean bExists
                 String sFileName
-                Get psConnIdFile to sFileName
+                Get Value of oFilelist_fm to sFileName
                 File_Exist sFileName bExists
                 Function_Return bExists
             End_Function
@@ -994,10 +1029,11 @@ Object oFilelistFixerView is a cRDCDbView
                 End
             End_Procedure
                           
+            // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
             Function IsEnabled Returns Boolean
                 Boolean bExists
                 String sFileName
-                Get psConnIdFile to sFileName
+                Get Value of oFilelist_fm to sFileName
                 File_Exist sFileName bExists
                 Function_Return bExists
             End_Function
@@ -1237,10 +1273,11 @@ Object oFilelistFixerView is a cRDCDbView
                 End
             End_Procedure  
             
+            // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
             Function IsEnabled Returns Boolean
                 Boolean bExists
                 String sFileName
-                Get psConnIdFile to sFileName
+                Get Value of oFilelist_fm to sFileName
                 File_Exist sFileName bExists
                 Function_Return bExists
             End_Function
@@ -1285,9 +1322,9 @@ Object oFilelistFixerView is a cRDCDbView
             Set piErrNum  to iErrNum
             Set piErrLine to iErrLine
             Set psErrText to sErrText  
-            Move False to Err
-            Move 0 to LastErr
-            Move 0 to ErrLine
+            // Err, LastErr and ErrLine stay as the runtime set them, before it sent this message: the code that met
+            // the error checks them. (They were cleared here, and that reached the caller: a failed Open or
+            // restructure looked like a success - measured 2026-10-18.)
             Send WriteError of (Parent(Self)) ("Error:" * String(iErrNum) * "at line:" * String(iErrLine) * "Text:" * String(sErrText))
             Set pbErrorProcessingState to False 
         End_Procedure
@@ -1345,7 +1382,7 @@ Object oFilelistFixerView is a cRDCDbView
         
         // Note: Removes all cached files, else we don't open what we think we are.
         Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
-        EraseFile (sDataPath + "\*.cch") 
+        Send EraseCacheFiles
         
         Move False to bCancel
         Send UtilFillFileListStruct of ghoDUF (&bCancel)
@@ -1369,6 +1406,23 @@ Object oFilelistFixerView is a cRDCDbView
         Send ListAliasErrorFiles
         
         Send StopStatusPanel
+    End_Procedure
+
+    // Removes the cache files (.cch) from each folder of the data path. (The whole data path was taken for one
+    // folder name: with two folders no file was removed.)
+    Procedure EraseCacheFiles
+        String sDataPath sFolder
+        Integer iPaths iPath
+
+        Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
+        Get CountOfPaths of (phoWorkspace(ghoApplication)) sDataPath to iPaths
+        For iPath from 1 to iPaths
+            Get PathAtIndex of (phoWorkspace(ghoApplication)) sDataPath iPath to sFolder
+            If (Trim(sFolder) <> "") Begin
+                Get vFolderFormat sFolder to sFolder
+                EraseFile (sFolder + "*.cch")
+            End
+        Loop
     End_Procedure
 
     // Fills list of "RootName *.dat Files" with tables that are not Alias and does
@@ -1656,7 +1710,14 @@ Object oFilelistFixerView is a cRDCDbView
         String sDriver
         Integer iDriver
         Get psDriverID of ghoDUF to sDriver
+        // Not for embedded tables, nor for a driver that could not be loaded (driver 0).
+        If (sDriver = DATAFLEX_ID or sDriver = "") Begin
+            Procedure_Return
+        End
         Get DriverIndex of ghoDUF sDriver to iDriver
+        If (iDriver = 0) Begin
+            Procedure_Return
+        End
         // Note: If Ignore_Ucase_Support is set to false, the Connectivity Kit will 
         //       behave the same as earlier driver versions.
         //       This means that "U_" columns will be kept during a restructure.

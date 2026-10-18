@@ -140,6 +140,9 @@ Class cDUFFilelistRepair is a cObject
             Get_Attribute DF_FILE_NEXT_USED of hTable to hTable
             // Table 50 is FlexErrs
             If (hTable <> 0 and hTable <> 50) Begin
+                // Each table starts without a new name. (The log named the new root name of a table before.)
+                Move "" to sRootNameNew
+                Move "" to sDisplayNameNew
                 Get_Attribute DF_FILE_ROOT_NAME    of hTable to sRootNameOrg
                 Get_Attribute DF_FILE_LOGICAL_NAME of hTable to sLogicalNameOrg
                 Send UpdateStatusPanel sLogicalNameOrg
@@ -328,6 +331,7 @@ Class cDUFFilelistRepair is a cObject
             Get pFileListArray of ghoDUF to FileListArray
         End    
         
+        Move (SizeOfArray(FileListArray)) to iSize
         Send StartStatusPanel "Fixing Filelist Open Errors" "" iSize
         Get psFileList of (phoWorkspace(ghoApplication)) to sFileList
         Get BackupAnyFileToBackupFolder sFileList to bOK
@@ -426,7 +430,7 @@ Class cDUFFilelistRepair is a cObject
         Move (SizeOfArray(ErrorFilesArray)) to iSize
         Get psConnId to sConnectionID
         Set psBackupFolder to ""
-        Send StartStatusPanel "Fixing Int File Errors" ""     
+        Send StartStatusPanel "Fixing Int File Errors" "" iSize
     
         For iCount from 0 to (iSize - 1)
             Move ErrorFilesArray[iCount].sDriver to sDriver
@@ -482,7 +486,7 @@ Class cDUFFilelistRepair is a cObject
     Function RecreateAllIntFiles Boolean bExtractRelations Boolean bRemoveUCol Returns Integer
         Integer iSize iCount iCounter iDriver iLastErr iErrLine
         tFilelist[] FileListArray
-        String sDriver sIntFileName sConnectionID sDataPath
+        String sDriver sIntFileName sConnectionID sDataPath sIntFileDriver
         Boolean bOK bIsSystem bAnsi bIsAlias bIsSQL bCurrentUcaseMode bErr bCancel
         Handle hTable
     
@@ -528,6 +532,14 @@ Class cDUFFilelistRepair is a cObject
             Set Message_Text of ghoStatusPanel to ("Table number:" * String(hTable))
             If (bIsSQL = True and bIsAlias = False) Begin
                 Move (FileListArray[iCount].sNoDriverRootname + ".int") to sIntFileName
+                // A root name without a driver - Customer.int - names a table of the driver of its .int file. (It was
+                // taken for an embedded table and left out.)
+                If (sDriver = DATAFLEX_ID) Begin
+                    Get UtilIntFileDriver of ghoDUF hTable to sIntFileDriver
+                    If (sIntFileDriver <> "") Begin
+                        Move sIntFileDriver to sDriver
+                    End
+                End
                 If (sDriver <> DATAFLEX_ID) Begin
                     // A table whose .int file would crash the MS SQL driver is not opened; its .int file is made anew.
                     If (UtilTableIsSafeToOpen(ghoDUF, hTable)) Begin

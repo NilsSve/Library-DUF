@@ -7033,6 +7033,24 @@ Class cDbUpdateFunctionLibrary is a cBaseDbUpdateFuncLib
         Function_Return ""
     End_Function
 
+    // The driver named by the DRIVER_NAME line of a table's .int file - the library's driver when the line is not
+    // there -, in capitals. "" when the table has no .int file.
+    Function UtilIntFileDriver Handle hTable Returns String
+        String sIntFile sDriverID
+        String[] asIntFile
+
+        Get _UtilIntFileOfTable hTable to sIntFile
+        If (sIntFile = "") Begin
+            Function_Return ""
+        End
+        Get _UtilIntFileLines sIntFile to asIntFile
+        Get _UtilIntFileValue asIntFile "DRIVER_NAME" to sDriverID
+        If (sDriverID = "") Begin
+            Get psDriverID to sDriverID
+        End
+        Function_Return (Uppercase(sDriverID))
+    End_Function
+
     // The number of columns of a table or view on a server, "schema.table"; -1 when it is not known (no such table,
     // or the server could not be asked). The tables of a server are read once per Filelist, in one query. MS SQL.
     Function _SqlUtilServerColumnCount String sDriverID String sServer String sTable Returns Integer
