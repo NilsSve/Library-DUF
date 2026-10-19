@@ -69,7 +69,7 @@ Object oFilelistFixerView is a cRDCDbView
         End_Procedure
 
         Procedure OnChange
-            String sFileList sPath sHome sChar
+            String sFileList sPath sHome sChar sDatabase
             Boolean bExists bCfgFile bOK
             Handle hoLocalError_Object_Id hoOrgError_Object_Id
             
@@ -93,6 +93,9 @@ Object oFilelistFixerView is a cRDCDbView
                     Set psFilelistFrom of ghoApplication to sFileList
                     Send UpdateConnIdData of oConnidInfo_edt
                     Send UpdateDriverIniFile of oDriver_fm
+                    // The collation of the database is read once here, after the login.
+                    Get psDatabase of ghoDUF to sDatabase
+                    Send UpdateCollatingSequence of oCurrentCollatingSequence_fm sDatabase
                     Get ParseFolderName sFileList to sPath
                     Move (Right(sPath, 1)) to sChar
                     If (sChar = "\") Begin
@@ -110,6 +113,7 @@ Object oFilelistFixerView is a cRDCDbView
                 Set psDatabase of ghoDUF to ""
                 Send ClearData of oConnidInfo_edt
                 Set Value of oDriver_fm to ""
+                Set Value of oCurrentCollatingSequence_fm to ""
             End
 
             Move hoLocalError_Object_Id to Error_Object_Id
@@ -531,7 +535,9 @@ Object oFilelistFixerView is a cRDCDbView
             
             Procedure UpdateCollatingSequence String sDatabase
                 String sCollatingSequence
+                // No database (a Filelist without SQL): the field is cleared, so no old value stays.
                 If (sDatabase = "") Begin
+                    Set Value to ""
                     Procedure_Return
                 End
                 Get SqlDatabaseCollationQuery of ghoDUF sDatabase True to sCollatingSequence
