@@ -56,7 +56,9 @@ Object oMain is a Panel
     Set Label to (psProduct(ghoApplication))
     Set Location to 92 194
     Set Size to 509 699
-    Set piMinSize to 442 625  
+    // Not smaller than the panel's own size: a window that opens smaller makes DataFlex shrink the view at startup, and
+    // the controls anchored to the bottom of FileListFixerView.vw then stay below the edge of their group.
+    Set piMinSize to 509 699
     Set Icon to "DUFFilelistRepairer.ico"
 
     Object oCommandBarSystem is a cCJCommandBarSystem

@@ -44,13 +44,14 @@ Object oFilelistFixerView is a cRDCDbView
     Property Integer piLoggedErrors 0
     
     Object oFilelist_fm is a cRDCForm
-        Set Size to 12 382
-        Set Location to 14 82
+        Set Size to 12 323
+        Set Location to 8 62
+        Set peAnchors to anTopLeftRight
         Set Label to "Filelist.cfg:" 
         Set Prompt_Object to Self 
-        
+
         Property Boolean pbFirst True
-        
+
         Procedure Prompt
             String sFileName sPath sFileMask sRetval
             Get Value to sFileName
@@ -62,7 +63,7 @@ Object oFilelistFixerView is a cRDCDbView
                 Set Value to sRetval
             End
         End_Procedure
-        
+
         Procedure Set Value Integer iItem String sValue
             Forward Set Value iItem to sValue
             Set psFileList to sValue
@@ -72,7 +73,7 @@ Object oFilelistFixerView is a cRDCDbView
             String sFileList sPath sHome sChar sDatabase
             Boolean bExists bCfgFile bOK
             Handle hoLocalError_Object_Id hoOrgError_Object_Id
-            
+
             // The local handler is put back at the end in any case. (It was set only when the Filelist existed: an
             // empty or mistyped path made the error object 0.)
             Move (oLocalError_Info_Object(Self)) to hoLocalError_Object_Id
@@ -87,7 +88,7 @@ Object oFilelistFixerView is a cRDCDbView
                 Move (oLocalError_Info_Object(Self)) to hoLocalError_Object_Id
                 Get phoOrgError_Object_Id of hoLocalError_Object_Id to hoOrgError_Object_Id
                 Move hoOrgError_Object_Id to Error_Object_Id
-                
+
                 Get ChangeFilelistPathing of ghoApplication sFileList to bOK
                 If (bOK = True) Begin
                     Set psFilelistFrom of ghoApplication to sFileList
@@ -122,7 +123,7 @@ Object oFilelistFixerView is a cRDCDbView
 
         Procedure Page Integer iPageObject
             String sFileName
-            
+
             Forward Send Page iPageObject
             Get psFilelistFrom of ghoApplication to sFileName
             If (sFileName = "") Begin
@@ -131,90 +132,61 @@ Object oFilelistFixerView is a cRDCDbView
             Set Value to sFileName
             Set pbFirst to False
         End_Procedure
-        
+
     End_Object
 
     Object oSelectFilelist_btn is a cRDCButton
         Set Size to 12 50
-        Set Location to 14 470
+        Set Location to 8 395
         Set Label to "Select"
-        Set peAnchors to anNone
+        Set peAnchors to anTopRight
         Set psImage to "ActionOpen.ico"
         Set psToolTip to "Select a Filelist.cfg file from a Data folder."
-        
+
         Procedure OnClick
             Send Prompt of oFilelist_fm
         End_Procedure
-    
+
     End_Object
 
-    Object oConnIDErrors_btn is a cRDCButton
-        Set Size to 30 61
-        Set Location to 3 549
-        Set Label to "Make all .int files use DFConnid"
-        Set psToolTip to "Changes or updates all .int files in the Data folder - except for DAW driver .int files (MSSQL_DRV.int, DB2_DRV.int & ODBC_DRV.int) - to use 'SERVER_NAME DFCONNID=xxx', where xxx is the 'id=' of the DFConnid.ini file displayed to the left."
-        Set peAnchors to anNone
-        Set MultiLineState to True
-        Set psImage to "ChangeToDFConnid.ico"
-        Set piImageSize to 24
-        Set pbAutoEnable to True
-        
-        // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
-        Procedure OnClick
-            Send ResetLoggedErrors
-            Send DoClick
-            Send OfferErrorLog
+    Object oLogFile_fm is a cRDCForm
+        Set Size to 12 323
+        Set Location to 23 62
+        Set Enabled_State to False
+        Set Label to "Log file:"
+        Set peAnchors to anTopLeftRight
+
+        Procedure Page Integer iPageObject
+            String sFileName sHomePath
+            Forward Send Page iPageObject
+            Get psHome of (phoWorkspace(ghoApplication)) to sHomePath
+            Move CS_ReportFileName to sFileName
+            Set Value to (sHomePath + sFileName)
         End_Procedure
 
-        Procedure DoClick
-            String sDataPath sConnectionID
-            String[] asFileChanges
-            Boolean bActive
-            Integer iRetval iSize iCount 
-            Handle ho
+    End_Object
 
-            Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
-            Get psConnId to sConnectionID
-            Get YesNo_Box ("Do you want to change all .int files in folder:\n" + sDataPath + "\n\nTo use 'DFCONNID=" + sConnectionID +"' ?") to iRetval
-            If (iRetval <> MBR_Yes) Begin
+    Object oOpenLogFile_btn is a cRDCButton
+        Set Size to 12 50
+        Set Location to 23 395
+        Set Label to "View"
+        Set peAnchors to anTopRight
+        Set psImage to "View.ico"
+        Set pbAutoEnable to True
+        Set psToolTip to "View the content of the log file."
+
+        Procedure OnClick
+            String sFileName
+            Boolean bExists
+            Get Value of oLogFile_fm to sFileName
+            File_Exist sFileName bExists
+            If (bExists = False) Begin
+                Send Info_Box ("The log file hasn't been created yet:\n" + sFileName)
                 Procedure_Return
             End
-            
-            Move 0 to iCount
-            Set Value of oConnIDErrors_fm to 0
-            Move (oConnIDErrors_edt(Self)) to ho     
-            Send Delete_Data of ho
-            Send StartStatusPanel "Changing to Connection ID's in .int files" "" -1
+            Runprogram Shell Background sFileName
+        End_Procedure
 
-            Get SqlUtilChangeIntFilesToConnectionIDs of ghoDUF sDataPath sConnectionID True to asFileChanges
-
-            Send UpdateStatusPanel ""
-            Get Active_State of ghoStatusPanel to bActive
-            If (bActive = False) Begin
-                Send StopStatusPanel
-                Send Info_Box "Process interrupted..."
-                Procedure_Return
-            End
-
-            Move (SizeOfArray(asFileChanges)) to iSize
-            Set Value of oConnIDErrors_fm to (iSize max 0)
-            Send StopStatusPanel
-            If (SizeOfArray(asFileChanges) <> 0) Begin
-                Decrement iSize
-                For iCount from 0 to iSize
-                    Send AppendTextLn of ho asFileChanges[iCount]
-                Loop       
-                Send Beginning_of_Data of ho
-                // Note: Remove all cache-files:
-                Send EraseCacheFiles
-                Send RefreshData
-                Send Info_Box ("Ready!" * String(iSize + 1) * ".int files contained errors and were changed to be using DFConnID's.")
-            End
-            Else Begin
-                Send Info_Box "Ready! No problems found."    
-            End
-        End_Procedure 
-        
         Function IsEnabled Returns Boolean
             Boolean bExists
             String sFileName
@@ -223,12 +195,12 @@ Object oFilelistFixerView is a cRDCDbView
             Function_Return bExists
         End_Function
 
-    End_Object
+    End_Object  
 
     Object oRefresh_btn is a cRDCButton
-        Set Size to 30 61
-        Set Location to 3 615
-        Set Label to "Refresh Data!"
+        Set Size to 29 85
+        Set Location to 7 453
+        Set Label to "Refresh Data (F5)"
         Set Default_State to True
         Set Form_FontWeight to fw_Bold
         Set psToolTip to "Refreshes all data by reading the Filelist.cfg and SQL database tables (F5)" 
@@ -236,8 +208,8 @@ Object oFilelistFixerView is a cRDCDbView
         Set piImageSize to 32
         Set MultiLineState to True
         Set pbAutoEnable to True
-        Set peAnchors to anNone
-        
+        Set peAnchors to anTopRight
+
         // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
         Procedure OnClick
             Send ResetLoggedErrors
@@ -248,7 +220,7 @@ Object oFilelistFixerView is a cRDCDbView
         Procedure DoClick
             Send RefreshData
         End_Procedure
-    
+
         Function IsEnabled Returns Boolean
             Boolean bExists
             String sFileName
@@ -260,23 +232,23 @@ Object oFilelistFixerView is a cRDCDbView
     End_Object
 
     Object oSQL_grp is a Group
-        Set Size to 175 673
-        Set Location to 47 12
-        Set Label to "SQL Settings:"
+        Set Size to 108 384
+        Set Location to 42 6
+        Set Label to "SQL connection:"
         Set peAnchors to anTopLeftRight
 
         Object oConnidInfo_edt is a cDUFRichEdit
-            Set Size to 75 448
-            Set Location to 23 5
-            Set peAnchors to anNone
+            Set Size to 46 316
+            Set Location to 12 6
+            Set peAnchors to anTopLeftRight
             Set Skip_State to True
             Set pbUseSpellChecker to False
-            
+
             Procedure Page Integer iPageObject
                 Forward Send Page iPageObject
                 Send UpdateConnIdData
             End_Procedure
-            
+
             // The connection string with "***" for the value of PWD= and PASSWORD=. (The password was shown.)
             Function ConnectionStringWithoutPassword String sConnection Returns String
                 String sUpper sRest
@@ -309,11 +281,11 @@ Object oFilelistFixerView is a cRDCDbView
                 String sDFConnidFile sDatapath sServer sDatabase
                 Boolean bExists
                 tConnection[] Connections
-                
+
                 If (ghoConnection = 0) Begin
                     Procedure_Return
                 End
-                
+
                 Send Delete_Data
                 Set Label to ""
                 Get psDataPath of (phoWorkspace(ghoApplication)) to sDatapath
@@ -324,7 +296,7 @@ Object oFilelistFixerView is a cRDCDbView
                 Else Begin
                     Procedure_Return
                 End
-                
+
                 Get ConnectionIDs of ghoConnection to Connections
                 If (SizeOfArray(Connections) <> 0) Begin
                     Set psConnId to Connections[0].sId
@@ -346,29 +318,29 @@ Object oFilelistFixerView is a cRDCDbView
                     Send AppendTextLn "No DFConnid.ini file found, or no active connection."
                 End
             End_Procedure  
-            
+
             Procedure ClearData
                 Forward Send ClearData
                 Set Label to ""
             End_Procedure
-    
+
         End_Object
-        
+
         Object oEditDFConnIt_btn is a cRDCButton
             Set Size to 12 50
-            Set Location to 23 458
+            Set Location to 12 328
             Set Label to "Edit"
-            Set peAnchors to anNone
+            Set peAnchors to anTopRight
             Set psImage to "ActionEdit.ico"
             Set pbAutoEnable to True
             Set psToolTip to "Edit the SQL connection file."
-            
+
             Procedure OnClick
                 String sFileName
                 Get psConnIdFile to sFileName
                 Runprogram Shell Background sFileName
             End_Procedure
-        
+
             Function IsEnabled Returns Boolean
                 Boolean bExists
                 String sFileName
@@ -376,26 +348,26 @@ Object oFilelistFixerView is a cRDCDbView
                 File_Exist sFileName bExists
                 Function_Return bExists
             End_Function
-    
+
         End_Object
-        
+
         Object oDriver_fm is a cRDCForm
-            Set Size to 12 378
-            Set Location to 103 76
+            Set Size to 12 246
+            Set Location to 62 76
             Set Label to "Driver .int file:"
             Set pbAutoEnable to True
-            Set peAnchors to anNone
-            
+            Set peAnchors to anTopLeftRight
+
             Procedure Page Integer iPageObject
                 Forward Send Page iPageObject 
                 Send UpdateDriverIniFile
             End_Procedure
-            
+
             Procedure UpdateDriverIniFile
                 String sFileName sPath sDriver
                 Boolean bExists
                 Integer iPos
-                
+
                 Get psDataPath of (phoWorkspace(ghoApplication)) to sPath
                 Get vFolderFormat sPath to sPath
                 Get psDriverID of ghoDUF to sDriver
@@ -413,7 +385,7 @@ Object oFilelistFixerView is a cRDCDbView
                     Move (Left(sDriver, iPos -1)) to sFileName
                 End
                 Move (sFileName + ".int") to sFileName
-                
+
                 File_Exist (sPath + sFileName) bExists
                 If (bExists = False) Begin
                     Get_File_Path sFileName to sFileName   
@@ -423,7 +395,7 @@ Object oFilelistFixerView is a cRDCDbView
                 End
                 Set Value to sFileName
             End_Procedure
-            
+
             Function IsEnabled Returns Boolean
                 Boolean bExists
                 String sFileName
@@ -431,24 +403,24 @@ Object oFilelistFixerView is a cRDCDbView
                 File_Exist sFileName bExists
                 Function_Return bExists
             End_Function
-    
+
         End_Object    
-        
+
         Object oViewDriverProperties_btn is a cRDCButton
             Set Size to 12 50
-            Set Location to 103 458
+            Set Location to 62 328
             Set Label to "View"
-            Set peAnchors to anNone
+            Set peAnchors to anTopRight
             Set psImage to "View.ico"
             Set pbAutoEnable to True
             Set psToolTip to "View the content of the driver .ini file."
-            
+
             Procedure OnClick
                 String sFileName
                 Get Value of oDriver_fm to sFileName
                 Send ActivateDriverIntSettingsDialog sFileName     
             End_Procedure
-        
+
             Function IsEnabled Returns Boolean
                 Boolean bExists
                 String sFileName
@@ -456,13 +428,14 @@ Object oFilelistFixerView is a cRDCDbView
                 File_Exist sFileName bExists
                 Function_Return bExists
             End_Function
-    
+
         End_Object
-        
+
         Object oServer_fm is a cRDCForm
             Set Label to "SQL Server name:"
-            Set Size to 12 157
-            Set Location to 119 76
+            Set Size to 12 246
+            Set Location to 76 76
+            Set peAnchors to anTopLeftRight
             Set pbAutoEnable to True
 
             Function IsEnabled Returns Boolean
@@ -472,13 +445,14 @@ Object oFilelistFixerView is a cRDCDbView
                 File_Exist sFileName bExists
                 Function_Return bExists
             End_Function
-        
+
         End_Object
 
         Object oDatabase_fm is a cRDCForm
             Set Label to "Database name:"
-            Set Size to 12 154
-            Set Location to 119 298
+            Set Size to 12 246
+            Set Location to 90 76
+            Set peAnchors to anTopLeftRight
             Set pbAutoEnable to True
 
             Function IsEnabled Returns Boolean
@@ -488,17 +462,18 @@ Object oFilelistFixerView is a cRDCDbView
                 File_Exist sFileName bExists
                 Function_Return bExists
             End_Function
-    
+
         End_Object
 
         Object oBackupSQLDatabase_btn is a cRDCButton
             Set Size to 12 50
-            Set Location to 119 458
+            Set Location to 90 328
+            Set peAnchors to anTopRight
             Set Label to "Backup"
             Set psImage to "DbBackup.ico"
             Set pbAutoEnable to True
             Set psToolTip to "Make a backup copy of the SQL database. The file will be created in the SQL Server standard Backup folder, with a file name that is the database name followed by the todays date and time."
-            
+
             // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
                 Send ResetLoggedErrors
@@ -524,15 +499,23 @@ Object oFilelistFixerView is a cRDCDbView
                 File_Exist sFileName bExists
                 Function_Return bExists
             End_Function
-    
+
         End_Object
+    End_Object
+
+    Object oCollation_grp is a Group
+        Set Size to 108 289
+        Set Location to 42 396
+        Set Label to "MS-SQL collation:"
+        Set peAnchors to anTopRight
 
         Object oCurrentCollatingSequence_fm is a cRDCForm
-            Set Size to 13 378
-            Set Location to 135 76
+            Set Size to 12 198
+            Set Location to 12 84
+            Set peAnchors to anNone
             Set pbAutoEnable to True 
             Set Label to "MS-SQL collating:"
-            
+
             Procedure UpdateCollatingSequence String sDatabase
                 String sCollatingSequence
                 // No database (a Filelist without SQL): the field is cleared, so no old value stays.
@@ -543,7 +526,7 @@ Object oFilelistFixerView is a cRDCDbView
                 Get SqlDatabaseCollationQuery of ghoDUF sDatabase True to sCollatingSequence
                 Set Value to sCollatingSequence
             End_Procedure
-            
+
             Function IsEnabled Returns Boolean
                 Boolean bExists
                 String sDatabase sFileName
@@ -555,51 +538,25 @@ Object oFilelistFixerView is a cRDCDbView
                 Get psDatabase of ghoDUF to sDatabase
                 Function_Return (sDatabase <> "" and bExists = True)
             End_Function
-    
-        End_Object
 
-        Object oCollatingSequenceHelp_btn is a cRDCButton
-            Set Size to 12 50
-            Set Location to 135 458
-            Set Label to "Help"
-            Set psImage to "ActionHelp.ico"
-            Set psToolTip to "Help about using collations for a MS-SQL database."
-        
-            Procedure OnClick
-                Runprogram Shell Background "https://learn.microsoft.com/en-us/sql/relational-databases/collations/collation-and-unicode-support?view=sql-server-ver16#SQL-collations"
-            End_Procedure
-        
         End_Object
-
-        Object oSelectCollationHelp_btn is a cRDCButton
-            Set Size to 12 124
-            Set Location to 135 515
-            Set Label to "How to select a MS-SQL Collation"
-            Set psToolTip to "Help on selecting the Right SQL Collation"
-            Set peAnchors to anNone
-            Set psImage to "ActionHelp.ico"
-        
-            Procedure OnClick
-                Runprogram Shell Background "https://learn.microsoft.com/en-us/sql/relational-databases/collations/collation-and-unicode-support?view=sql-server-ver16"
-            End_Procedure
-        
-        End_Object  
 
         Object oCollatingSequence_fm is a cRDCForm
-            Set Size to 13 378
-            Set Location to 152 76
+            Set Size to 12 198
+            Set Location to 26 84
+            Set peAnchors to anNone
             Set Label to "Select new collating:" 
             Set psToolTip to "This is for MS-SQL only. The T-SQL script used for the background process is currently only adapted for MS-SQL."
             Set pbAutoEnable to True
             Set Entry_State to True
             Set Prompt_Object to (oSQLCollations(Self))
             Set Prompt_Button_Mode to PB_PromptOn
-            
+
             Procedure Prompt
                 tSQLCollation[] aCollations
                 tSQLCollation Collation
                 String sDriverID sCollation
-                
+
                 Get psDriverID of ghoDUF to sDriverID
                 Get _SqlEnumerateDatabaseCollations of ghoDUF sDriverID to aCollations
                 Get Value to Collation.sCollation
@@ -613,7 +570,7 @@ Object oFilelistFixerView is a cRDCDbView
                 Set Value to Collation.sCollation
                 Set psToolTip to Collation.sDescription
             End_Procedure
-    
+
             Function IsEnabled Returns Boolean
                 Boolean bExists
                 String sFileName
@@ -621,12 +578,31 @@ Object oFilelistFixerView is a cRDCDbView
                 File_Exist sFileName bExists
                 Function_Return bExists
             End_Function
-    
+
+        End_Object
+
+        Object oMakeBackup_cb is a cRDCCheckBox
+            Set Size to 10 120
+            Set Location to 42 84
+            Set peAnchors to anNone
+            Set Label to "Create database backup"
+            Set psToolTip to "If checked, a database backup with a name that ends with todays date and time, is created in the standard SQL Server Backup folder, before attempting to change the database collation."
+            Set Checked_State to True
+
+            Function IsEnabled Returns Boolean
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
+            End_Function
+
         End_Object
 
         Object oCollatingSequence_btn is a cRDCButton
-            Set Size to 12 50
-            Set Location to 152 458
+            Set Size to 14 64
+            Set Location to 56 84
+            Set peAnchors to anNone
             Set Label to "Change"
             Set psImage to "ActionSort.ico"
             Set pbAutoEnable to True
@@ -646,7 +622,7 @@ Object oFilelistFixerView is a cRDCDbView
                 tSQLLoggedInUser[] aUsers
                 String sUsers
                 Integer iUser
-                
+
                 Get Checked_State of oMakeBackup_cb to bBackup
                 Get psDatabase of ghoDUF to sDatabase   
                 Get Value of oCurrentCollatingSequence_fm to sCurrentCollatingSequence
@@ -659,14 +635,14 @@ Object oFilelistFixerView is a cRDCDbView
                     Send Info_Box "Nope that won't work. The database is already using the selected collating sequence."
                     Procedure_Return
                 End
-                
+
                 Get HoToStepsText bBackup to sSteps
                 Get YesNo_Box ("Are you sure you want to change the collating sequence for database:" * sDatabase * "\nTo use the new collating sequence:\n" + sCollatingSequence + "\n\n" + sSteps + "\n\nStart making changes now?") to iRetval
                 If (iRetval <> MBR_Yes) Begin
                     Procedure_Return
                 End
                 Send StartStatusPanel "Checking that nobody is using the database..." "" -1
-                
+
                 Get IsDatabaseInUse of ghoDUF to bOK
                 If (bOK = False) Begin
                     Send StopStatusPanel
@@ -706,7 +682,7 @@ Object oFilelistFixerView is a cRDCDbView
                     Send Info_Box "The change of collating sequence failed, and was *not* changed."
                 End
             End_Procedure
-            
+
             Function HoToStepsText Boolean bBackup Returns String
                 String sSteps
                 If (bBackup = False) Begin
@@ -729,65 +705,53 @@ Object oFilelistFixerView is a cRDCDbView
                 Append sSteps "-- Step 13: Cleanup temporary tables" CS_CRLF 
                 Function_Return sSteps
             End_Function
-                
+
             Function IsEnabled Returns Boolean
                 String sCollation
                 Get value of oCollatingSequence_fm to sCollation
                 Function_Return (sCollation <> "")
             End_Function
-    
+
         End_Object
 
-        Object oMakeBackup_cb is a cRDCCheckBox
-            Set Size to 12 55
-            Set Location to 154 515
-            Set Label to "Create database backup"
-            Set psToolTip to "If checked, a database backup with a name that ends with todays date and time, is created in the standard SQL Server Backup folder, before attempting to change the database collation."
-            Set Checked_State to True
-            
-            Function IsEnabled Returns Boolean
-                Boolean bExists
-                String sFileName
-                Get psConnIdFile to sFileName
-                File_Exist sFileName bExists
-                Function_Return bExists
-            End_Function
-    
+        Object oCollatingSequenceHelp_btn is a cRDCButton
+            Set Size to 14 61
+            Set Location to 57 151
+            Set peAnchors to anNone
+            Set Label to "Help"
+            Set psImage to "ActionHelp.ico"
+            Set psToolTip to "Help about using collations for a MS-SQL database."
+
+            Procedure OnClick
+                Runprogram Shell Background "https://learn.microsoft.com/en-us/sql/relational-databases/collations/collation-and-unicode-support?view=sql-server-ver16#SQL-collations"
+            End_Procedure
+
         End_Object
 
-        Object oConnIDErrors_edt is a cDUFRichEdit
-            Set Size to 74 77
-            Set Location to 23 557
-            Set Label to "Connection ID changes:"
-            Set peAnchors to anTopLeftRight
-            Set Label_Col_Offset to -5
-        End_Object
+        Object oSelectCollationHelp_btn is a cRDCButton
+            Set Size to 14 128
+            Set Location to 72 84
+            Set Label to "How to select a MS-SQL Collation"
+            Set psToolTip to "Help on selecting the Right SQL Collation"
+            Set peAnchors to anNone
+            Set psImage to "ActionHelp.ico"
 
-        Object oConnIDErrors_fm is a cDUFNumForm
-            Set Size to 12 34
-            Set Location to 103 600
-            Set Label to "Counter:"
-            Set peAnchors to anTopRight
-        End_Object
+            Procedure OnClick
+                Runprogram Shell Background "https://learn.microsoft.com/en-us/sql/relational-databases/collations/collation-and-unicode-support?view=sql-server-ver16"
+            End_Procedure
 
-        Object oNumberOfSQLTables_fm is a cDUFNumForm
-            Set Label to "Tot SQL tables:"
-            Set Size to 12 34
-            Set Location to 119 600
-            Set peAnchors to anTopRight
-        End_Object
-    
+        End_Object  
     End_Object
 
     Object oCount_grp is a Group
-        Set Size to 137 673
-        Set Location to 231 12
-        Set Label to "Filelist.cfg:"
+        Set Size to 225 679
+        Set Location to 156 6
+        Set Label to "Filelist.cfg problems and their fixes:"
         Set peAnchors to anAll
 
         Object oDatTables_edt is a cDUFRichEdit
-            Set Size to 79 104
-            Set Location to 29 6
+            Set Size to 142 96
+            Set Location to 25 6
             Set Label to "RootName *.Dat"
             Set psExtension to ".dat"
             Set peAnchors to anTopBottom
@@ -795,9 +759,9 @@ Object oFilelistFixerView is a cRDCDbView
 
         Object oDatTables_fm is a cDUFNumForm
             Set Size to 12 34
-            Set Location to 111 76
+            Set Location to 170 68
             Set Label to "Counter:"
-            Set peAnchors to anBottomRight
+            Set peAnchors to anBottomLeft
             Procedure OnChange
                 String sVal
                 Get Value to sVal
@@ -805,108 +769,17 @@ Object oFilelistFixerView is a cRDCDbView
             End_Procedure
         End_Object
 
-        Object oAliasErrors_edt is a cDUFRichEdit
-            Set Size to 79 104
-            Set Location to 29 113
-            Set Label to "Alias table errors"
-            Set psExtension to ".int"
-            Set peAnchors to anTopBottom
-        End_Object
-
-        Object oAliasErrors_fm is a cDUFNumForm
-            Set Size to 12 34
-            Set Location to 111 183
-            Set Label to "Counter:"
-            Set peAnchors to anBottomRight
-        End_Object
-
-        Object oRootNameIntTables_edt is a cDUFRichEdit
-            Set Size to 79 104
-            Set Location to 29 220
-            Set Label to "RootName *.int"
-            Set psExtension to ".int"
-            Set peAnchors to anTopBottom
-        End_Object
-
-        Object oRootNameIntTables_fm is a cDUFNumForm
-            Set Size to 12 34
-            Set Location to 111 290
-            Set Label to "Counter:"
-            Set peAnchors to anBottomRight
-        End_Object
-
-        Object oOpenErrorTables_edt is a cDUFRichEdit
-            Set Size to 79 125
-            Set Location to 29 327
-            Set Label to "Open table errors"
-            Set peAnchors to anTopBottom
-            Set psExtension to ".int"
-        End_Object
-
-        Object oOpenErrorTables_fm is a cDUFNumForm
-            Set Size to 12 34
-            Set Location to 111 418
-            Set Label to "Counter:"
-            Set peAnchors to anBottomRight
-        End_Object
-
-        Object oFileList_grp is a Group
-            Set Size to 103 209
-            Set Location to 25 459
-            Set Label to "FileList.cfg counters:"
-            Set peAnchors to anTopBottomRight
-
-            Object oNoOfSystemTables_fm is a cDUFNumForm
-                Set Size to 12 34
-                Set Location to 10 142
-                Set Label to "System tables"
-            End_Object
-
-            Object oNumberOfMasterFileListSQLTables_fm is a cDUFNumForm
-                Set Size to 12 34
-                Set Location to 32 142
-                Set Label to "Master tables and SQL prefix:"
-            End_Object
-            
-            Object oNoOfAliasSQLTables_fm is a cDUFNumForm
-                Set Size to 12 34
-                Set Location to 47 142
-                Set Label to "Alias tables:"
-            End_Object
-
-            Object oNoOfDatTables2_fm is a cDUFNumForm
-                Set Size to 12 34
-                Set Location to 62 142
-                Set Label to "RootName *.Dat tables:"
-            End_Object
-            
-            Object oNumberOfFileListTables_fm is a cDUFNumForm
-                Set Size to 12 34
-                Set Location to 77 142
-                Set Label to "Total Filelist tables:"
-            End_Object
-
-        End_Object
-        
-    End_Object
-
-    Object oFixProblemsPreUpdate_grp is a Group
-        Set Size to 64 340
-        Set Location to 381 12
-        Set Label to "Prepare for DUF Database Update Actions:"
-        Set peAnchors to anBottomLeft
-
         // Will remove non Alias Filelist entries that:
         //   - Does not have a corresponding .Dat file, 
         Object oFixFileListErrors_btn is a cRDCButton
-            Set Size to 32 61
-            Set Location to 12 8
+            Set Size to 30 96
+            Set Location to 186 6
             Set Label to "1. Fix 'RootName .Dat errors'"
-            Set peAnchors to anTopRight
+            Set peAnchors to anBottomLeft
             Set MultiLineState to True
             Set pbAutoEnable to True
             Set psToolTip to "The fix will spin through the Filelist and \n1. Removes non Alias entries that does not have a corresponding .Dat file.\nNote:This only applies to non Alias tables."
-        
+
             // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
                 Send ResetLoggedErrors
@@ -920,7 +793,7 @@ Object oFilelistFixerView is a cRDCDbView
                 If (iRetval <> MBR_Yes) Begin
                     Procedure_Return    
                 End
-                
+
                 Get FixFileListErrors to iCounter
                 If (iCounter < 0) Begin
                     Send Stop_Box (BackupStoppedText(Self, "", 0))
@@ -933,7 +806,7 @@ Object oFilelistFixerView is a cRDCDbView
                     Send Info_Box "Ready! No problems found."
                 End
             End_Procedure
-                          
+
             // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
             Function IsEnabled Returns Boolean
                 Boolean bExists
@@ -945,15 +818,30 @@ Object oFilelistFixerView is a cRDCDbView
 
         End_Object
 
+        Object oAliasErrors_edt is a cDUFRichEdit
+            Set Size to 142 96
+            Set Location to 24 107
+            Set Label to "Alias table errors"
+            Set psExtension to ".int"
+            Set peAnchors to anTopBottom
+        End_Object
+
+        Object oAliasErrors_fm is a cDUFNumForm
+            Set Size to 12 34
+            Set Location to 170 169
+            Set Label to "Counter:"
+            Set peAnchors to anBottomLeft
+        End_Object
+
         Object oFixAliasProblems_btn is a cRDCButton
-            Set Size to 32 61
-            Set Location to 11 74
+            Set Size to 30 96
+            Set Location to 186 107
             Set Label to "2. Fix 'Alias table errors'"
-            Set peAnchors to anTopRight
+            Set peAnchors to anBottomLeft
             Set MultiLineState to True
             Set pbAutoEnable to True
             Set psToolTip to "The fix will spin through Filelist.cfg and \n1. either add or remove driver prefixes for ALIAS rootnames, depending on the Master RootName\n2. Change all ALIAS table Descriptions to the ROOTNAME + 'ALIAS'"
-        
+
             // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
                 Send ResetLoggedErrors
@@ -967,13 +855,13 @@ Object oFilelistFixerView is a cRDCDbView
                 If (iRetval <> MBR_Yes) Begin
                     Procedure_Return    
                 End
-                
+
                 Get FixFileListAliasProblems to iCounter
                 If (iCounter < 0) Begin
                     Send Stop_Box (BackupStoppedText(Self, "", 0))
                     Procedure_Return
                 End
-                
+
                 If (iCounter <> 0) Begin 
                     Send RefreshData
                     Send Info_Box ("Ready!" * String(iCounter) * "Alias problems fixed in Filelist.cfg. See Also: Logfile")
@@ -982,7 +870,7 @@ Object oFilelistFixerView is a cRDCDbView
                     Send Info_Box "Ready! NO Alias problems found in Filelist.cfg."
                 End
             End_Procedure
-                          
+
             // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
             Function IsEnabled Returns Boolean
                 Boolean bExists
@@ -994,15 +882,30 @@ Object oFilelistFixerView is a cRDCDbView
 
         End_Object
 
+        Object oRootNameIntTables_edt is a cDUFRichEdit
+            Set Size to 142 96
+            Set Location to 24 208
+            Set Label to "RootName *.int"
+            Set psExtension to ".int"
+            Set peAnchors to anTopBottom
+        End_Object
+
+        Object oRootNameIntTables_fm is a cDUFNumForm
+            Set Size to 12 34
+            Set Location to 170 270
+            Set Label to "Counter:"
+            Set peAnchors to anBottomLeft
+        End_Object
+
         Object oFixFileListSQLMissingTables_btn is a cRDCButton
-            Set Size to 32 63
-            Set Location to 12 139
+            Set Size to 30 96
+            Set Location to 186 208
             Set Label to "3. Make Filelist RootNames equal to SQL database"
-            Set peAnchors to anTopRight
+            Set peAnchors to anBottomLeft
             Set MultiLineState to True
             Set pbAutoEnable to True
             Set psToolTip to "The fix will spin through Filelist.cfg and \n1. Remove all driver prefixes for Master tables that does NOT exist in the SQL Database\n2. OR Add driver prefix for Master filelist entries that are missing a driver prefix."
-        
+
             // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
                 Send ResetLoggedErrors
@@ -1032,7 +935,7 @@ Object oFilelistFixerView is a cRDCDbView
                     Send Info_Box "Ready! No problems found."    
                 End
             End_Procedure
-                          
+
             Function IsEnabled Returns Boolean
                 Boolean bExists
                 String sFileName
@@ -1043,15 +946,30 @@ Object oFilelistFixerView is a cRDCDbView
 
         End_Object
 
+        Object oOpenErrorTables_edt is a cDUFRichEdit
+            Set Size to 142 96
+            Set Location to 24 309
+            Set Label to "Open table errors"
+            Set peAnchors to anTopBottom
+            Set psExtension to ".int"
+        End_Object
+
+        Object oOpenErrorTables_fm is a cDUFNumForm
+            Set Size to 12 34
+            Set Location to 170 371
+            Set Label to "Counter:"
+            Set peAnchors to anBottomLeft
+        End_Object
+
         Object oFixFileListOpenErrors_btn is a cRDCButton
-            Set Size to 32 61
-            Set Location to 12 206
+            Set Size to 30 96
+            Set Location to 186 309
             Set Label to "4. Fix Filelist: 'Open table errors'"
-            Set peAnchors to anTopRight
+            Set peAnchors to anBottomLeft
             Set MultiLineState to True
             Set pbAutoEnable to True
             Set psToolTip to "The fix will spin through the Filelist and \n1. Try to fix or removes Non SQL entries for tables that cannot be opened."
-        
+
             // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
                 Send ResetLoggedErrors
@@ -1061,7 +979,7 @@ Object oFilelistFixerView is a cRDCDbView
 
             Procedure DoClick
                 Integer iRetval iCounter iOpenErrors
-                
+
                 Get YesNo_Box "The fix will spin through the Filelist and: \n- Try to fix or remove Non SQL Filelist entries for tables that cannot be opened.\n\nA backup copy of the Filelist.cfg file is made first\n\nContinue?" to iRetval
                 If (iRetval <> MBR_Yes) Begin
                     Procedure_Return    
@@ -1073,7 +991,7 @@ Object oFilelistFixerView is a cRDCDbView
                     Procedure_Return
                 End
                 Get _CountFileListOpenErrors of ghoDUF to iOpenErrors
-                
+
                 If (iOpenErrors <> 0 and iCounter = 0) Begin 
                     Send RefreshData
                     Send Info_Box ("Ready! No Errors were fixed. NOTE:" * String(iOpenErrors) * "Open errors still exists and needs your attention. Please use the button '5. Recreate *.int files for Open table errors'.")
@@ -1091,7 +1009,7 @@ Object oFilelistFixerView is a cRDCDbView
                     Send Info_Box "Ready! No problems found."
                 End
             End_Procedure
-                          
+
             // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
             Function IsEnabled Returns Boolean
                 Boolean bExists
@@ -1103,15 +1021,88 @@ Object oFilelistFixerView is a cRDCDbView
 
         End_Object
 
-        Object oFixIntFileError_btn is a cRDCButton
-            Set Size to 32 61
-            Set Location to 12 272
-            Set Label to "5. Recreate *.int files for 'Open table errors'"
-            Set peAnchors to anTopRight
+        // Step 5 is left out of the layout for now (Nils 2026-10-19). Its place is under the
+        // "Open table errors" list, beside step 4.
+        // Object oFixIntFileError_btn is a cRDCButton
+            // Set Size to 30 96
+            // Set Location to 186 309
+            // Set Label to "5. Recreate *.int files for 'Open table errors'"
+            // Set peAnchors to anTopRight
+            // Set MultiLineState to True
+            // Set psToolTip to "This will try recreate the .int files listed in the 'Open Table Errors' list."
+            // Set pbAutoEnable to True
+
+            // // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
+            // Procedure OnClick
+                // Send ResetLoggedErrors
+                // Send DoClick
+                // Send OfferErrorLog
+            // End_Procedure
+
+            // Procedure DoClick
+                // Integer iRetval iCounter 
+                // Boolean bExtractRelations bRemoveUCol
+
+                // Get YesNo_Box "This will recreate the .int files listed in the 'Open Table Errors' list.\n\nContinue?" to iRetval
+                // If (iRetval <> MBR_Yes) Begin
+                    // Procedure_Return    
+                // End
+                // Get YesNo_Box "Would you like to extract relation ships from the current .int file, and add that info to the new .int file?" to iRetval
+                // Move (iRetval = MBR_Yes) to bExtractRelations
+                // Get YesNo_Box "Would you also like to remove the uppercased (U_) columns of these tables? Each table that has them is restructured on the SQL server." to iRetval
+                // Move (iRetval = MBR_Yes) to bRemoveUCol
+
+                // Get FixAllIntFileErrors bExtractRelations bRemoveUCol to iCounter
+                // If (psBackupError(Self) <> "") Begin
+                    // Send Stop_Box (BackupStoppedText(Self, ".int files recreated", iCounter))
+                    // Procedure_Return
+                // End
+                // If (iCounter > 0) Begin
+                    // Send Info_Box ("Ready! Update to:" * String(iCounter) * ".int files done.")
+                // End
+                // Else If (iCounter = 0) Begin
+                    // Send Info_Box "Ready! No problems found."
+                // End
+                // Else Begin
+                    // Send Info_Box "No 'Open Table Errors' found."
+                // End
+            // End_Procedure
+
+            // Function IsEnabled Returns Boolean
+                // Boolean bExists
+                // String sFileName
+                // Get psConnIdFile to sFileName
+                // File_Exist sFileName bExists
+                // Function_Return bExists
+            // End_Function
+
+        // End_Object
+
+        Object oConnIDErrors_edt is a cDUFRichEdit
+            Set Size to 142 96
+            Set Location to 24 410
+            Set Label to "Connection ID changes:"
+            Set peAnchors to anTopBottom
+        End_Object
+
+        Object oConnIDErrors_fm is a cDUFNumForm
+            Set Size to 12 34
+            Set Location to 170 472
+            Set Label to "Counter:"
+            Set peAnchors to anBottomLeft
+        End_Object
+
+        Object oConnIDErrors_btn is a cRDCButton
+            Set Size to 30 96
+            Set Location to 186 410
+            Set Label to "Make all .int files use DFConnid"
+            Set psToolTip to "Changes or updates all .int files in the Data folder - except for DAW driver .int files (MSSQL_DRV.int, DB2_DRV.int & ODBC_DRV.int) - to use 'SERVER_NAME DFCONNID=xxx', where xxx is the 'id=' of the DFConnid.ini file displayed to the left."
+            Set peAnchors to anBottomLeft
             Set MultiLineState to True
-            Set psToolTip to "This will try recreate the .int files listed in the 'Open Table Errors' list."
+            Set psImage to "ChangeToDFConnid.ico"
+            Set piImageSize to 24
             Set pbAutoEnable to True
-            
+
             // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
                 Send ResetLoggedErrors
@@ -1120,34 +1111,54 @@ Object oFilelistFixerView is a cRDCDbView
             End_Procedure
 
             Procedure DoClick
-                Integer iRetval iCounter 
-                Boolean bExtractRelations bRemoveUCol
-                
-                Get YesNo_Box "This will recreate the .int files listed in the 'Open Table Errors' list.\n\nContinue?" to iRetval
+                String sDataPath sConnectionID
+                String[] asFileChanges
+                Boolean bActive
+                Integer iRetval iSize iCount 
+                Handle ho
+
+                Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
+                Get psConnId to sConnectionID
+                Get YesNo_Box ("Do you want to change all .int files in folder:\n" + sDataPath + "\n\nTo use 'DFCONNID=" + sConnectionID +"' ?") to iRetval
                 If (iRetval <> MBR_Yes) Begin
-                    Procedure_Return    
-                End
-                Get YesNo_Box "Would you like to extract relation ships from the current .int file, and add that info to the new .int file?" to iRetval
-                Move (iRetval = MBR_Yes) to bExtractRelations
-                Get YesNo_Box "Would you also like to remove the uppercased (U_) columns of these tables? Each table that has them is restructured on the SQL server." to iRetval
-                Move (iRetval = MBR_Yes) to bRemoveUCol
-                
-                Get FixAllIntFileErrors bExtractRelations bRemoveUCol to iCounter
-                If (psBackupError(Self) <> "") Begin
-                    Send Stop_Box (BackupStoppedText(Self, ".int files recreated", iCounter))
                     Procedure_Return
                 End
-                If (iCounter > 0) Begin
-                    Send Info_Box ("Ready! Update to:" * String(iCounter) * ".int files done.")
+
+                Move 0 to iCount
+                Set Value of oConnIDErrors_fm to 0
+                Move (oConnIDErrors_edt(Self)) to ho     
+                Send Delete_Data of ho
+                Send StartStatusPanel "Changing to Connection ID's in .int files" "" -1
+
+                Get SqlUtilChangeIntFilesToConnectionIDs of ghoDUF sDataPath sConnectionID True to asFileChanges
+
+                Send UpdateStatusPanel ""
+                Get Active_State of ghoStatusPanel to bActive
+                If (bActive = False) Begin
+                    Send StopStatusPanel
+                    Send Info_Box "Process interrupted..."
+                    Procedure_Return
                 End
-                Else If (iCounter = 0) Begin
-                    Send Info_Box "Ready! No problems found."
+
+                Move (SizeOfArray(asFileChanges)) to iSize
+                Set Value of oConnIDErrors_fm to (iSize max 0)
+                Send StopStatusPanel
+                If (SizeOfArray(asFileChanges) <> 0) Begin
+                    Decrement iSize
+                    For iCount from 0 to iSize
+                        Send AppendTextLn of ho asFileChanges[iCount]
+                    Loop       
+                    Send Beginning_of_Data of ho
+                    // Note: Remove all cache-files:
+                    Send EraseCacheFiles
+                    Send RefreshData
+                    Send Info_Box ("Ready!" * String(iSize + 1) * ".int files contained errors and were changed to be using DFConnID's.")
                 End
                 Else Begin
-                    Send Info_Box "No 'Open Table Errors' found."
+                    Send Info_Box "Ready! No problems found."    
                 End
-            End_Procedure
-            
+            End_Procedure 
+
             Function IsEnabled Returns Boolean
                 Boolean bExists
                 String sFileName
@@ -1158,74 +1169,67 @@ Object oFilelistFixerView is a cRDCDbView
 
         End_Object
 
+        Object oFileList_grp is a Group
+            Set Size to 106 160
+            Set Location to 20 513
+            Set Label to "FileList.cfg counters:"
+            Set peAnchors to anTopRight
+
+            Object oNoOfSystemTables_fm is a cDUFNumForm
+                Set Size to 12 34
+                Set Location to 12 118
+                Set Label to "System tables"
+            End_Object
+
+            Object oNumberOfMasterFileListSQLTables_fm is a cDUFNumForm
+                Set Size to 12 34
+                Set Location to 27 118
+                Set Label to "Master tables and SQL prefix:"
+            End_Object
+
+            Object oNoOfAliasSQLTables_fm is a cDUFNumForm
+                Set Size to 12 34
+                Set Location to 42 118
+                Set Label to "Alias tables:"
+            End_Object
+
+            Object oNoOfDatTables2_fm is a cDUFNumForm
+                Set Size to 12 34
+                Set Location to 57 118
+                Set Label to "RootName *.Dat tables:"
+            End_Object
+
+            Object oNumberOfSQLTables_fm is a cDUFNumForm
+                Set Label to "SQL tables:"
+                Set Size to 12 34
+                Set Location to 72 118
+            End_Object
+
+            Object oNumberOfFileListTables_fm is a cDUFNumForm
+                Set Size to 12 34
+                Set Location to 87 118
+                Set Label to "Total Filelist tables:"
+            End_Object
+        End_Object
     End_Object
 
     Object oFixExtraProblems_grp is a Group
-        Set Size to 64 323
-        Set Location to 381 362
+        Set Size to 59 679
+        Set Location to 390 6
         Set Label to "More Database Actions:"
         Set peAnchors to anBottomLeftRight
 
-        Object oExtract_Relationships_cb is a cRDCCheckBox
-            Set Size to 10 50
-            Set Location to 16 6
-            Set Label to "Extract relationships"
-            Set Checked_State to True   
-            Set psToolTip to "Check this if you would like to extract relationships from the current .int file, and add that info to the new .int file."
-            Set pbCreateInfoItem to False
-
-            Function IsEnabled Returns Boolean
-                Boolean bExists
-                String sFileName
-                Get psConnIdFile to sFileName
-                File_Exist sFileName bExists
-                Function_Return bExists
-            End_Function
-    
-        End_Object
-
-        Object oRemoveUColumns_cb is a cRDCCheckBox
-            Set Size to 10 50
-            Set Location to 31 6
-            Set Label to "Remove U_ columns"
-            Set Checked_State to True
-            Set psToolTip to "Check the box if you would like to Remove Uppercased Columns. It is strongly suggested to do so IF you have applied an General Insensitive collation like 'Latin1_General_CI_AS'. Please read the help about the subject first, by clicking the help button 'Remove Uppercased Columns'"
-            Set pbCreateInfoItem to False
-
-            Function IsEnabled Returns Boolean
-                Boolean bExists
-                String sFileName
-                Get psConnIdFile to sFileName
-                File_Exist sFileName bExists
-                Function_Return bExists
-            End_Function
-    
-        End_Object
-
-        Object oUColHelp_btn is a cRDCButton
-            Set Size to 12 147
-            Set Location to 45 5
-            Set Label to "Why remove uppercased columns?"
-            Set psToolTip to "Help on selecting the Right SQL Collation and removing uppercased columns"
-            Set peAnchors to anNone
-            Set psImage to "ActionHelp.ico"
-        
-            Procedure OnClick
-                Runprogram Shell Background "https://docs.dataaccess.com/dataflexhelp/index.htm#t=mergedProjects%2FDevelopmentGuide%2FIgnore_Case_Support_and_Uppercase_Columns.htm"
-            End_Procedure
-        
-        End_Object  
-
         Object oRecreateAllIntFiles_btn is a cRDCButton
-            Set Size to 32 61
-            Set Location to 11 91
+            Set Size to 30 100
+            Set Location to 16 6
+            Set peAnchors to anNone
             Set Label to "Recreate all *.int files"
             Set MultiLineState to True
             Set psToolTip to "This will recreate all .int files."
             Set psImage to "RecreateIntFiles.ico"
             Set piImageSize to 24
             Set pbAutoEnable to True
-            
+
             // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
                 Send ResetLoggedErrors
@@ -1237,7 +1241,7 @@ Object oFilelistFixerView is a cRDCDbView
                 Integer iRetval iCounter
                 Boolean bExtractRelations bRemoveUCol
                 String sDataPath sBackup
-                
+
                 Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
                 Get vFolderFormat sDataPath to sDataPath
                 Move (sDataPath + CS_BackupFolder) to sBackup
@@ -1247,7 +1251,7 @@ Object oFilelistFixerView is a cRDCDbView
                 End
                 Get Checked_State of oExtract_Relationships_cb to bExtractRelations
                 Get Checked_State of oRemoveUColumns_cb        to bRemoveUCol
-                
+
                 Get RecreateAllIntFiles bExtractRelations bRemoveUCol to iCounter
                 If (psBackupError(Self) <> "") Begin
                     Send Stop_Box (BackupStoppedText(Self, ".int files recreated", iCounter))
@@ -1260,7 +1264,7 @@ Object oFilelistFixerView is a cRDCDbView
                     Send Info_Box "Ready! No .int files found to recreate."
                 End
             End_Procedure
-            
+
             Function IsEnabled Returns Boolean
                 Boolean bExists
                 String sFileName
@@ -1271,16 +1275,69 @@ Object oFilelistFixerView is a cRDCDbView
 
         End_Object
 
+        Object oExtract_Relationships_cb is a cRDCCheckBox
+            Set Size to 10 110
+            Set Location to 14 112
+            Set peAnchors to anNone
+            Set Label to "Extract relationships"
+            Set Checked_State to True   
+            Set psToolTip to "Check this if you would like to extract relationships from the current .int file, and add that info to the new .int file."
+            Set pbCreateInfoItem to False
+
+            Function IsEnabled Returns Boolean
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
+            End_Function
+
+        End_Object
+
+        Object oRemoveUColumns_cb is a cRDCCheckBox
+            Set Size to 10 110
+            Set Location to 28 112
+            Set peAnchors to anNone
+            Set Label to "Remove U_ columns"
+            Set Checked_State to True
+            Set psToolTip to "Check the box if you would like to Remove Uppercased Columns. It is strongly suggested to do so IF you have applied an General Insensitive collation like 'Latin1_General_CI_AS'. Please read the help about the subject first, by clicking the help button 'Remove Uppercased Columns'"
+            Set pbCreateInfoItem to False
+
+            Function IsEnabled Returns Boolean
+                Boolean bExists
+                String sFileName
+                Get psConnIdFile to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
+            End_Function
+
+        End_Object
+
+        Object oUColHelp_btn is a cRDCButton
+            Set Size to 12 125
+            Set Location to 42 112
+            Set Label to "Why remove uppercased columns?"
+            Set psToolTip to "Help on selecting the Right SQL Collation and removing uppercased columns"
+            Set peAnchors to anNone
+            Set psImage to "ActionHelp.ico"
+
+            Procedure OnClick
+                Runprogram Shell Background "https://docs.dataaccess.com/dataflexhelp/index.htm#t=mergedProjects%2FDevelopmentGuide%2FIgnore_Case_Support_and_Uppercase_Columns.htm"
+            End_Procedure
+
+        End_Object  
+
         Object oRemove_U_Columns_btn is a cRDCButton
-            Set Size to 32 61
-            Set Location to 11 159
+            Set Size to 30 100
+            Set Location to 16 243
+            Set peAnchors to anNone
             Set Label to "Remove uppercased columns"
             Set MultiLineState to True
             Set psToolTip to "This will remove Uppercased (U_) columns from all tables. This will also be done when the 'Recreate All .int files' button is clicked while the 'Remove U_ Columns' checkbox is selected, but with this button Only the columns are being removed."
             Set psImage to "TableColumnDelete.ico"
             Set piImageSize to 24
             Set pbAutoEnable to True
-            
+
             // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
                 Send ResetLoggedErrors
@@ -1292,7 +1349,7 @@ Object oFilelistFixerView is a cRDCDbView
                 Integer iRetval iCounter
                 Boolean bBackup
                 String sDataPath sBackup
-                
+
                 Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
                 Get vFolderFormat sDataPath to sDataPath
                 Move (sDataPath + CS_BackupFolder) to sBackup
@@ -1302,7 +1359,7 @@ Object oFilelistFixerView is a cRDCDbView
                 End
                 Get YesNo_Box "Would you like to make a backup copy of the SQL database and .int files?" to iRetval
                 Move (iRetval = MBR_Yes) to bBackup
-                
+
                 Get FindAllUColumnsFiles bBackup to iCounter
                 If (psBackupError(Self) <> "") Begin
                     Send Stop_Box (BackupStoppedText(Self, "tables searched for uppercased columns", iCounter))
@@ -1315,7 +1372,7 @@ Object oFilelistFixerView is a cRDCDbView
                     Send Info_Box "Ready! No changes made."
                 End
             End_Procedure
-            
+
             Function IsEnabled Returns Boolean
                 Boolean bExists
                 String sFileName
@@ -1327,15 +1384,16 @@ Object oFilelistFixerView is a cRDCDbView
         End_Object
 
         Object oMoveUnusedDatFiles_btn is a cRDCButton
-            Set Size to 32 61
-            Set Location to 11 257
+            Set Size to 30 100
+            Set Location to 16 349
+            Set peAnchors to anNone
             Set Label to "Move *.Dat files to backup"
             Set MultiLineState to True
             Set psToolTip to "This will move all *.dat related files, that does not exist in the Filelist, to the workspace's '.\Data\Backup' folder."
             Set psImage to "MoveFiles.ico"
             Set piImageSize to 24
             Set pbAutoEnable to True
-            
+
             // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
             Procedure OnClick
                 Send ResetLoggedErrors
@@ -1345,14 +1403,14 @@ Object oFilelistFixerView is a cRDCDbView
 
             Procedure DoClick
                 Integer iRetval iCounter 
-                
+
                 Get YesNo_Box "Move all *.dat related files that is not in the 'Rootname *.dat' list, to the workspace's '.\Data\Backup' folder.\n\nContinue?" to iRetval
                 If (iRetval <> MBR_Yes) Begin
                     Procedure_Return    
                 End
-                
+
                 Get MoveUnusedDatFileToBackupFolder CS_BackupFolder to iCounter
-                
+
                 If (iCounter = -1) Begin
                     Send Info_Box ("The backup folder:\n" + CS_BackupFolder + "\nCould not be created! No *.dat related files were moved.")
                 End
@@ -1363,7 +1421,7 @@ Object oFilelistFixerView is a cRDCDbView
                     Send Info_Box "Ready! No files moved."
                 End
             End_Procedure  
-            
+
             // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
             Function IsEnabled Returns Boolean
                 Boolean bExists
@@ -1374,7 +1432,6 @@ Object oFilelistFixerView is a cRDCDbView
             End_Function
 
         End_Object
-        
     End_Object
 
     Object oLocalError_Info_Object is a cObject
@@ -1822,7 +1879,7 @@ Object oFilelistFixerView is a cRDCDbView
         End
         Send ShowSQLTablesCount 
         Get psDatabase of ghoDUF to sDatabase
-        Send UpdateCollatingSequence of (oCurrentCollatingSequence_fm(oSQL_grp(Self))) sDatabase
+        Send UpdateCollatingSequence of (oCurrentCollatingSequence_fm(oCollation_grp(Self))) sDatabase
         // This is to make sure the uppercase support for the driver is set properly.
         Send SetupIgnoreUcaseSupport
         Send ShowFileListData
@@ -1870,53 +1927,6 @@ Object oFilelistFixerView is a cRDCDbView
         // This is the crucial bit:
         Set Border_Style of (Client_Id(ghoCommandBars)) to Border_None
     End_Procedure
-
-    Object oLogFile_fm is a cRDCForm
-        Set Size to 12 382
-        Set Location to 29 82
-        Set Enabled_State to False
-        Set Label to "Log file:"
-        Set peAnchors to anNone
-
-        Procedure Page Integer iPageObject
-            String sFileName sHomePath
-            Forward Send Page iPageObject
-            Get psHome of (phoWorkspace(ghoApplication)) to sHomePath
-            Move CS_ReportFileName to sFileName
-            Set Value to (sHomePath + sFileName)
-        End_Procedure
-        
-    End_Object
-    Object oOpenLogFile_btn is a cRDCButton
-        Set Size to 12 50
-        Set Location to 29 470
-        Set Label to "View"
-        Set peAnchors to anNone
-        Set psImage to "View.ico"
-        Set pbAutoEnable to True
-        Set psToolTip to "View the content of the log file."
-    
-        Procedure OnClick
-            String sFileName
-            Boolean bExists
-            Get Value of oLogFile_fm to sFileName
-            File_Exist sFileName bExists
-            If (bExists = False) Begin
-                Send Info_Box ("The log file hasn't been created yet:\n" + sFileName)
-                Procedure_Return
-            End
-            Runprogram Shell Background sFileName
-        End_Procedure
-    
-        Function IsEnabled Returns Boolean
-            Boolean bExists
-            String sFileName
-            Get psConnIdFile to sFileName
-            File_Exist sFileName bExists
-            Function_Return bExists
-        End_Function
-
-    End_Object  
 
     On_Key kClear Send RefreshDataByKey
 End_Object    
