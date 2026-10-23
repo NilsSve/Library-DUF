@@ -47,6 +47,11 @@ Packages:
   1.0.0 fixes the Windows folder dialog (`vSHBrowseForFolder`) in 64-bit programs. A workspace that also asks for
   vWin32fh itself must ask for `1.0.0` or a range such as `^1.0.0`: df-cli reports a commit pin of vWin32fh next
   to this release as incompatible.
+- A workspace that pins DUF 1.0.9 or older keeps working as long as its `.sws.lock` holds RDCToolsLib 1.0.13 or
+  older. Without a lock (a fresh clone, or the lock file removed) df-cli now takes RDCToolsLib 1.0.14 for it,
+  while DUF 1.0.9 and older still ask for vWin32fh by commit, and the workspace reports "Incompatible ref for
+  NilsSve/vWin32fh-Library-DF26.0". Move such a workspace to DUF 1.0.10, or list RDCToolsLib `1.0.13` above DUF in
+  its .sws.
 
 SQL Repair Utility:
 
