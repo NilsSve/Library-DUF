@@ -37,6 +37,24 @@ These sections can be found in the `Developer5.chm` Help file located in the `/H
 
 The workspace also uses three other libraries from Nils Sve's GitHub page — DFAbout, RDCToolsLib and vwin32fh. As of the flattening described below, they are **no longer nested submodules of DUF**; they are separate sibling libraries. See the Dependencies section for why, and what a consuming application must do.
 
+## What is new in 1.0.10
+
+vWin32fh 1.0.0 and RDCToolsLib 1.0.14, and a new layout for the SQL Repair Utility.
+
+Packages:
+
+- DUF asks for vWin32fh by version range, `^1.0.0`, instead of one commit, and for RDCToolsLib `^1.0.14`. vWin32fh
+  1.0.0 fixes the Windows folder dialog (`vSHBrowseForFolder`) in 64-bit programs. A workspace that also asks for
+  vWin32fh itself must ask for `1.0.0` or a range such as `^1.0.0`: df-cli reports a commit pin of vWin32fh next
+  to this release as incompatible.
+
+SQL Repair Utility:
+
+- A new layout: the five lists of Filelist problems stand side by side, each with its counter and its fix button
+  underneath. The window never opens smaller than its layout, so no control is cut off at the bottom.
+- The step "Recreate *.int files for 'Open table errors'" is left out of the window for now.
+- The MS-SQL collation is shown again after the login.
+
 ## What is new in 1.0.9
 
 The SQL Repair Utility says when errors were written to its log.
@@ -409,13 +427,13 @@ vwin32fh come with it. A package brings the sources of DUF's programs, but no pr
 Add it with the version after a `#`:
 
 ```
-https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.9
+https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.10
 ```
 
 Each release has a version tag (`1.0.0`, `1.0.1`, `1.0.2`, `1.0.3`, `1.0.4`, `1.0.5`, `1.0.6`, `1.0.7`, `1.0.8`,
-`1.0.9`, ...), listed under Tags on GitHub. Without the `#` part the workspace gets a commit. A workspace that
-also names RDCToolsLib or DFAbout itself lists them before DUF, in a version DUF accepts: RDCToolsLib 1.0.11 or
-later, DFAbout 1.0.2 or later.
+`1.0.9`, `1.0.10`, ...), listed under Tags on GitHub. Without the `#` part the workspace gets a commit. A
+workspace that also names RDCToolsLib or DFAbout itself lists them before DUF, in a version DUF accepts:
+RDCToolsLib 1.0.14 or later, DFAbout 1.0.2 or later.
 
 The package puts **`BuildDUFUtilities.bat`** into the workspace folder. Start it there. It compiles
 `DUFCodeGenerator` and `DUFSQLRepairUtility` into the workspace's `Programs` folder:

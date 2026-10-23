@@ -3,7 +3,7 @@
         {
             "source": "https://github.com/NilsSve/Library-RDCToolsLib.git",
             "sws": "RDC-Windows-Sub-Classes-Library.sws",
-            "version": "1.0.13"
+            "version": "1.0.14"
         },
         {
             "source": "https://github.com/NilsSve/Library-DFAbout.git",
@@ -13,7 +13,7 @@
         {
             "source": "https://github.com/NilsSve/Library-vwin32fh.git",
             "sws": "StudioLibrary/vWin32fh-Library-DF26.0.sws",
-            "version": "5432741c37c80be755e78f5f9d45ba8329fddcaf"
+            "version": "1.0.0"
         },
         {
             "source": "https://github.com/NilsSve/Library-DFUnit.git",

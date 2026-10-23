@@ -8,12 +8,12 @@
         {
             "source": "https://github.com/NilsSve/Library-RDCToolsLib.git",
             "sws": "RDC-Windows-Sub-Classes-Library.sws",
-            "version": "^1.0.11"
+            "version": "^1.0.14"
         },
         {
             "source": "https://github.com/NilsSve/Library-vwin32fh.git",
             "sws": "StudioLibrary/vWin32fh-Library-DF26.0.sws",
-            "version": "5432741c37c80be755e78f5f9d45ba8329fddcaf"
+            "version": "^1.0.0"
         }
     ],
     "description": "Database Update Framework: versioned, repeatable database schema updates for DataFlex.",
@@ -26,7 +26,7 @@
         ],
         "license": "MIT",
         "licenseFile": "LICENSE",
-        "version": "1.0.9"
+        "version": "1.0.10"
     },
     "projects": [
         "DUFCodeGenerator.src",
