@@ -18,7 +18,7 @@
         {
             "source": "https://github.com/NilsSve/Library-DFUnit.git",
             "sws": "RDC-DFUnit-Library.sws",
-            "version": "7736c25f39f27300f932856aad761e25925fcb10"
+            "version": "0.1.0"
         }
     ],
     "df": 26.0,
