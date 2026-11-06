@@ -14,8 +14,10 @@ Object oHtmlHelp is a cHtmlHelp
     Set pbAlwaysOnTop to False
 End_Object
 
-Define CS_PropertiesKeyWord     for "Properties"
-Define CS_ThemeKeyWord          for "Theme"
+Define CS_PropertiesKeyWord for "Properties"
+Define CS_ThemeKeyWord      for "Theme"
+Define CS_Preferences       for "Preferences"
+Define CS_Filelist          for "FileList"
 
 #IF (!@ < 201)
      "Nope, that won't work. You need at least DataFlex 20.1 to compile/run this program."
@@ -27,12 +29,44 @@ Object oApplication is a cDUFApplication
     Set psProduct to "DUF - Code Generator"
 
     Property Handle phoTableDUFCodeGenerator_vw 0
-    Property Integer[] piaDifferences
+    Property Integer[] piaDifferences  
+    Property String psLogFile
+    
+    Procedure DoShowReport
+        String sLogFile
+        Get psLogFile to sLogFile
+        Send ActivateLogFileDialog of (Client_Id(ghoCommandBars)) sLogFile
+    End_Procedure
 
     Object oConnection is a cConnection
         Use LoginEncryption.pkg
         Use DatabaseLoginDialog.dg
     End_Object
+
+    // Auto-sets the psFilelistFrom property - that is later read by the "Filelist.cfg" form of the FielListFixerView.vw.
+    // It does this in two steps:
+    // 1. If a filelist.cfg is passed as a param on the command-line, that value is used.
+    // 2. If no command line param, read the value from the registry, set by the form "Filelist.cfg".
+    Procedure OnCreate
+        Handle hoCmdLine
+        String sArgument
+
+        // cDUFApplication takes a .sws argument - what the Studio passes for "Add to Studio". (It was never asked.)
+        Forward Send OnCreate
+        Get phoCommandLine to hoCmdLine
+        Get Argument of hoCmdLine 1 to sArgument
+        // Open any Filelist.cfg file passed on the command line.
+        If (Lowercase(sArgument) contains ".cfg") Begin
+            Set psFilelistFrom to sArgument
+        End
+        Else Begin
+            Get ReadString of ghoApplication CS_Preferences CS_Filelist "" to sArgument
+            If (Lowercase(sArgument) contains ".cfg") Begin
+                Set psFilelistFrom to sArgument
+            End
+        End
+    End_Procedure
+    
 End_Object
 
 // cDbUpdateHandler main object including cDbUpdateVersion child objects.
@@ -180,6 +214,37 @@ Object oMain is a Panel
             Object oPromptToolItem is a cCJPromptMenuItem
                 Set psImage to "ActionPrompt.ico"
                 Set pbControlBeginGroup to True
+            End_Object
+
+            Object oOpenReport_MenuItem is a cCJMenuItem
+                Set psImage to "ViewReport.ico"
+                Set psCaption to "Report"
+                Set psToolTip to "Open the generated report of database changes made."
+                Set psDescription to "Open Report"
+                Set pbActiveUpdate to True
+
+                Function IsEnabled Returns Boolean
+                    Function_Return True
+                End_Function
+
+                Procedure OnExecute Variant vCommandBarControl
+                    Boolean bExists
+                    String sLogFile
+                    Get psLogFile of ghoApplication to sLogFile 
+                    Get vFilePathExists sLogFile to bExists
+                    If (bExists = True) Begin
+                        Send ActivateLogFileDialog of (Client_Id(ghoCommandBars)) sLogFile
+                    End
+                End_Procedure
+
+                Function IsEnabled Returns Boolean
+                    String sLogFile
+                    Boolean bExists
+                    Get psLogFile of ghoApplication to sLogFile
+                    Get vFilePathExists sLogFile to bExists
+                    Function_Return bExists
+                End_Function
+
             End_Object
 
             Object oClearToolItem is a cCJClearMenuItem

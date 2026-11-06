@@ -8,6 +8,7 @@ Use seq_chnl.pkg
 Use File_dlg.pkg
 Use cRDCForm.pkg
 Use cRDCButton.pkg
+Use cRDCCJSelectionGrid.pkg
 Use cDbUpdateFunctionLibrary.pkg
 Use cRDCComboForm.pkg
 Use cRDCCheckbox.pkg
@@ -20,6 +21,7 @@ Use SQLCollations.sl
 
 // The repair work, the ghoDUF handle and the CS_ Defines of the view are in cDUFFilelistRepair.pkg.
 Use cDUFFilelistRepair.pkg
+Use dfLine.pkg
 
 Register_Object oConnIDErrors_edt
 Register_Function BackupStoppedText String sDone Integer iDone Returns String
@@ -27,7 +29,8 @@ Register_Function BackupStoppedText String sDone Integer iDone Returns String
 Activate_View Acivate_oFileListFixerView for oFileListFixerView
 Object oFilelistFixerView is a cRDCDbView 
     Set Location to 2 1
-    Set Size to 452 691
+    Set Size to 426 691
+    Set Maximize_Icon to True
     Set pbAutoActivate to True
 
     Set phoFilelistFixerView of ghoApplication to Self
@@ -44,7 +47,7 @@ Object oFilelistFixerView is a cRDCDbView
     Property Integer piLoggedErrors 0
     
     Object oFilelist_fm is a cRDCForm
-        Set Size to 12 323
+        Set Size to 12 322
         Set Location to 8 62
         Set peAnchors to anTopLeftRight
         Set Label to "Filelist.cfg:" 
@@ -61,6 +64,7 @@ Object oFilelistFixerView is a cRDCDbView
             If (sRetval <> "") Begin
                 Delegate Send ClearData
                 Set Value to sRetval
+                Send WriteString of ghoApplication CS_Preferences CS_Filelist sRetval
             End
         End_Procedure
 
@@ -92,11 +96,11 @@ Object oFilelistFixerView is a cRDCDbView
                 Get ChangeFilelistPathing of ghoApplication sFileList to bOK
                 If (bOK = True) Begin
                     Set psFilelistFrom of ghoApplication to sFileList
-                    Send UpdateConnIdData of oConnidInfo_edt
+                    Send UpdateConnIdData of (oConnidInfo_edt(Self))
                     Send UpdateDriverIniFile of oDriver_fm
                     // The collation of the database is read once here, after the login.
                     Get psDatabase of ghoDUF to sDatabase
-                    Send UpdateCollatingSequence of oCurrentCollatingSequence_fm sDatabase
+                    Send UpdateCollatingSequence of (oCurrentCollatingSequence_fm(Self)) sDatabase
                     Get ParseFolderName sFileList to sPath
                     Move (Right(sPath, 1)) to sChar
                     If (sChar = "\") Begin
@@ -105,16 +109,16 @@ Object oFilelistFixerView is a cRDCDbView
                     End
                     Get vFolderFormat sPath to sPath
                     Get ParseFolderName sHome to sHome
-                    Set Value of oLogFile_fm to (sHome + CS_ReportFileName)
+                    Set Value of (oLogFile_fm(Self)) to (sHome + CS_ReportFileName)
                 End
             End
             Else Begin
                 Send UnRegisterAllConnections of ghoConnection 
                 Set psDriverID of ghoDUF to DATAFLEX_ID
                 Set psDatabase of ghoDUF to ""
-                Send ClearData of oConnidInfo_edt
-                Set Value of oDriver_fm to ""
-                Set Value of oCurrentCollatingSequence_fm to ""
+                Send ClearData of (oConnidInfo_edt(Self))
+                Set Value of (oDriver_fm(Self)) to ""
+                Set Value of (oCurrentCollatingSequence_fm(Self)) to ""
             End
 
             Move hoLocalError_Object_Id to Error_Object_Id
@@ -137,7 +141,7 @@ Object oFilelistFixerView is a cRDCDbView
 
     Object oSelectFilelist_btn is a cRDCButton
         Set Size to 12 50
-        Set Location to 8 395
+        Set Location to 8 387
         Set Label to "Select"
         Set peAnchors to anTopRight
         Set psImage to "ActionOpen.ico"
@@ -146,66 +150,64 @@ Object oFilelistFixerView is a cRDCDbView
         Procedure OnClick
             Send Prompt of oFilelist_fm
         End_Procedure
-
+        
     End_Object
 
     Object oLogFile_fm is a cRDCForm
-        Set Size to 12 323
+        Set Size to 12 322
         Set Location to 23 62
         Set Enabled_State to False
         Set Label to "Log file:"
         Set peAnchors to anTopLeftRight
 
-        Procedure Page Integer iPageObject
-            String sFileName sHomePath
-            Forward Send Page iPageObject
-            Get psHome of (phoWorkspace(ghoApplication)) to sHomePath
-            Move CS_ReportFileName to sFileName
-            Set Value to (sHomePath + sFileName)
+        Procedure OnChange
+            String sValue
+            Get Value to sValue
+            Set psLogFile of ghoApplication to sValue
         End_Procedure
 
     End_Object
 
-    Object oOpenLogFile_btn is a cRDCButton
-        Set Size to 12 50
-        Set Location to 23 395
-        Set Label to "View"
-        Set peAnchors to anTopRight
-        Set psImage to "View.ico"
-        Set pbAutoEnable to True
-        Set psToolTip to "View the content of the log file."
-
-        Procedure OnClick
-            String sFileName
-            Boolean bExists
-            Get Value of oLogFile_fm to sFileName
-            File_Exist sFileName bExists
-            If (bExists = False) Begin
-                Send Info_Box ("The log file hasn't been created yet:\n" + sFileName)
-                Procedure_Return
-            End
-            Runprogram Shell Background sFileName
-        End_Procedure
-
-        Function IsEnabled Returns Boolean
-            Boolean bExists
-            String sFileName
-            Get psConnIdFile to sFileName
-            File_Exist sFileName bExists
-            Function_Return bExists
-        End_Function
-
-    End_Object  
+//    Object oOpenLogFile_btn is a cRDCButton
+//        Set Size to 12 50
+//        Set Location to 23 387
+//        Set Label to "View"
+//        Set peAnchors to anTopRight
+//        Set psImage to "View.ico"
+//        Set pbAutoEnable to True
+//        Set psToolTip to "View the content of the log file."
+//
+//        Procedure OnClick
+//            String sFileName
+//            Boolean bExists
+//            Get Value of oLogFile_fm to sFileName
+//            File_Exist sFileName bExists
+//            If (bExists = False) Begin
+//                Send Info_Box ("The log file hasn't been created yet:\n" + sFileName)
+//                Procedure_Return
+//            End
+//            Runprogram Shell Background sFileName
+//        End_Procedure
+//
+//        Function IsEnabled Returns Boolean
+//            Boolean bExists
+//            String sFileName
+//            Get psConnIdFile to sFileName
+//            File_Exist sFileName bExists
+//            Function_Return bExists
+//        End_Function
+//
+//    End_Object  
 
     Object oRefresh_btn is a cRDCButton
-        Set Size to 29 85
-        Set Location to 7 453
-        Set Label to "Refresh Data (F5)"
+        Set Size to 19 94
+        Set Location to 8 470
+        Set Label to "Read/Refresh Data"
         Set Default_State to True
         Set Form_FontWeight to fw_Bold
         Set psToolTip to "Refreshes all data by reading the Filelist.cfg and SQL database tables (F5)" 
         Set psImage to "ActionRefresh.ico"
-        Set piImageSize to 32
+        Set piImageSize to 24
         Set MultiLineState to True
         Set pbAutoEnable to True
         Set peAnchors to anTopRight
@@ -235,7 +237,8 @@ Object oFilelistFixerView is a cRDCDbView
         Set Size to 108 384
         Set Location to 42 6
         Set Label to "SQL connection:"
-        Set peAnchors to anTopLeftRight
+        Set peAnchors to anNone
+//        Set peNeighborhood to nhPublic
 
         Object oConnidInfo_edt is a cDUFRichEdit
             Set Size to 46 316
@@ -310,9 +313,9 @@ Object oFilelistFixerView is a cRDCDbView
                     Send AppendTextLn ("disabled=" + String(Connections[0].bDisabled)) 
                     Send Beginning_of_Data
                     Get psServer of ghoduf to sServer
-                    Set Value of oServer_fm to sServer
+                    Set Value of (oServer_fm(Self)) to sServer
                     Get psDatabase of ghoDUF to sDatabase
-                    Set Value of oDatabase_fm to sDatabase
+                    Set Value of (oDatabase_fm(Self)) to sDatabase
                 End   
                 Else Begin
                     Send AppendTextLn "No DFConnid.ini file found, or no active connection."
@@ -507,7 +510,8 @@ Object oFilelistFixerView is a cRDCDbView
         Set Size to 108 289
         Set Location to 42 396
         Set Label to "MS-SQL collation:"
-        Set peAnchors to anTopRight
+        Set peAnchors to anNone
+//        Set peNeighborhood to nhPublic
 
         Object oCurrentCollatingSequence_fm is a cRDCForm
             Set Size to 12 198
@@ -743,697 +747,6 @@ Object oFilelistFixerView is a cRDCDbView
         End_Object  
     End_Object
 
-    Object oCount_grp is a Group
-        Set Size to 225 679
-        Set Location to 156 6
-        Set Label to "Filelist.cfg problems and their fixes:"
-        Set peAnchors to anAll
-
-        Object oDatTables_edt is a cDUFRichEdit
-            Set Size to 142 96
-            Set Location to 25 6
-            Set Label to "RootName *.Dat"
-            Set psExtension to ".dat"
-            Set peAnchors to anTopBottom
-        End_Object
-
-        Object oDatTables_fm is a cDUFNumForm
-            Set Size to 12 34
-            Set Location to 170 68
-            Set Label to "Counter:"
-            Set peAnchors to anBottomLeft
-            Procedure OnChange
-                String sVal
-                Get Value to sVal
-                Set Value of oNoOfDatTables2_fm to sVal
-            End_Procedure
-        End_Object
-
-        // Will remove non Alias Filelist entries that:
-        //   - Does not have a corresponding .Dat file, 
-        Object oFixFileListErrors_btn is a cRDCButton
-            Set Size to 30 96
-            Set Location to 186 6
-            Set Label to "1. Fix 'RootName .Dat errors'"
-            Set peAnchors to anBottomLeft
-            Set MultiLineState to True
-            Set pbAutoEnable to True
-            Set psToolTip to "The fix will spin through the Filelist and \n1. Removes non Alias entries that does not have a corresponding .Dat file.\nNote:This only applies to non Alias tables."
-
-            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
-            Procedure OnClick
-                Send ResetLoggedErrors
-                Send DoClick
-                Send OfferErrorLog
-            End_Procedure
-
-            Procedure DoClick
-                Integer iRetval iCounter
-                Get YesNo_Box "The fix will spin through the Filelist and \n1. Removes non Alias entries that does not have a corresponding .Dat file.\nNote:This only applies to non Alias tables.\n\nA backup copy of the Filelist.cfg file is made first.\n\nContinue?" to iRetval
-                If (iRetval <> MBR_Yes) Begin
-                    Procedure_Return    
-                End
-
-                Get FixFileListErrors to iCounter
-                If (iCounter < 0) Begin
-                    Send Stop_Box (BackupStoppedText(Self, "", 0))
-                    Procedure_Return
-                End
-                If (iCounter <> 0) Begin
-                    Send Info_Box ("Ready! Removed" * String(iCounter) * "Filelist.cfg entries that pointed to a .dat file but the .dat file was missing, and the table was not an Alias. See: Log file!")
-                End
-                Else Begin
-                    Send Info_Box "Ready! No problems found."
-                End
-            End_Procedure
-
-            // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
-            Function IsEnabled Returns Boolean
-                Boolean bExists
-                String sFileName
-                Get Value of oFilelist_fm to sFileName
-                File_Exist sFileName bExists
-                Function_Return bExists
-            End_Function
-
-        End_Object
-
-        Object oAliasErrors_edt is a cDUFRichEdit
-            Set Size to 142 96
-            Set Location to 24 107
-            Set Label to "Alias table errors"
-            Set psExtension to ".int"
-            Set peAnchors to anTopBottom
-        End_Object
-
-        Object oAliasErrors_fm is a cDUFNumForm
-            Set Size to 12 34
-            Set Location to 170 169
-            Set Label to "Counter:"
-            Set peAnchors to anBottomLeft
-        End_Object
-
-        Object oFixAliasProblems_btn is a cRDCButton
-            Set Size to 30 96
-            Set Location to 186 107
-            Set Label to "2. Fix 'Alias table errors'"
-            Set peAnchors to anBottomLeft
-            Set MultiLineState to True
-            Set pbAutoEnable to True
-            Set psToolTip to "The fix will spin through Filelist.cfg and \n1. either add or remove driver prefixes for ALIAS rootnames, depending on the Master RootName\n2. Change all ALIAS table Descriptions to the ROOTNAME + 'ALIAS'"
-
-            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
-            Procedure OnClick
-                Send ResetLoggedErrors
-                Send DoClick
-                Send OfferErrorLog
-            End_Procedure
-
-            Procedure DoClick
-                Integer iRetval iCounter
-                Get YesNo_Box "The fix will spin through Filelist.cfg and \n1. either add or remove driver prefixes for ALIAS rootnames, depending on the Master RootName\n2. Change all ALIAS table Descriptions to the ROOTNAME + 'ALIAS'\n\nA backup copy of the Filelist.cfg file is made first.\n\nContinue?" to iRetval
-                If (iRetval <> MBR_Yes) Begin
-                    Procedure_Return    
-                End
-
-                Get FixFileListAliasProblems to iCounter
-                If (iCounter < 0) Begin
-                    Send Stop_Box (BackupStoppedText(Self, "", 0))
-                    Procedure_Return
-                End
-
-                If (iCounter <> 0) Begin 
-                    Send RefreshData
-                    Send Info_Box ("Ready!" * String(iCounter) * "Alias problems fixed in Filelist.cfg. See Also: Logfile")
-                End
-                Else Begin
-                    Send Info_Box "Ready! NO Alias problems found in Filelist.cfg."
-                End
-            End_Procedure
-
-            // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
-            Function IsEnabled Returns Boolean
-                Boolean bExists
-                String sFileName
-                Get Value of oFilelist_fm to sFileName
-                File_Exist sFileName bExists
-                Function_Return bExists
-            End_Function
-
-        End_Object
-
-        Object oRootNameIntTables_edt is a cDUFRichEdit
-            Set Size to 142 96
-            Set Location to 24 208
-            Set Label to "RootName *.int"
-            Set psExtension to ".int"
-            Set peAnchors to anTopBottom
-        End_Object
-
-        Object oRootNameIntTables_fm is a cDUFNumForm
-            Set Size to 12 34
-            Set Location to 170 270
-            Set Label to "Counter:"
-            Set peAnchors to anBottomLeft
-        End_Object
-
-        Object oFixFileListSQLMissingTables_btn is a cRDCButton
-            Set Size to 30 96
-            Set Location to 186 208
-            Set Label to "3. Make Filelist RootNames equal to SQL database"
-            Set peAnchors to anBottomLeft
-            Set MultiLineState to True
-            Set pbAutoEnable to True
-            Set psToolTip to "The fix will spin through Filelist.cfg and \n1. Remove all driver prefixes for Master tables that does NOT exist in the SQL Database\n2. OR Add driver prefix for Master filelist entries that are missing a driver prefix."
-
-            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
-            Procedure OnClick
-                Send ResetLoggedErrors
-                Send DoClick
-                Send OfferErrorLog
-            End_Procedure
-
-            Procedure DoClick
-                Integer iRetval iCounter
-                Get YesNo_Box "The fix will spin through Filelist.cfg and \n1. Remove all driver prefixes for tables that does NOT exist in the SQL Database\n2. OR Add driver prefix for Master filelist entries that are missing a driver prefix.\n\nA backup copy of the Filelist.cfg file is made first.\n\nContinue?" to iRetval
-                If (iRetval <> MBR_Yes) Begin
-                    Procedure_Return    
-                End
-                Get FixFileListSQLMissingTables to iCounter               
-                If (iCounter = -2) Begin
-                    Send Stop_Box "The list of the tables of the SQL database could not be read, so nothing was changed.\n\nCheck the connection: 'Tot SQL tables' shows how many tables were read. Then click 'Refresh Data!' and try again."
-                    Procedure_Return
-                End
-                If (iCounter < 0) Begin
-                    Send Stop_Box (BackupStoppedText(Self, "", 0))
-                    Procedure_Return
-                End
-                If (iCounter <> 0) Begin
-                    Send Info_Box ("Ready!" * String(iCounter) * "RootName entries in Filelist.cfg that pointed to SQL tables that doesn't exist in the SQL database, were adjusted.\n\nTop tip: If tables were added to the ''Open Table Errors', check the list 'RootName *.int' for a match. The odds are high that there is something wrong with the .int file.")
-                End
-                Else Begin
-                    Send Info_Box "Ready! No problems found."    
-                End
-            End_Procedure
-
-            Function IsEnabled Returns Boolean
-                Boolean bExists
-                String sFileName
-                Get psConnIdFile to sFileName
-                File_Exist sFileName bExists
-                Function_Return bExists
-            End_Function
-
-        End_Object
-
-        Object oOpenErrorTables_edt is a cDUFRichEdit
-            Set Size to 142 96
-            Set Location to 24 309
-            Set Label to "Open table errors"
-            Set peAnchors to anTopBottom
-            Set psExtension to ".int"
-        End_Object
-
-        Object oOpenErrorTables_fm is a cDUFNumForm
-            Set Size to 12 34
-            Set Location to 170 371
-            Set Label to "Counter:"
-            Set peAnchors to anBottomLeft
-        End_Object
-
-        Object oFixFileListOpenErrors_btn is a cRDCButton
-            Set Size to 30 96
-            Set Location to 186 309
-            Set Label to "4. Fix Filelist: 'Open table errors'"
-            Set peAnchors to anBottomLeft
-            Set MultiLineState to True
-            Set pbAutoEnable to True
-            Set psToolTip to "The fix will spin through the Filelist and \n1. Try to fix or removes Non SQL entries for tables that cannot be opened."
-
-            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
-            Procedure OnClick
-                Send ResetLoggedErrors
-                Send DoClick
-                Send OfferErrorLog
-            End_Procedure
-
-            Procedure DoClick
-                Integer iRetval iCounter iOpenErrors
-
-                Get YesNo_Box "The fix will spin through the Filelist and: \n- Try to fix or remove Non SQL Filelist entries for tables that cannot be opened.\n\nA backup copy of the Filelist.cfg file is made first\n\nContinue?" to iRetval
-                If (iRetval <> MBR_Yes) Begin
-                    Procedure_Return    
-                End
-
-                Get FixFileListOpenErrors to iCounter
-                If (iCounter < 0) Begin
-                    Send Stop_Box (BackupStoppedText(Self, "", 0))
-                    Procedure_Return
-                End
-                Get _CountFileListOpenErrors of ghoDUF to iOpenErrors
-
-                If (iOpenErrors <> 0 and iCounter = 0) Begin 
-                    Send RefreshData
-                    Send Info_Box ("Ready! No Errors were fixed. NOTE:" * String(iOpenErrors) * "Open errors still exists and needs your attention. Please use the button '5. Recreate *.int files for Open table errors'.")
-                End
-                Else If (iOpenErrors <> 0 and iCounter <> 0) Begin
-                    Send RefreshData
-                    Send Info_Box ("Ready!" * String(iCounter) * "RootName entries were changed. See: Log file!")
-                End
-                // Every error fixed is no "no problems". (It said so.)
-                Else If (iCounter <> 0) Begin
-                    Send RefreshData
-                    Send Info_Box ("Ready!" * String(iCounter) * "RootName entries were changed; no open errors are left. See: Log file!")
-                End
-                Else Begin
-                    Send Info_Box "Ready! No problems found."
-                End
-            End_Procedure
-
-            // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
-            Function IsEnabled Returns Boolean
-                Boolean bExists
-                String sFileName
-                Get Value of oFilelist_fm to sFileName
-                File_Exist sFileName bExists
-                Function_Return bExists
-            End_Function
-
-        End_Object
-
-        // Step 5 is left out of the layout for now (Nils 2026-10-19). Its place is under the
-        // "Open table errors" list, beside step 4.
-        // Object oFixIntFileError_btn is a cRDCButton
-            // Set Size to 30 96
-            // Set Location to 186 309
-            // Set Label to "5. Recreate *.int files for 'Open table errors'"
-            // Set peAnchors to anTopRight
-            // Set MultiLineState to True
-            // Set psToolTip to "This will try recreate the .int files listed in the 'Open Table Errors' list."
-            // Set pbAutoEnable to True
-
-            // // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
-            // Procedure OnClick
-                // Send ResetLoggedErrors
-                // Send DoClick
-                // Send OfferErrorLog
-            // End_Procedure
-
-            // Procedure DoClick
-                // Integer iRetval iCounter 
-                // Boolean bExtractRelations bRemoveUCol
-
-                // Get YesNo_Box "This will recreate the .int files listed in the 'Open Table Errors' list.\n\nContinue?" to iRetval
-                // If (iRetval <> MBR_Yes) Begin
-                    // Procedure_Return    
-                // End
-                // Get YesNo_Box "Would you like to extract relation ships from the current .int file, and add that info to the new .int file?" to iRetval
-                // Move (iRetval = MBR_Yes) to bExtractRelations
-                // Get YesNo_Box "Would you also like to remove the uppercased (U_) columns of these tables? Each table that has them is restructured on the SQL server." to iRetval
-                // Move (iRetval = MBR_Yes) to bRemoveUCol
-
-                // Get FixAllIntFileErrors bExtractRelations bRemoveUCol to iCounter
-                // If (psBackupError(Self) <> "") Begin
-                    // Send Stop_Box (BackupStoppedText(Self, ".int files recreated", iCounter))
-                    // Procedure_Return
-                // End
-                // If (iCounter > 0) Begin
-                    // Send Info_Box ("Ready! Update to:" * String(iCounter) * ".int files done.")
-                // End
-                // Else If (iCounter = 0) Begin
-                    // Send Info_Box "Ready! No problems found."
-                // End
-                // Else Begin
-                    // Send Info_Box "No 'Open Table Errors' found."
-                // End
-            // End_Procedure
-
-            // Function IsEnabled Returns Boolean
-                // Boolean bExists
-                // String sFileName
-                // Get psConnIdFile to sFileName
-                // File_Exist sFileName bExists
-                // Function_Return bExists
-            // End_Function
-
-        // End_Object
-
-        Object oConnIDErrors_edt is a cDUFRichEdit
-            Set Size to 142 96
-            Set Location to 24 410
-            Set Label to "Connection ID changes:"
-            Set peAnchors to anTopBottom
-        End_Object
-
-        Object oConnIDErrors_fm is a cDUFNumForm
-            Set Size to 12 34
-            Set Location to 170 472
-            Set Label to "Counter:"
-            Set peAnchors to anBottomLeft
-        End_Object
-
-        Object oConnIDErrors_btn is a cRDCButton
-            Set Size to 30 96
-            Set Location to 186 410
-            Set Label to "Make all .int files use DFConnid"
-            Set psToolTip to "Changes or updates all .int files in the Data folder - except for DAW driver .int files (MSSQL_DRV.int, DB2_DRV.int & ODBC_DRV.int) - to use 'SERVER_NAME DFCONNID=xxx', where xxx is the 'id=' of the DFConnid.ini file displayed to the left."
-            Set peAnchors to anBottomLeft
-            Set MultiLineState to True
-            Set psImage to "ChangeToDFConnid.ico"
-            Set piImageSize to 24
-            Set pbAutoEnable to True
-
-            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
-            Procedure OnClick
-                Send ResetLoggedErrors
-                Send DoClick
-                Send OfferErrorLog
-            End_Procedure
-
-            Procedure DoClick
-                String sDataPath sConnectionID
-                String[] asFileChanges
-                Boolean bActive
-                Integer iRetval iSize iCount 
-                Handle ho
-
-                Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
-                Get psConnId to sConnectionID
-                Get YesNo_Box ("Do you want to change all .int files in folder:\n" + sDataPath + "\n\nTo use 'DFCONNID=" + sConnectionID +"' ?") to iRetval
-                If (iRetval <> MBR_Yes) Begin
-                    Procedure_Return
-                End
-
-                Move 0 to iCount
-                Set Value of oConnIDErrors_fm to 0
-                Move (oConnIDErrors_edt(Self)) to ho     
-                Send Delete_Data of ho
-                Send StartStatusPanel "Changing to Connection ID's in .int files" "" -1
-
-                Get SqlUtilChangeIntFilesToConnectionIDs of ghoDUF sDataPath sConnectionID True to asFileChanges
-
-                Send UpdateStatusPanel ""
-                Get Active_State of ghoStatusPanel to bActive
-                If (bActive = False) Begin
-                    Send StopStatusPanel
-                    Send Info_Box "Process interrupted..."
-                    Procedure_Return
-                End
-
-                Move (SizeOfArray(asFileChanges)) to iSize
-                Set Value of oConnIDErrors_fm to (iSize max 0)
-                Send StopStatusPanel
-                If (SizeOfArray(asFileChanges) <> 0) Begin
-                    Decrement iSize
-                    For iCount from 0 to iSize
-                        Send AppendTextLn of ho asFileChanges[iCount]
-                    Loop       
-                    Send Beginning_of_Data of ho
-                    // Note: Remove all cache-files:
-                    Send EraseCacheFiles
-                    Send RefreshData
-                    Send Info_Box ("Ready!" * String(iSize + 1) * ".int files contained errors and were changed to be using DFConnID's.")
-                End
-                Else Begin
-                    Send Info_Box "Ready! No problems found."    
-                End
-            End_Procedure 
-
-            Function IsEnabled Returns Boolean
-                Boolean bExists
-                String sFileName
-                Get psConnIdFile to sFileName
-                File_Exist sFileName bExists
-                Function_Return bExists
-            End_Function
-
-        End_Object
-
-        Object oFileList_grp is a Group
-            Set Size to 106 160
-            Set Location to 20 513
-            Set Label to "FileList.cfg counters:"
-            Set peAnchors to anTopRight
-
-            Object oNoOfSystemTables_fm is a cDUFNumForm
-                Set Size to 12 34
-                Set Location to 12 118
-                Set Label to "System tables"
-            End_Object
-
-            Object oNumberOfMasterFileListSQLTables_fm is a cDUFNumForm
-                Set Size to 12 34
-                Set Location to 27 118
-                Set Label to "Master tables and SQL prefix:"
-            End_Object
-
-            Object oNoOfAliasSQLTables_fm is a cDUFNumForm
-                Set Size to 12 34
-                Set Location to 42 118
-                Set Label to "Alias tables:"
-            End_Object
-
-            Object oNoOfDatTables2_fm is a cDUFNumForm
-                Set Size to 12 34
-                Set Location to 57 118
-                Set Label to "RootName *.Dat tables:"
-            End_Object
-
-            Object oNumberOfSQLTables_fm is a cDUFNumForm
-                Set Label to "SQL tables:"
-                Set Size to 12 34
-                Set Location to 72 118
-            End_Object
-
-            Object oNumberOfFileListTables_fm is a cDUFNumForm
-                Set Size to 12 34
-                Set Location to 87 118
-                Set Label to "Total Filelist tables:"
-            End_Object
-        End_Object
-    End_Object
-
-    Object oFixExtraProblems_grp is a Group
-        Set Size to 59 679
-        Set Location to 390 6
-        Set Label to "More Database Actions:"
-        Set peAnchors to anBottomLeftRight
-
-        Object oRecreateAllIntFiles_btn is a cRDCButton
-            Set Size to 30 100
-            Set Location to 16 6
-            Set peAnchors to anNone
-            Set Label to "Recreate all *.int files"
-            Set MultiLineState to True
-            Set psToolTip to "This will recreate all .int files."
-            Set psImage to "RecreateIntFiles.ico"
-            Set piImageSize to 24
-            Set pbAutoEnable to True
-
-            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
-            Procedure OnClick
-                Send ResetLoggedErrors
-                Send DoClick
-                Send OfferErrorLog
-            End_Procedure
-
-            Procedure DoClick
-                Integer iRetval iCounter
-                Boolean bExtractRelations bRemoveUCol
-                String sDataPath sBackup
-
-                Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
-                Get vFolderFormat sDataPath to sDataPath
-                Move (sDataPath + CS_BackupFolder) to sBackup
-                Get YesNo_Box ("This will recreate all .int files. Relations from the current .int file will be preserved, if exists. A backup of .int files and the Filelist.cfg will be made in a new folder, named" * CS_BackupFolder * "and the date and time, in:\n" + String(sDataPath) + "\n\nContinue?") to iRetval
-                If (iRetval <> MBR_Yes) Begin
-                    Procedure_Return    
-                End
-                Get Checked_State of oExtract_Relationships_cb to bExtractRelations
-                Get Checked_State of oRemoveUColumns_cb        to bRemoveUCol
-
-                Get RecreateAllIntFiles bExtractRelations bRemoveUCol to iCounter
-                If (psBackupError(Self) <> "") Begin
-                    Send Stop_Box (BackupStoppedText(Self, ".int files recreated", iCounter))
-                    Procedure_Return
-                End
-                If (iCounter > 0) Begin
-                    Send Info_Box ("Ready!" * String(iCounter) * ".int files recreated.")
-                End
-                Else If (iCounter = 0) Begin
-                    Send Info_Box "Ready! No .int files found to recreate."
-                End
-            End_Procedure
-
-            Function IsEnabled Returns Boolean
-                Boolean bExists
-                String sFileName
-                Get psConnIdFile to sFileName
-                File_Exist sFileName bExists
-                Function_Return bExists
-            End_Function
-
-        End_Object
-
-        Object oExtract_Relationships_cb is a cRDCCheckBox
-            Set Size to 10 110
-            Set Location to 14 112
-            Set peAnchors to anNone
-            Set Label to "Extract relationships"
-            Set Checked_State to True   
-            Set psToolTip to "Check this if you would like to extract relationships from the current .int file, and add that info to the new .int file."
-            Set pbCreateInfoItem to False
-
-            Function IsEnabled Returns Boolean
-                Boolean bExists
-                String sFileName
-                Get psConnIdFile to sFileName
-                File_Exist sFileName bExists
-                Function_Return bExists
-            End_Function
-
-        End_Object
-
-        Object oRemoveUColumns_cb is a cRDCCheckBox
-            Set Size to 10 110
-            Set Location to 28 112
-            Set peAnchors to anNone
-            Set Label to "Remove U_ columns"
-            Set Checked_State to True
-            Set psToolTip to "Check the box if you would like to Remove Uppercased Columns. It is strongly suggested to do so IF you have applied an General Insensitive collation like 'Latin1_General_CI_AS'. Please read the help about the subject first, by clicking the help button 'Remove Uppercased Columns'"
-            Set pbCreateInfoItem to False
-
-            Function IsEnabled Returns Boolean
-                Boolean bExists
-                String sFileName
-                Get psConnIdFile to sFileName
-                File_Exist sFileName bExists
-                Function_Return bExists
-            End_Function
-
-        End_Object
-
-        Object oUColHelp_btn is a cRDCButton
-            Set Size to 12 125
-            Set Location to 42 112
-            Set Label to "Why remove uppercased columns?"
-            Set psToolTip to "Help on selecting the Right SQL Collation and removing uppercased columns"
-            Set peAnchors to anNone
-            Set psImage to "ActionHelp.ico"
-
-            Procedure OnClick
-                Runprogram Shell Background "https://docs.dataaccess.com/dataflexhelp/index.htm#t=mergedProjects%2FDevelopmentGuide%2FIgnore_Case_Support_and_Uppercase_Columns.htm"
-            End_Procedure
-
-        End_Object  
-
-        Object oRemove_U_Columns_btn is a cRDCButton
-            Set Size to 30 100
-            Set Location to 16 243
-            Set peAnchors to anNone
-            Set Label to "Remove uppercased columns"
-            Set MultiLineState to True
-            Set psToolTip to "This will remove Uppercased (U_) columns from all tables. This will also be done when the 'Recreate All .int files' button is clicked while the 'Remove U_ Columns' checkbox is selected, but with this button Only the columns are being removed."
-            Set psImage to "TableColumnDelete.ico"
-            Set piImageSize to 24
-            Set pbAutoEnable to True
-
-            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
-            Procedure OnClick
-                Send ResetLoggedErrors
-                Send DoClick
-                Send OfferErrorLog
-            End_Procedure
-
-            Procedure DoClick
-                Integer iRetval iCounter
-                Boolean bBackup
-                String sDataPath sBackup
-
-                Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
-                Get vFolderFormat sDataPath to sDataPath
-                Move (sDataPath + CS_BackupFolder) to sBackup
-                Get YesNo_Box ("This will remove all uppercased columns (U_ computed columns). A backup of .int files and the Filelist.cfg will be made in a new folder, named" * CS_BackupFolder * "and the date and time, in:\n" + String(sDataPath) + "\n\nContinue?") to iRetval
-                If (iRetval <> MBR_Yes) Begin
-                    Procedure_Return    
-                End
-                Get YesNo_Box "Would you like to make a backup copy of the SQL database and .int files?" to iRetval
-                Move (iRetval = MBR_Yes) to bBackup
-
-                Get FindAllUColumnsFiles bBackup to iCounter
-                If (psBackupError(Self) <> "") Begin
-                    Send Stop_Box (BackupStoppedText(Self, "tables searched for uppercased columns", iCounter))
-                    Procedure_Return
-                End
-                If (iCounter > 0) Begin
-                    Send Info_Box ("Ready!" * "Uppercased columns for:" * String(iCounter) * "tables were removed.")
-                End
-                Else If (iCounter = 0) Begin
-                    Send Info_Box "Ready! No changes made."
-                End
-            End_Procedure
-
-            Function IsEnabled Returns Boolean
-                Boolean bExists
-                String sFileName
-                Get psConnIdFile to sFileName
-                File_Exist sFileName bExists
-                Function_Return bExists
-            End_Function
-
-        End_Object
-
-        Object oMoveUnusedDatFiles_btn is a cRDCButton
-            Set Size to 30 100
-            Set Location to 16 349
-            Set peAnchors to anNone
-            Set Label to "Move *.Dat files to backup"
-            Set MultiLineState to True
-            Set psToolTip to "This will move all *.dat related files, that does not exist in the Filelist, to the workspace's '.\Data\Backup' folder."
-            Set psImage to "MoveFiles.ico"
-            Set piImageSize to 24
-            Set pbAutoEnable to True
-
-            // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
-            Procedure OnClick
-                Send ResetLoggedErrors
-                Send DoClick
-                Send OfferErrorLog
-            End_Procedure
-
-            Procedure DoClick
-                Integer iRetval iCounter 
-
-                Get YesNo_Box "Move all *.dat related files that is not in the 'Rootname *.dat' list, to the workspace's '.\Data\Backup' folder.\n\nContinue?" to iRetval
-                If (iRetval <> MBR_Yes) Begin
-                    Procedure_Return    
-                End
-
-                Get MoveUnusedDatFileToBackupFolder CS_BackupFolder to iCounter
-
-                If (iCounter = -1) Begin
-                    Send Info_Box ("The backup folder:\n" + CS_BackupFolder + "\nCould not be created! No *.dat related files were moved.")
-                End
-                Else If (iCounter > 0) Begin
-                    Send Info_Box ("Ready! Moved:" * String(iCounter) * ".dat related files to the folder" * CS_BackupFolder * "of the data folder.")
-                End
-                Else Begin
-                    Send Info_Box "Ready! No files moved."
-                End
-            End_Procedure  
-
-            // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
-            Function IsEnabled Returns Boolean
-                Boolean bExists
-                String sFileName
-                Get Value of oFilelist_fm to sFileName
-                File_Exist sFileName bExists
-                Function_Return bExists
-            End_Function
-
-        End_Object
-    End_Object
-
     Object oLocalError_Info_Object is a cObject
         Property Handle phoOrgError_Object_Id
         Property Boolean pbErrorProcessingState
@@ -1515,7 +828,7 @@ Object oFilelistFixerView is a cRDCDbView
         String[] asSQLTables
         Send UtilFillSQLTables of ghoDUF
         Get pasSQLDataTables   of ghoDUF to asSQLTables
-        Set Value of oNumberOfSQLTables_fm to (String(SizeOfArray(asSQLTables))) 
+        Set Value of (oNumberOfSQLTables_fm(Self)) to (String(SizeOfArray(asSQLTables))) 
     End_Procedure
 
     Procedure ShowFileListData
@@ -1538,19 +851,19 @@ Object oFilelistFixerView is a cRDCDbView
             Procedure_Return
         End
         Get pFileListArray of ghoDUF to FileListArray
-        Set Value of oNumberOfFileListTables_fm to (SizeOfArray(FileListArray))
-        Send ListRootDatFiles
-        Send ListRootIntFiles
+        Set Value of (oNumberOfFileListTables_fm(Self)) to (SizeOfArray(FileListArray))
+        Send ListRootDatFiles (oDatTables_edt(Self))
+        Send ListRootIntFiles (oRootNameIntTables_edt(Self))
         Send ListOpenErrorFiles
         
         Get _CountFileListMasterTables of ghoDUF to iCount
-        Set Value of oNumberOfMasterFileListSQLTables_fm to iCount
+        Set Value of (oNumberOfMasterFileListSQLTables_fm(Self)) to iCount
         Get _CountFileListAliasTables of ghoDUF to iCount
-        Set Value of oNoOfAliasSQLTables_fm to iCount
+        Set Value of (oNoOfAliasSQLTables_fm(Self)) to iCount
         Get _CountFilelistSystemTables of ghoDUF to iCount
-        Set Value of oNoOfSystemTables_fm to iCount
+        Set Value of (oNoOfSystemTables_fm(Self)) to iCount
         Get _CountFileListOpenErrors of ghoDUF to iCount
-        Set Value of oOpenErrorTables_fm to iCount
+        Set Value of (oOpenErrorTables_fm(Self)) to iCount
         Send ListAliasErrorFiles
         
         Send StopStatusPanel
@@ -1575,13 +888,11 @@ Object oFilelistFixerView is a cRDCDbView
 
     // Fills list of "RootName *.dat Files" with tables that are not Alias and does
     // not have a driver prefix or contains ".int".
-    Procedure ListRootDatFiles
-        Handle ho
+    Procedure ListRootDatFiles Handle ho
         String[] asFiles
         Integer iSize iCount iCounter
         
         Move 0 to iCounter
-        Move oDatTables_edt to ho
         Send Delete_Data of ho
         Get InUseDatFiles to asFiles
         If (SizeOfArray(asFiles) <> 0) Begin
@@ -1593,8 +904,8 @@ Object oFilelistFixerView is a cRDCDbView
                 Increment iCounter
             Loop
         End
-        Set Value of oDatTables_fm to iCounter
-        Send Beginning_of_Data of ho
+        Set Value of (oDatTables_fm(Self)) to iCounter
+        Send Beginning_of_Data of ho 
     End_Procedure
 
     Procedure ListAliasErrorFiles
@@ -1604,7 +915,7 @@ Object oFilelistFixerView is a cRDCDbView
         
         Move (oAliasErrors_edt(Self)) to ho
         Send Delete_Data of ho
-        Set Value of oAliasErrors_fm to 0
+        Set Value of (oAliasErrors_fm(Self)) to 0
         Get _CountFileListAliasErrors of ghoDUF to FileListArray
         Move (SizeOfArray(FileListArray)) to iSize
         If (iSize = 0) Begin
@@ -1614,19 +925,17 @@ Object oFilelistFixerView is a cRDCDbView
         For iCount from 0 to iSize
             Send AppendTextLn of ho (FileListArray[iCount].sRootName * "(" + String(FileListArray[iCount].hTable) + ")")
         Loop
-        Set Value of oAliasErrors_fm to (iSize + 1)
+        Set Value of (oAliasErrors_fm(Self)) to (iSize + 1)
         Send Beginning_of_Data of ho
     End_Procedure
 
-    Procedure ListRootIntFiles
-        Handle ho
+    Procedure ListRootIntFiles Handle ho
         tFilelist[] FilelistTables
         Boolean bIsIntTable
         Integer iSize iCount iCounter
         
         Move 0 to iCounter
         Get pFileListArray of ghoDUF to FileListTables
-        Move oRootNameIntTables_edt to ho
         Send Delete_Data of ho
         Move (SizeOfArray(FilelistTables)) to iSize
         Decrement iSize
@@ -1637,7 +946,7 @@ Object oFilelistFixerView is a cRDCDbView
                 Increment iCounter
             End
         Loop
-        Set Value of oRootNameIntTables_fm to iCounter
+        Set Value of (oRootNameIntTables_fm(Self)) to iCounter
         Send Beginning_of_Data of ho
     End_Procedure
 
@@ -1649,7 +958,7 @@ Object oFilelistFixerView is a cRDCDbView
         String sVal
         
         Get pFileListArray of ghoDUF to FileListTables
-        Move oOpenErrorTables_edt to ho
+        Move (oOpenErrorTables_edt(Self)) to ho
         Send Delete_Data of ho
         Move (SizeOfArray(FilelistTables)) to iSize
         Decrement iSize
@@ -1660,13 +969,832 @@ Object oFilelistFixerView is a cRDCDbView
                 Move FilelistTables[iCount] to ErrorFilesArray[SizeOfArray(ErrorFilesArray)]
             End
         Loop
-        Set Value of oOpenErrorTables_fm to (SizeOfArray(ErrorFilesArray))
+        Set Value of (oOpenErrorTables_fm(Self)) to (SizeOfArray(ErrorFilesArray))
         Set pErrorTables of ghoDUF to ErrorFilesArray
         Send Beginning_of_Data of ho
     End_Procedure
 
-    // *** The repair work: oFilelistRepair (cDUFFilelistRepair.pkg) does it; the buttons' messages are relayed ***
+    // *** The repair work: oFilelistRepair (cDUFFilelistRepair.pkg) does the work; the buttons' messages are relayed ***
     Object oFilelistRepair is a cDUFFilelistRepair
+    End_Object
+
+    Object oRepair_TabDialog is a TabDialog
+        Set Location to 155 4
+        Set Size to 268 680
+        Set peAnchors to anAll
+//        Set peNeighborhood to nhPublic
+
+        Object oRepair_tb is a TabPage
+            Set Label to "Repair"
+            Set Tab_ToolTip_Value to "Repair Functions"
+//            Set peNeighborhood to nhPublic
+
+            Object oCount_grp is a Group
+                Set Size to 179 679
+                Set Location to 10 6
+                Set Label to "Filelist.cfg problems and their fixes:"
+                Set peAnchors to anAll
+//                Set peNeighborhood to nhPublic
+        
+                Object oConnIDErrors_edt is a cDUFRichEdit
+                    Set Size to 100 96
+                    Set Location to 24 3
+                    Set Label to "Connection ID changes:"
+                    Set peAnchors to anTopBottom
+                End_Object
+
+                Object oConnIDErrors_fm is a cDUFNumForm
+                    Set Size to 12 34
+                    Set Location to 126 66
+                    Set Label to "Counter:"
+                    Set peAnchors to anBottomLeft
+                End_Object
+
+                Object oConnIDErrors_btn is a cRDCButton
+                    Set Size to 30 96
+                    Set Location to 142 3
+                    Set Label to "Make all .int files use DFConnid"
+                    Set psToolTip to "Changes or updates all .int files in the Data folder - except for DAW driver .int files (MSSQL_DRV.int, DB2_DRV.int & ODBC_DRV.int) - to use 'SERVER_NAME DFCONNID=xxx', where xxx is the 'id=' of the DFConnid.ini file displayed to the left."
+                    Set peAnchors to anBottomLeft
+                    Set MultiLineState to True
+                    Set psImage to "ChangeToDFConnid.ico"
+                    Set piImageSize to 24
+                    Set pbAutoEnable to True
+        
+                    // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
+                    Procedure OnClick
+                        Send ResetLoggedErrors
+                        Send DoClick
+                        Send OfferErrorLog
+                    End_Procedure
+        
+                    Procedure DoClick
+                        String sDataPath sConnectionID
+                        String[] asFileChanges
+                        Boolean bActive
+                        Integer iRetval iSize iCount 
+                        Handle ho
+        
+                        Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
+                        Get psConnId to sConnectionID
+                        Get YesNo_Box ("Do you want to change all .int files in folder:\n" + sDataPath + "\n\nTo use 'DFCONNID=" + sConnectionID +"' ?") to iRetval
+                        If (iRetval <> MBR_Yes) Begin
+                            Procedure_Return
+                        End
+        
+                        Move 0 to iCount
+                        Set Value of (oConnIDErrors_fm(Self)) to 0
+                        Move (oConnIDErrors_edt(Self)) to ho     
+                        Send Delete_Data of ho
+                        Send StartStatusPanel "Changing to Connection ID's in .int files" "" -1
+        
+                        Get SqlUtilChangeIntFilesToConnectionIDs of ghoDUF sDataPath sConnectionID True to asFileChanges
+        
+                        Send UpdateStatusPanel ""
+                        Get Active_State of ghoStatusPanel to bActive
+                        If (bActive = False) Begin
+                            Send StopStatusPanel
+                            Send Info_Box "Process interrupted..."
+                            Procedure_Return
+                        End
+        
+                        Move (SizeOfArray(asFileChanges)) to iSize
+                        Set Value of (oConnIDErrors_fm(Self)) to (iSize max 0)
+                        Send StopStatusPanel
+                        If (SizeOfArray(asFileChanges) <> 0) Begin
+                            Decrement iSize
+                            For iCount from 0 to iSize
+                                Send AppendTextLn of ho asFileChanges[iCount]
+                            Loop       
+                            Send Beginning_of_Data of ho
+                            // Note: Remove all cache-files:
+                            Send EraseCacheFiles
+                            Send RefreshData
+                            Send Info_Box ("Ready!" * String(iSize + 1) * ".int files contained errors and were changed to be using DFConnID's.")
+                        End
+                        Else Begin
+                            Send Info_Box "Ready! No problems found."    
+                        End
+                    End_Procedure 
+        
+                    Function IsEnabled Returns Boolean
+                        Boolean bExists
+                        String sFileName
+                        Get psConnIdFile to sFileName
+                        File_Exist sFileName bExists
+                        Function_Return bExists
+                    End_Function
+        
+                End_Object
+
+                Object oLineControl1 is a LineControl
+                    Set Location to 13 110
+                    Set Size to 160 3
+                    Set Horizontal_State to False
+                    Set peAnchors to anTopBottomLeft
+                End_Object
+        
+                Object oDatTables_edt is a cDUFRichEdit
+                    Set Size to 100 96
+                    Set Location to 25 118
+                    Set Label to "RootName *.Dat"
+                    Set psExtension to ".dat"
+                    Set peAnchors to anTopBottom
+                End_Object
+        
+                Object oDatTables_fm is a cDUFNumForm
+                    Set Size to 12 34
+                    Set Location to 126 181
+                    Set Label to "Counter:"
+                    Set peAnchors to anBottomLeft
+                    Procedure OnChange
+                        String sVal
+                        Get Value to sVal
+                        Set Value of (oNoOfDatTables2_fm(Self)) to sVal
+                    End_Procedure
+                End_Object
+        
+                // Will remove non Alias Filelist entries that:
+                //   - Does not have a corresponding .Dat file, 
+                Object oFixFileListErrors_btn is a cRDCButton
+                    Set Size to 30 96
+                    Set Location to 142 118
+                    Set Label to "1. Fix 'RootName .Dat errors'"
+                    Set peAnchors to anBottomLeft
+                    Set MultiLineState to True
+                    Set pbAutoEnable to True
+                    Set psToolTip to ("The fix will spin through the Filelist and" + CS_CRLF + "1. Removes non Alias entries that does not have a corresponding .Dat file. Note:This only applies to non Alias tables.")
+        
+                    // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
+                    Procedure OnClick
+                        Send ResetLoggedErrors
+                        Send DoClick
+                        Send OfferErrorLog
+                    End_Procedure
+        
+                    Procedure DoClick
+                        Integer iRetval iCounter
+                        Get YesNo_Box "The fix will spin through the Filelist and \n1. Removes non Alias entries that does not have a corresponding .Dat file.\nNote:This only applies to non Alias tables.\n\nA backup copy of the Filelist.cfg file is made first.\n\nContinue?" to iRetval
+                        If (iRetval <> MBR_Yes) Begin
+                            Procedure_Return    
+                        End
+        
+                        Get FixFileListErrors to iCounter
+                        If (iCounter < 0) Begin
+                            Send Stop_Box (BackupStoppedText(Self, "", 0))
+                            Procedure_Return
+                        End
+                        If (iCounter <> 0) Begin
+                            Send Info_Box ("Ready! Removed" * String(iCounter) * "Filelist.cfg entries that pointed to a .dat file but the .dat file was missing, and the table was not an Alias. See: Log file!")
+                        End
+                        Else Begin
+                            Send Info_Box "Ready! No problems found."
+                        End
+                    End_Procedure
+        
+                    // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
+                    Function IsEnabled Returns Boolean
+                        Boolean bExists
+                        String sFileName
+                        Get Value of oFilelist_fm to sFileName
+                        File_Exist sFileName bExists
+                        Function_Return bExists
+                    End_Function
+        
+                End_Object
+        
+                Object oAliasErrors_edt is a cDUFRichEdit
+                    Set Size to 100 96
+                    Set Location to 24 219
+                    Set Label to "Alias table errors"
+                    Set psExtension to ".int"
+                    Set peAnchors to anTopBottom
+                End_Object
+        
+                Object oAliasErrors_fm is a cDUFNumForm
+                    Set Size to 12 34
+                    Set Location to 126 282
+                    Set Label to "Counter:"
+                    Set peAnchors to anBottomLeft
+                End_Object
+        
+                Object oFixAliasProblems_btn is a cRDCButton
+                    Set Size to 30 96
+                    Set Location to 142 219
+                    Set Label to "2. Fix 'Alias table errors'"
+                    Set peAnchors to anBottomLeft
+                    Set MultiLineState to True
+                    Set pbAutoEnable to True
+                    Set psToolTip to ("The fix will spin through Filelist.cfg and" + CS_CRLF + "1. either add or remove driver prefixes for ALIAS rootnames, depending on the Master RootName" + CS_CRLF + "2. Change all ALIAS table Descriptions to the ROOTNAME + 'ALIAS'")
+        
+                    // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
+                    Procedure OnClick
+                        Send ResetLoggedErrors
+                        Send DoClick
+                        Send OfferErrorLog
+                    End_Procedure
+        
+                    Procedure DoClick
+                        Integer iRetval iCounter
+                        Get YesNo_Box "The fix will spin through Filelist.cfg and \n1. either add or remove driver prefixes for ALIAS rootnames, depending on the Master RootName\n2. Change all ALIAS table Descriptions to the ROOTNAME + 'ALIAS'\n\nA backup copy of the Filelist.cfg file is made first.\n\nContinue?" to iRetval
+                        If (iRetval <> MBR_Yes) Begin
+                            Procedure_Return    
+                        End
+        
+                        Get FixFileListAliasProblems to iCounter
+                        If (iCounter < 0) Begin
+                            Send Stop_Box (BackupStoppedText(Self, "", 0))
+                            Procedure_Return
+                        End
+        
+                        If (iCounter <> 0) Begin 
+                            Send RefreshData
+                            Send Info_Box ("Ready!" * String(iCounter) * "Alias problems fixed in Filelist.cfg. See Also: Logfile")
+                        End
+                        Else Begin
+                            Send Info_Box "Ready! NO Alias problems found in Filelist.cfg."
+                        End
+                    End_Procedure
+        
+                    // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
+                    Function IsEnabled Returns Boolean
+                        Boolean bExists
+                        String sFileName
+                        Get Value of oFilelist_fm to sFileName
+                        File_Exist sFileName bExists
+                        Function_Return bExists
+                    End_Function
+        
+                End_Object
+        
+                Object oRootNameIntTables_edt is a cDUFRichEdit
+                    Set Size to 100 96
+                    Set Location to 24 320
+                    Set Label to "RootName *.int"
+                    Set psExtension to ".int"
+                    Set peAnchors to anTopBottom
+                End_Object
+        
+                Object oRootNameIntTables_fm is a cDUFNumForm
+                    Set Size to 12 34
+                    Set Location to 126 383
+                    Set Label to "Counter:"
+                    Set peAnchors to anBottomLeft
+                End_Object
+        
+                Object oFixFileListSQLMissingTables_btn is a cRDCButton
+                    Set Size to 30 96
+                    Set Location to 142 320
+                    Set Label to "3. Make Filelist RootNames equal to SQL database"
+                    Set peAnchors to anBottomLeft
+                    Set MultiLineState to True
+                    Set pbAutoEnable to True
+                    Set psToolTip to ("The fix will spin through Filelist.cfg and"  + CS_CRLF + "1. Remove all driver prefixes for Master tables that does NOT exist in the SQL Database" + CS_CRLF + "2. OR Add driver prefix for Master filelist entries that are missing a driver prefix.")
+        
+                    // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
+                    Procedure OnClick
+                        Send ResetLoggedErrors
+                        Send DoClick
+                        Send OfferErrorLog
+                    End_Procedure
+        
+                    Procedure DoClick
+                        Integer iRetval iCounter
+                        Get YesNo_Box "The fix will spin through Filelist.cfg and \n1. Remove all driver prefixes for tables that does NOT exist in the SQL Database\n2. OR Add driver prefix for Master filelist entries that are missing a driver prefix.\n\nA backup copy of the Filelist.cfg file is made first.\n\nContinue?" to iRetval
+                        If (iRetval <> MBR_Yes) Begin
+                            Procedure_Return    
+                        End
+                        Get FixFileListSQLMissingTables to iCounter               
+                        If (iCounter = -2) Begin
+                            Send Stop_Box "The list of the tables of the SQL database could not be read, so nothing was changed.\n\nCheck the connection: 'Tot SQL tables' shows how many tables were read. Then click 'Refresh Data!' and try again."
+                            Procedure_Return
+                        End
+                        If (iCounter < 0) Begin
+                            Send Stop_Box (BackupStoppedText(Self, "", 0))
+                            Procedure_Return
+                        End
+                        If (iCounter <> 0) Begin
+                            Send Info_Box ("Ready!" * String(iCounter) * "RootName entries in Filelist.cfg that pointed to SQL tables that doesn't exist in the SQL database, were adjusted.\n\nTop tip: If tables were added to the ''Open Table Errors', check the list 'RootName *.int' for a match. The odds are high that there is something wrong with the .int file.")
+                        End
+                        Else Begin
+                            Send Info_Box "Ready! No problems found."    
+                        End
+                    End_Procedure
+        
+                    Function IsEnabled Returns Boolean
+                        Boolean bExists
+                        String sFileName
+                        Get psConnIdFile to sFileName
+                        File_Exist sFileName bExists
+                        Function_Return bExists
+                    End_Function
+        
+                End_Object
+        
+                Object oOpenErrorTables_edt is a cDUFRichEdit
+                    Set Size to 100 96
+                    Set Location to 24 421
+                    Set Label to "Open table errors"
+                    Set peAnchors to anAll
+                    Set psExtension to ".int"
+                End_Object
+        
+                Object oOpenErrorTables_fm is a cDUFNumForm
+                    Set Size to 12 34
+                    Set Location to 126 484
+                    Set Label to "Counter:"
+                    Set peAnchors to anBottomRight
+                End_Object
+        
+                Object oFixFileListOpenErrors_btn is a cRDCButton
+                    Set Size to 30 96
+                    Set Location to 142 421
+                    Set Label to "4. Fix Filelist: 'Open table errors'"
+                    Set peAnchors to anBottomRight
+                    Set MultiLineState to True
+                    Set pbAutoEnable to True
+                    Set psToolTip to ("The fix will spin through the Filelist and"  + CS_CRLF + "1. Try to fix or removes Non SQL entries for tables that cannot be opened.")
+        
+                    // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
+                    Procedure OnClick
+                        Send ResetLoggedErrors
+                        Send DoClick
+                        Send OfferErrorLog
+                    End_Procedure
+        
+                    Procedure DoClick
+                        Integer iRetval iCounter iOpenErrors
+        
+                        Get YesNo_Box "The fix will spin through the Filelist and: \n- Try to fix or remove Non SQL Filelist entries for tables that cannot be opened.\n\nA backup copy of the Filelist.cfg file is made first\n\nContinue?" to iRetval
+                        If (iRetval <> MBR_Yes) Begin
+                            Procedure_Return    
+                        End
+        
+                        Get FixFileListOpenErrors to iCounter
+                        If (iCounter < 0) Begin
+                            Send Stop_Box (BackupStoppedText(Self, "", 0))
+                            Procedure_Return
+                        End
+                        Get _CountFileListOpenErrors of ghoDUF to iOpenErrors
+        
+                        If (iOpenErrors <> 0 and iCounter = 0) Begin 
+                            Send RefreshData
+                            Send Info_Box ("Ready! No Errors were fixed. NOTE:" * String(iOpenErrors) * "Open errors still exists and needs your attention. Please use the button '5. Recreate *.int files for Open table errors'.")
+                        End
+                        Else If (iOpenErrors <> 0 and iCounter <> 0) Begin
+                            Send RefreshData
+                            Send Info_Box ("Ready!" * String(iCounter) * "RootName entries were changed. See: Log file!")
+                        End
+                        // Every error fixed is no "no problems". (It said so.)
+                        Else If (iCounter <> 0) Begin
+                            Send RefreshData
+                            Send Info_Box ("Ready!" * String(iCounter) * "RootName entries were changed; no open errors are left. See: Log file!")
+                        End
+                        Else Begin
+                            Send Info_Box "Ready! No problems found."
+                        End
+                    End_Procedure
+        
+                    // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
+                    Function IsEnabled Returns Boolean
+                        Boolean bExists
+                        String sFileName
+                        Get Value of oFilelist_fm to sFileName
+                        File_Exist sFileName bExists
+                        Function_Return bExists
+                    End_Function
+        
+                End_Object
+        
+                // Step 5 is left out of the layout for now (Nils 2026-10-19). Its place is under the
+                // "Open table errors" list, beside step 4.
+                // Object oFixIntFileError_btn is a cRDCButton
+                    // Set Size to 30 96
+                    // Set Location to 186 309
+                    // Set Label to "5. Recreate *.int files for 'Open table errors'"
+                    // Set peAnchors to anTopRight
+                    // Set MultiLineState to True
+                    // Set psToolTip to "This will try recreate the .int files listed in the 'Open Table Errors' list."
+                    // Set pbAutoEnable to True
+        
+                    // // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
+                    // Procedure OnClick
+                        // Send ResetLoggedErrors
+                        // Send DoClick
+                        // Send OfferErrorLog
+                    // End_Procedure
+        
+                    // Procedure DoClick
+                        // Integer iRetval iCounter 
+                        // Boolean bExtractRelations bRemoveUCol
+        
+                        // Get YesNo_Box "This will recreate the .int files listed in the 'Open Table Errors' list.\n\nContinue?" to iRetval
+                        // If (iRetval <> MBR_Yes) Begin
+                            // Procedure_Return    
+                        // End
+                        // Get YesNo_Box "Would you like to extract relation ships from the current .int file, and add that info to the new .int file?" to iRetval
+                        // Move (iRetval = MBR_Yes) to bExtractRelations
+                        // Get YesNo_Box "Would you also like to remove the uppercased (U_) columns of these tables? Each table that has them is restructured on the SQL server." to iRetval
+                        // Move (iRetval = MBR_Yes) to bRemoveUCol
+        
+                        // Get FixAllIntFileErrors bExtractRelations bRemoveUCol to iCounter
+                        // If (psBackupError(Self) <> "") Begin
+                            // Send Stop_Box (BackupStoppedText(Self, ".int files recreated", iCounter))
+                            // Procedure_Return
+                        // End
+                        // If (iCounter > 0) Begin
+                            // Send Info_Box ("Ready! Update to:" * String(iCounter) * ".int files done.")
+                        // End
+                        // Else If (iCounter = 0) Begin
+                            // Send Info_Box "Ready! No problems found."
+                        // End
+                        // Else Begin
+                            // Send Info_Box "No 'Open Table Errors' found."
+                        // End
+                    // End_Procedure
+        
+                    // Function IsEnabled Returns Boolean
+                        // Boolean bExists
+                        // String sFileName
+                        // Get psConnIdFile to sFileName
+                        // File_Exist sFileName bExists
+                        // Function_Return bExists
+                    // End_Function
+        
+                // End_Object
+        
+                Object oFileList_grp is a Group
+                    Set Size to 106 140
+                    Set Location to 20 524
+                    Set Label to "FileList.cfg counters:"
+                    Set peAnchors to anTopRight
+//                    Set peNeighborhood to nhPublic
+        
+                    Object oNoOfSystemTables_fm is a cDUFNumForm
+                        Set Size to 12 34
+                        Set Location to 12 102
+                        Set Label to "System tables"
+                    End_Object
+        
+                    Object oNumberOfMasterFileListSQLTables_fm is a cDUFNumForm
+                        Set Size to 12 34
+                        Set Location to 27 102
+                        Set Label to "Master tables and SQL prefix:"
+                    End_Object
+        
+                    Object oNoOfAliasSQLTables_fm is a cDUFNumForm
+                        Set Size to 12 34
+                        Set Location to 42 102
+                        Set Label to "Alias tables:"
+                    End_Object
+        
+                    Object oNoOfDatTables2_fm is a cDUFNumForm
+                        Set Size to 12 34
+                        Set Location to 57 102
+                        Set Label to "RootName *.Dat tables:"
+                    End_Object
+        
+                    Object oNumberOfSQLTables_fm is a cDUFNumForm
+                        Set Label to "SQL tables:"
+                        Set Size to 12 34
+                        Set Location to 72 102
+                    End_Object
+        
+                    Object oNumberOfFileListTables_fm is a cDUFNumForm
+                        Set Size to 12 34
+                        Set Location to 87 102
+                        Set Label to "Total Filelist tables:"
+                    End_Object
+                End_Object
+            End_Object
+            
+            Object oFixExtraProblems_grp is a Group
+                Set Size to 57 679
+                Set Location to 194 6
+                Set Label to "More Database Actions:"
+                Set peAnchors to anBottomLeftRight
+//                Set peNeighborhood to nhPublic
+        
+                Object oExtract_Relationships_cb is a cRDCCheckBox
+                    Set Size to 10 110
+                    Set Location to 14 8
+                    Set peAnchors to anNone
+                    Set Label to "Extract relationships"
+                    Set Checked_State to True   
+                    Set psToolTip to "Check this if you would like to extract relationships from the current .int file, and add that info to the new .int file."
+                    Set pbCreateInfoItem to False
+        
+                    Function IsEnabled Returns Boolean
+                        Boolean bExists
+                        String sFileName
+                        Get psConnIdFile to sFileName
+                        File_Exist sFileName bExists
+                        Function_Return bExists
+                    End_Function
+        
+                End_Object
+        
+                Object oRemoveUColumns_cb is a cRDCCheckBox
+                    Set Size to 10 110
+                    Set Location to 28 8
+                    Set peAnchors to anNone
+                    Set Label to "Remove U_ columns"
+                    Set Checked_State to True
+                    Set psToolTip to "Check the box if you would like to Remove Uppercased Columns. It is strongly suggested to do so IF you have applied an General Insensitive collation like 'Latin1_General_CI_AS'. Please read the help about the subject first, by clicking the help button 'Remove Uppercased Columns'"
+                    Set pbCreateInfoItem to False
+        
+                    Function IsEnabled Returns Boolean
+                        Boolean bExists
+                        String sFileName
+                        Get psConnIdFile to sFileName
+                        File_Exist sFileName bExists
+                        Function_Return bExists
+                    End_Function
+        
+                End_Object
+        
+                Object oUColHelp_btn is a cRDCButton
+                    Set Size to 12 115
+                    Set Location to 42 8
+                    Set Label to "Why remove U_ columns?"
+                    Set psToolTip to "Help on selecting the Right SQL Collation and removing uppercased columns"
+                    Set peAnchors to anNone
+                    Set psImage to "ActionHelp.ico"
+        
+                    Procedure OnClick
+                        Runprogram Shell Background "https://docs.dataaccess.com/dataflexhelp/index.htm#t=mergedProjects%2FDevelopmentGuide%2FIgnore_Case_Support_and_Uppercase_Columns.htm"
+                    End_Procedure
+        
+                End_Object  
+        
+                Object oRecreateAllIntFiles_btn is a cRDCButton
+                    Set Size to 30 100
+                    Set Location to 15 137
+                    Set peAnchors to anNone
+                    Set Label to "5. Recreate all *.int files"
+                    Set MultiLineState to True
+                    Set psToolTip to "This will recreate all .int files."
+                    Set psImage to "RecreateIntFiles.ico"
+                    Set piImageSize to 24
+                    Set pbAutoEnable to True
+        
+                    // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
+                    Procedure OnClick
+                        Send ResetLoggedErrors
+                        Send DoClick
+                        Send OfferErrorLog
+                    End_Procedure
+        
+                    Procedure DoClick
+                        Integer iRetval iCounter
+                        Boolean bExtractRelations bRemoveUCol
+                        String sDataPath sBackup
+        
+                        Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
+                        Get vFolderFormat sDataPath to sDataPath
+                        Move (sDataPath + CS_BackupFolder) to sBackup
+                        Get YesNo_Box ("This will recreate all .int files. Relations from the current .int file will be preserved, if exists. A backup of .int files and the Filelist.cfg will be made in a new folder, named" * CS_BackupFolder * "and the date and time, in:\n" + String(sDataPath) + "\n\nContinue?") to iRetval
+                        If (iRetval <> MBR_Yes) Begin
+                            Procedure_Return    
+                        End
+                        Get Checked_State of oExtract_Relationships_cb to bExtractRelations
+                        Get Checked_State of oRemoveUColumns_cb        to bRemoveUCol
+        
+                        Get RecreateAllIntFiles bExtractRelations bRemoveUCol to iCounter
+                        If (psBackupError(Self) <> "") Begin
+                            Send Stop_Box (BackupStoppedText(Self, ".int files recreated", iCounter))
+                            Procedure_Return
+                        End
+                        If (iCounter > 0) Begin
+                            Send Info_Box ("Ready!" * String(iCounter) * ".int files recreated.")
+                        End
+                        Else If (iCounter = 0) Begin
+                            Send Info_Box "Ready! No .int files found to recreate."
+                        End
+                    End_Procedure
+        
+                    Function IsEnabled Returns Boolean
+                        Boolean bExists
+                        String sFileName
+                        Get psConnIdFile to sFileName
+                        File_Exist sFileName bExists
+                        Function_Return bExists
+                    End_Function
+        
+                End_Object
+        
+                Object oRemove_U_Columns_btn is a cRDCButton
+                    Set Size to 30 100
+                    Set Location to 16 243
+                    Set peAnchors to anNone
+                    Set Label to "Remove uppercased columns"
+                    Set MultiLineState to True
+                    Set psToolTip to "This will remove Uppercased (U_) columns from all tables. This will also be done when the 'Recreate All .int files' button is clicked while the 'Remove U_ Columns' checkbox is selected, but with this button Only the columns are being removed."
+                    Set psImage to "TableColumnDelete.ico"
+                    Set piImageSize to 24
+                    Set pbAutoEnable to True
+        
+                    // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
+                    Procedure OnClick
+                        Send ResetLoggedErrors
+                        Send DoClick
+                        Send OfferErrorLog
+                    End_Procedure
+        
+                    Procedure DoClick
+                        Integer iRetval iCounter
+                        Boolean bBackup
+                        String sDataPath sBackup
+        
+                        Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
+                        Get vFolderFormat sDataPath to sDataPath
+                        Move (sDataPath + CS_BackupFolder) to sBackup
+                        Get YesNo_Box ("This will remove all uppercased columns (U_ computed columns). A backup of .int files and the Filelist.cfg will be made in a new folder, named" * CS_BackupFolder * "and the date and time, in:\n" + String(sDataPath) + "\n\nContinue?") to iRetval
+                        If (iRetval <> MBR_Yes) Begin
+                            Procedure_Return    
+                        End
+                        Get YesNo_Box "Would you like to make a backup copy of the SQL database and .int files?" to iRetval
+                        Move (iRetval = MBR_Yes) to bBackup
+        
+                        Get FindAllUColumnsFiles bBackup to iCounter
+                        If (psBackupError(Self) <> "") Begin
+                            Send Stop_Box (BackupStoppedText(Self, "tables searched for uppercased columns", iCounter))
+                            Procedure_Return
+                        End
+                        If (iCounter > 0) Begin
+                            Send Info_Box ("Ready!" * "Uppercased columns for:" * String(iCounter) * "tables were removed.")
+                        End
+                        Else If (iCounter = 0) Begin
+                            Send Info_Box "Ready! No changes made."
+                        End
+                    End_Procedure
+        
+                    Function IsEnabled Returns Boolean
+                        Boolean bExists
+                        String sFileName
+                        Get psConnIdFile to sFileName
+                        File_Exist sFileName bExists
+                        Function_Return bExists
+                    End_Function
+        
+                End_Object
+        
+                Object oMoveUnusedDatFiles_btn is a cRDCButton
+                    Set Size to 30 100
+                    Set Location to 16 349
+                    Set peAnchors to anNone
+                    Set Label to "Move *.Dat files to backup"
+                    Set MultiLineState to True
+                    Set psToolTip to "This will move all *.dat related files, that does not exist in the Filelist, to the workspace's '.\Data\Backup' folder."
+                    Set psImage to "MoveFiles.ico"
+                    Set piImageSize to 24
+                    Set pbAutoEnable to True
+        
+                    // The work is DoClick; when it wrote errors to the log file, the log is offered after it.
+                    Procedure OnClick
+                        Send ResetLoggedErrors
+                        Send DoClick
+                        Send OfferErrorLog
+                    End_Procedure
+        
+                    Procedure DoClick
+                        Integer iRetval iCounter 
+        
+                        Get YesNo_Box "Move all *.dat related files that is not in the 'Rootname *.dat' list, to the workspace's '.\Data\Backup' folder.\n\nContinue?" to iRetval
+                        If (iRetval <> MBR_Yes) Begin
+                            Procedure_Return    
+                        End
+        
+                        Get MoveUnusedDatFileToBackupFolder CS_BackupFolder to iCounter
+        
+                        If (iCounter = -1) Begin
+                            Send Info_Box ("The backup folder:\n" + CS_BackupFolder + "\nCould not be created! No *.dat related files were moved.")
+                        End
+                        Else If (iCounter > 0) Begin
+                            Send Info_Box ("Ready! Moved:" * String(iCounter) * ".dat related files to the folder" * CS_BackupFolder * "of the data folder.")
+                        End
+                        Else Begin
+                            Send Info_Box "Ready! No files moved."
+                        End
+                    End_Procedure  
+        
+                    // Also for embedded tables: the Filelist is enough. (It needed DFConnId.ini, so it was off without SQL.)
+                    Function IsEnabled Returns Boolean
+                        Boolean bExists
+                        String sFileName
+                        Get Value of oFilelist_fm to sFileName
+                        File_Exist sFileName bExists
+                        Function_Return bExists
+                    End_Function
+        
+                End_Object
+            End_Object
+        End_Object
+
+        Object oConvert_tb is a TabPage
+            Set Label to "Convert"
+            Set Tab_ToolTip_Value to "Convert Functions"
+//            Set peNeighborhood to nhPublic
+
+                Object oDatTables_grd is a cRDCCJSelectionGrid
+                    Set Size to 189 169
+                    Set Location to 25 10
+                    Set peAnchors to anTopBottom
+                    Set phoData_Col to (oNameDat_Col(Self))
+
+                    Object oCJGridColumnRowIndicator is a cCJGridColumnRowIndicator
+                        Set piWidth to 20
+                    End_Object
+                         
+                    Object oNameDat_Col is a cCJGridColumn
+                        Set piWidth to 261
+                        Set psCaption to "Embedded (.dat) Table Name" 
+                        Set psFooterText to "No of Tables:"
+                        Set peFooterAlignment to xtpAlignmentCenter
+                    End_Object
+
+                    Procedure LoadData 
+                        String[] asFiles
+                        Handle hoDataSource hTable
+                        tDataSourceRow[] TheData TheDataEmpty
+                        Integer iRow iTableNo iCheckBox iSize iCount
+
+                        Move False to Err                        
+                        Get InUseDatFiles to asFiles
+                        Get piColumnId of oNameDat_Col to iTableNo
+                        Get piColumnId of (phoCheckbox_Col(Self)) to iCheckBox
+                        Move (SizeOfArray(asFiles) -1) to iSize
+                        For iCount from 0 to iSize
+                            Move (asFiles[iCount])  to TheData[iRow].sValue[iTableNo]
+                            Move False              to TheData[iRow].sValue[iCheckBox]
+                        Loop
+                        Send InitializeData TheData
+                        Set psFooterText of oNameDat_Col to ("Tot # of Tables:" * String(iSize))
+                        Set psFooterText of (phoCheckbox_Col(Self)) to ("#" * String("0"))
+                    End_Procedure
+
+                End_Object
+        
+                Object oConvertDatToSQL_btn is a cRDCButton
+                    Set Size to 30 168
+                    Set Location to 218 10
+                    Set Label to "Convert .dat -> SQL"
+                    Set psToolTip to "Converts all selected .dat tables to SQL."
+                    Set peAnchors to anBottomLeft
+                    Set MultiLineState to True
+                End_Object
+                
+                Object oSQLTables_grd is a cRDCCJSelectionGrid
+                    Set Size to 189 168
+                    Set Location to 24 208
+                    Set peAnchors to anTopBottom
+                    Set phoData_Col to (oNameSQL_Col(Self))
+
+                    Object oCJGridColumnRowIndicator is a cCJGridColumnRowIndicator
+                        Set piWidth to 20
+                    End_Object
+                         
+                    Object oNameSQL_Col is a cCJGridColumn
+                        Set piWidth to 260
+                        Set psCaption to "SQL Table Name"
+                        Set psToolTip to "SQL table name including driver. Note that NO Alias tables are listed here." 
+                        Set psFooterText to "No of Tables:"
+                        Set peFooterAlignment to xtpAlignmentCenter
+                    End_Object
+
+                    Procedure LoadData 
+                        String[] asFiles
+                        Handle hoDataSource hTable
+                        tDataSourceRow[] TheData TheDataEmpty
+                        Integer iRow iTableNo iCheckBox iSize iCount
+                        
+                        Move False to Err
+                        Get InUseSQLFiles of oFilelistRepair to asFiles
+                        Get piColumnId of oNameSQL_Col to iTableNo
+                        Get piColumnId of (phoCheckbox_Col(Self)) to iCheckBox
+                        Move (SizeOfArray(asFiles)-1) to iSize
+                        For iCount from 0 to iSize
+                            Move (asFiles[iCount])  to TheData[iCount].sValue[iTableNo]
+                            Move False              to TheData[iCount].sValue[iCheckBox]
+                        Loop
+                        Send InitializeData TheData
+                        Set psFooterText of oNameSQL_Col    to ("Tot # of Tables:" * String(iSize))
+                        Set psFooterText of (phoCheckbox_Col(Self)) to ("#" * String("0"))
+                    End_Procedure
+
+                End_Object
+
+                Object oConvertSQLToDat_btn is a cRDCButton
+                    Set Size to 30 168
+                    Set Location to 218 208
+                    Set Label to "Convert SQL -> Dat"
+                    Set psToolTip to "Converts all selected SQL tables back to DataFlex embedded database .dat tables."
+                    Set peAnchors to anBottomLeft
+                    Set MultiLineState to True
+                End_Object
+        
+        End_Object
+
     End_Object
 
     Function FixFileListErrors Returns Integer
@@ -1725,7 +1853,7 @@ Object oFilelistFixerView is a cRDCDbView
 
     Function InUseDatFiles Returns String[]
         String[] asRetval
-        Get InUseDatFiles of (oFilelistRepair(Self)) to asRetval
+        Get InUseDatFiles of oFilelistRepair to asRetval
         Function_Return asRetval
     End_Function
 
@@ -1918,15 +2046,15 @@ Object oFilelistFixerView is a cRDCDbView
     
     // To automatically maximize the view size.
     // Way more complicated than it should be!
-    Procedure Page Integer iPageObject
-        Forward Send Page iPageObject
-        Set View_Mode to Viewmode_Zoom 
-        Set Maximize_Icon to False     
-        Set Minimize_Icon to False     
-        Set Sysmenu_Icon to False
-        // This is the crucial bit:
-        Set Border_Style of (Client_Id(ghoCommandBars)) to Border_None
-    End_Procedure
+//    Procedure Page Integer iPageObject
+//        Forward Send Page iPageObject
+//        Set View_Mode to Viewmode_Zoom 
+//        Set Maximize_Icon to False     
+//        Set Minimize_Icon to False     
+//        Set Sysmenu_Icon to False
+//        // This is the crucial bit:
+//        Set Border_Style of (Client_Id(ghoCommandBars)) to Border_None
+//    End_Procedure
 
     On_Key kClear Send RefreshDataByKey
 End_Object    

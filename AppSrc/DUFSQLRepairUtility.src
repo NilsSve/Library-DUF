@@ -1,6 +1,7 @@
 Use DFAllEnt.pkg
-Use cCJStandardCommandBarSystem.pkg
-Use cCJCommandBarSystem.pkg
+//Use cCJStandardCommandBarSystem.pkg
+//Use cCJCommandBarSystem.pkg  
+Use cRDCCJCommandBarSystem.pkg
 Use cDUFMenuItems.pkg
 Use vWin32fh.pkg
 
@@ -10,6 +11,9 @@ End_Object
 
 Declare_Datafile IntFilesTable
 
+Define CS_Preferences for "Preferences"
+Define CS_Filelist    for "FileList"
+
 Use cDUFApplication.pkg
 Object oApplication is a cDUFApplication
     Set peHelpType to htHtmlHelp
@@ -18,13 +22,17 @@ Object oApplication is a cDUFApplication
     Set psProduct to "DUF - SQL Repair Utility"
 
     Property Handle phoFilelistFixerView
-    Property String psFilelistFrom
+    Property String psLogFile
     
     Object oConnection is a cConnection
         Use LoginEncryption.pkg
         Use DatabaseLoginDialog.dg
     End_Object  
 
+    // Auto-sets the psFilelistFrom property - that is later read by the "Filelist.cfg" form of the FielListFixerView.vw.
+    // It does this in two steps:
+    // 1. If a filelist.cfg is passed as a param on the command-line, that value is used.
+    // 2. If no command line param, read the value from the registry, set by the form "Filelist.cfg".
     Procedure OnCreate
         Handle hoCmdLine
         String sArgument
@@ -36,6 +44,12 @@ Object oApplication is a cDUFApplication
         // Open any Filelist.cfg file passed on the command line.
         If (Lowercase(sArgument) contains ".cfg") Begin
             Set psFilelistFrom to sArgument
+        End
+        Else Begin
+            Get ReadString of ghoApplication CS_Preferences CS_Filelist "" to sArgument
+            If (Lowercase(sArgument) contains ".cfg") Begin
+                Set psFilelistFrom to sArgument
+            End
         End
     End_Procedure
     
@@ -54,22 +68,27 @@ Register_Procedure RefreshData
 
 Object oMain is a Panel
     Set Label to (psProduct(ghoApplication))
-    Set Location to 92 194
-    Set Size to 509 699
+    Set Location to 2 1
+    Set Size to 450 715
     // Not smaller than the panel's own size: a window that opens smaller makes DataFlex shrink the view at startup, and
     // the controls anchored to the bottom of FileListFixerView.vw then stay below the edge of their group.
-    Set piMinSize to 509 699
+    Set piMinSize to 430 699
     Set Icon to "DUFFilelistRepairer.ico"
 
-    Object oCommandBarSystem is a cCJCommandBarSystem
-        Set pbTimerUpdate to True
-        Set pbAutoResizeIcons to True
-        Set pbLargeIcons to True
-#IF (!@ > 240)
-        Set peVisualTheme to xtpThemeNativeWindows11 
-#ELSE
-        Set peVisualTheme to xtpThemeOffice2016Word
-#ENDIF
+    Object oCommandBarSystem is a cRDCCJCommandBarSystem
+//        Set pbTimerUpdate to True
+//        Set pbAutoResizeIcons to True
+//        Set pbLargeIcons to True
+//#IF (!@ > 240)
+//        Set peVisualTheme to xtpThemeNativeWindows11 
+//#ELSE
+//        Set peVisualTheme to xtpThemeOffice2016Word
+//#ENDIF
+        Set pbTabbedWorkspaces to False
+
+        Procedure End_Construct_Object
+            Forward Send End_Construct_Object
+        End_Procedure
 
         Procedure OnCreateCommandBars
             Handle hoOptions
@@ -106,23 +125,6 @@ Object oMain is a Panel
     
                 Function IsEnabled Returns Boolean
                     Function_Return True
-                End_Function
-
-            End_Object
-
-            Object oRefreshToolItem is a cCJMenuItem
-                Set psImage to "ActionRefresh.ico"  
-                Set psToolTip to "Refresh data (F5)"
-                Set pbActiveUpdate to True
-
-                Procedure OnExecute Variant vCommandBarControl
-                    Send RefreshData of (phoFilelistFixerView(ghoApplication))
-                End_Procedure
-
-                Function IsEnabled Returns Boolean
-                    String sFileList
-                    Get psFileList of (phoFilelistFixerView(ghoApplication)) to sFileList
-                    Function_Return (sFileList <> "") 
                 End_Function
 
             End_Object
@@ -166,6 +168,8 @@ Object oMain is a Panel
                 Set piShortCutKey to xtpKey_Alt VK_S
                 Set pbControlBeginGroup to True
                 Set pbActiveUpdate to True
+                Set psCaption to "View SQL"
+                Set peControlStyle to xtpButtonIconAndCaption
 
                 Procedure OnExecute Variant vCommandBarControl
                     tSQLConnection Connection
@@ -200,6 +204,31 @@ Object oMain is a Panel
                     tSQLConnection Connection
                     Get pSQLConnection of ghoSQLConnectionHandler to Connection
                     Function_Return (Connection.sDriverID <> DATAFLEX_ID and Connection.sDriverID <> "")
+                End_Function
+
+            End_Object
+
+            Object oLogfileToolItem is a cCJMenuItem
+                Set psImage to "ViewReport.ico"  
+                Set psToolTip to "View Log file"
+                Set psCaption to "View Log"
+                Set peControlStyle to xtpButtonIconAndCaption
+                Set pbActiveUpdate to True
+
+                Procedure OnExecute Variant vCommandBarControl
+                    String sLogFile
+                    Boolean bExists
+                    Get psLogFile of ghoApplication to sLogFile
+                    File_Exist sLogFile bExists
+                    If (bExists = True) Begin
+                        Runprogram Shell Background sLogFile
+                    End
+                End_Procedure
+
+                Function IsEnabled Returns Boolean
+                    String sLogFile
+                    Get psLogFile of ghoApplication to sLogFile
+                    Function_Return (sLogFile <> "") 
                 End_Function
 
             End_Object

@@ -81,12 +81,12 @@ Object oTableDUFCodeGenerator is a cRDCDbView
         Set psToolTip to "Select the Filelist.cfg for your development database. This is a suggestion form. So if used before - start typing what you're looking for."
 
         Object oFilelistPath_fm is a cRDCForm
-            Set Size to 12 424
-            Set Location to 29 29
+            Set Size to 12 283
+            Set Location to 28 29
             Set Label_Col_Offset to 0
             Set Label_Row_Offset to 1
             Set Label_Justification_Mode to JMode_Top
-            Set Prompt_Button_Mode to PB_PromptOn
+//            Set Prompt_Button_Mode to PB_PromptOn
             Set peAnchors to anTopLeftRight
             Set psToolTip to "Select the FROM database Filelist.cfg. This should be the development workspace Data folder's Filelist.cfg"
             Set Prompt_Object to Self
@@ -100,10 +100,11 @@ Object oTableDUFCodeGenerator is a cRDCDbView
                 Get vSelect_File sFileMask "Please select a Filelist.cfg file" sPath to sRetval
                 If (sRetval <> "") Begin
                     Set Value to sRetval
+                    Send WriteString of ghoApplication CS_Preferences CS_Filelist sRetval
                 End
             End_Procedure
 
-            Procedure OnChange
+            Procedure RefreshData
                 String sFileList
                 Boolean bOK bExists bCfgFile bHasRecords
                 Handle hTable
@@ -167,6 +168,47 @@ Object oTableDUFCodeGenerator is a cRDCDbView
             On_Key Key_Ctrl+Key_W Send None
             On_Key Key_Ctrl+Key_Q Send None 
             On_Key kPrompt Send Prompt
+        End_Object
+
+        Object oSelectFilelist_btn is a cRDCButton
+            Set Size to 12 50
+            Set Location to 28 315
+            Set Label to "Select"
+            Set peAnchors to anTopRight
+            Set psImage to "ActionOpen.ico"
+            Set psToolTip to "Select a Filelist.cfg file from a Data folder."
+    
+            Procedure OnClick
+                Send Prompt of oFilelistPath_fm
+            End_Procedure
+            
+        End_Object
+
+        Object oRefresh_btn is a cRDCButton
+            Set Size to 19 94
+            Set Location to 21 369
+            Set Label to "Read/Refresh Data"
+            Set Default_State to True
+            Set Form_FontWeight to fw_Bold
+            Set psToolTip to "Refreshes all data by reading the Filelist.cfg and SQL database tables (F5)" 
+            Set psImage to "ActionRefresh.ico"
+            Set piImageSize to 24
+            Set MultiLineState to True
+            Set pbAutoEnable to True
+            Set peAnchors to anTopRight
+    
+            Procedure OnClick
+                Send RefreshData of oFilelistPath_fm
+            End_Procedure
+    
+            Function IsEnabled Returns Boolean
+                Boolean bExists
+                String sFileName
+                Get Value of oFilelistPath_fm to sFileName
+                File_Exist sFileName bExists
+                Function_Return bExists
+            End_Function
+    
         End_Object
 
     End_Object
@@ -676,8 +718,8 @@ Object oTableDUFCodeGenerator is a cRDCDbView
         Set peAnchors to anBottomRight
 
         Procedure OnClick
-            Boolean bExists
-            String sSourceFile sPath
+            Boolean bExists bOK
+            String sSourceFile sPath sFileList
             Integer iSelected iRetval
 
             Get Value of oSourceName_fm to sSourceFile
@@ -699,6 +741,16 @@ Object oTableDUFCodeGenerator is a cRDCDbView
             Get CheckedItems  of oFilelist_grd to iSelected
             If (iSelected = 0) Begin
                 Send Info_Box "No tables selected. Please adjust and try again."
+                Procedure_Return
+            End
+
+            // Every run ends with Restore_DF_OPEN_PATH, which takes the selected Filelist's Data
+            // folder off the open path; and the Compare Databases view may have switched to
+            // another Filelist.cfg. So point the open path, filelist and SQL login at the
+            // selected Filelist.cfg again before each run, as the Compare Databases view does.
+            Get Value of oFilelistPath_fm to sFileList
+            Get ChangeFilelistPathing of ghoApplication sFileList to bOK
+            If (bOK = False) Begin
                 Procedure_Return
             End
 

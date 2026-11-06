@@ -162,6 +162,7 @@ Object oCompareDatabases_vw is a dbView
                 Get vFolderFormat   sPath to sPath
                 Move (sPath + CS_ReportFileName + String(sToday) + CS_ReportFileNameExtenstion) to sReportName
                 Set Value of oReportFileName_fm to sReportName
+                Set psLogFile of ghoApplication to sReportName
             End_Procedure
 
             On_Key Key_Ctrl+Key_W Send None
@@ -230,7 +231,7 @@ Object oCompareDatabases_vw is a dbView
             Set peAnchors to anTopLeftRight
             Set psToolTip to "The name of the output text file for database differences that will be generated"
             Set Status_Help to "The name of the output text file for database differences that will be generated"
-            Set Prompt_Object to Self
+            Set Prompt_Object to Self  
 
             Procedure Prompt
                 String sFileName sPath sFileMask sRetval
@@ -240,7 +241,8 @@ Object oCompareDatabases_vw is a dbView
                 Move "Text files (*.txt)|*.txt" to sFileMask
                 Get vSelect_File sFileMask "Please select a text file for the report" sPath to sRetval
                 If (sRetval <> "") Begin
-                    Set Value to sRetval
+                    Set Value to sRetval  
+                    Set psLogFile of ghoApplication to sRetval
                 End
             End_Procedure
 
@@ -509,8 +511,12 @@ Object oCompareDatabases_vw is a dbView
         Integer iCh
         String sFilelistFrom sFilelistTo sReportName //sDriverIDFrom sDriverIDTo sLogicalName sFrom sTo sRootName sTableName
         DateTime dtCreationTime    
-
-        Get Value of oReportFileName_fm to sReportName
+        
+        Get psLogFile of ghoApplication to sReportName
+        If (sReportName = "") Begin
+            Send Info_Box "No Report filename specified. Cannot write report."
+            Procedure_Return
+        End
         Get Seq_Open_Output_Channel sReportName to iCh
         If (iCh = DF_SEQ_CHANNEL_ERROR) Begin
             Send Stop_Box "Sorry, couldn't retrieve a free channel number."
@@ -1210,9 +1216,10 @@ Object oCompareDatabases_vw is a dbView
 
         Move DATAFLEX_ID to Connection.sDriverID
         Set pSQLConnection of ghoSQLConnectionHandler to Connection
-        Set Value of oFilelistPathFrom_fm   to ""
-        Set Value of oFilelistPathTo_fm     to ""
-        Set Value of oReportFileName_fm     to ""
+        Set Value of oFilelistPathFrom_fm    to ""
+        Set Value of oFilelistPathTo_fm      to ""
+        Set Value of oReportFileName_fm      to ""
+        Set psLogFile of ghoApplication      to ""
         Set psFilelistFrom of ghoApplication to ""
         Set piaDifferences of ghoApplication to iDifferencesEmpty
         Set piaTablesNotOpened to iDifferencesEmpty
@@ -1296,21 +1303,15 @@ Object oCompareDatabases_vw is a dbView
         Set piImageSize to 16 //24
 
         Procedure OnClick
-            Send DoShowReport
+            Send DoShowReport of ghoApplication
         End_Procedure
         
-        Procedure DoShowReport
-            String sReportName
-            Get Value of oReportFileName_fm to sReportName
-            Send ActivateLogFileDialog of (Client_Id(ghoCommandBars)) sReportName
-        End_Procedure
-
         Function IsEnabled Returns Boolean
-            String sReportName
+            String sLogFile
             Boolean bExists
 
-            Get Value of oReportFileName_fm to sReportName
-            Get vFilePathExists sReportName to bExists
+            Get psLogFile of ghoApplication to sLogFile
+            Get vFilePathExists sLogFile to bExists
             Function_Return bExists
         End_Function
 
@@ -1345,16 +1346,24 @@ Object oCompareDatabases_vw is a dbView
 
     End_Object
 
-    // The program's menu item of this view, set by the program: it is checked when the view gets the focus. (The
-    // view sent Execute to oCompareDatabases_MenuItem, which one program has, by its name.)
+    // The program's menu item of this view, set by the program: it is checked when the view gets the focus.
+    // The view sent Execute to oCompareDatabases_MenuItem.
     Property Handle phoViewMenuItem 0
 
     Procedure OnSetFocus
         Handle hoMenuItem
-
+        String sFileList
+        
         Get phoViewMenuItem to hoMenuItem
         If (hoMenuItem <> 0 and SizeOfArray(phoActiveUpdates(ghoCommandBars)) <> 0) Begin
             Send Execute of hoMenuItem
+            Get Value of oFilelistPathFrom_fm to sFileList
+            If (sFileList = "") Begin
+                Get ReadString of ghoApplication CS_Preferences CS_Filelist "" to sFileList
+                If (sFileList <> "") Begin
+                    Set Value of oFilelistPathFrom_fm to sFileList
+                End
+            End
         End
     End_Procedure
     

@@ -27,10 +27,7 @@
         "DUFSQLConnections.src",
         "DUFTestProgram.src",
         "ReadDFDriverDefXML.src",
-        {
-            "debugArguments": "C:\\Projects\\DF20\\ROW_TEST\\Data\\FILELIST.CFG",
-            "name": "DUFSQLRepairUtility.src"
-        },
+        "DUFSQLRepairUtility.src",
         "UnitTests.src"
     ]
 }

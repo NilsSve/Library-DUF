@@ -1674,6 +1674,25 @@ Class cDUFFilelistRepair is a cObject
         Function_Return asFiles
     End_Function
                 
+    Function InUseSQLFiles Returns String[]
+        tFilelist[] FilelistTables 
+        String[] asFiles
+        Integer iSize iCount
+        Boolean bIsIntTable
+        
+        // The tables Refresh Data read; none when it has not been read. (It sent Refresh Data then, and Refresh Data
+        // asks this function: with a Filelist without tables the two called each other until the program crashed.)
+        Get pFileListArray of ghoDUF to FileListTables
+        Move (SizeOfArray(FilelistTables)) to iSize
+        Decrement iSize
+        For iCount from 0 to iSize
+            If (FilelistTables[iCount].bErrorOpening = False  and FilelistTables[iCount].bIsAlias = False and FilelistTables[iCount].sDriver <> DATAFLEX_ID) Begin
+                Move (FilelistTables[iCount].sRootName + ".int") to asFiles[SizeOfArray(asFiles)]
+            End
+        Loop
+        Function_Return asFiles
+    End_Function
+                
     // To remove any "Alias" word from the DisplayName
     Function RemoveDisplayNameAlias Handle hTable String sDisplayNameOrg Returns String
         Integer iPos

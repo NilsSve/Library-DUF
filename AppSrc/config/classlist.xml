@@ -4,8 +4,8 @@
 	<DFLibraryVersion>2</DFLibraryVersion>
 	<libraries>
 		<library>
-			<libraryPath>DfPkg\NilsSve_vWin32fh_Library_DF26.0-5432741c37c80be755e78f5f9d45ba8329fddcaf\StudioLibrary\vWin32fh-Library-DF26.0.sws</libraryPath>
-			<libraryTimeStamp>2026-09-05T11:42:45</libraryTimeStamp>
+			<libraryPath>DfPkg\NilsSve_vWin32fh_Library_DF26.0-1.0.0\StudioLibrary\vWin32fh-Library-DF26.0.sws</libraryPath>
+			<libraryTimeStamp>2026-10-23T13:43:41</libraryTimeStamp>
 			<libraryID>github.com/NilsSve/Library-vwin32fh.git/StudioLibrary/vWin32fh-Library-DF26.0</libraryID>
 		</library>
 	</libraries>
