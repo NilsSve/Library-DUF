@@ -37,6 +37,29 @@ These sections can be found in the `Developer5.chm` Help file located in the `/H
 
 The workspace also uses three other libraries from Nils Sve's GitHub page — DFAbout, RDCToolsLib and vwin32fh. As of the flattening described below, they are **no longer nested submodules of DUF**; they are separate sibling libraries. See the Dependencies section for why, and what a consuming application must do.
 
+## What is new in 1.0.11
+
+The user count file in a folder with any name, and a Code Generator that runs more than once.
+
+User count:
+
+- From DataFlex 20 `cDbUpdateUserCount` opens its lock file beside the program with `CreateFileW`. It used the ANSI
+  `CreateFile` with the program's path, which a DataFlex 20 program has as UTF-8: in a program folder with a
+  national letter in its name the file was not found, and both the user count and the lock that keeps everybody
+  else out during a database update failed.
+
+Code Generator:
+
+- Generate code! points the open path, the filelist and the SQL login at the selected Filelist.cfg before every
+  run, so a second run finds its tables again ("Sorry, couldn't open the table!").
+- A Select button and a Read/Refresh Data button for the Filelist.cfg, which is remembered and read again at
+  startup, and a Report toolbar button.
+
+SQL Repair Utility:
+
+- The repair view is laid out on tab pages, with lists of the tables that could not be opened, and "View SQL" and
+  "View Log" toolbar buttons. The last Filelist.cfg is remembered, as in the Code Generator.
+
 ## What is new in 1.0.10
 
 vWin32fh 1.0.0 and RDCToolsLib 1.0.14, and a new layout for the SQL Repair Utility.
@@ -432,12 +455,12 @@ vwin32fh come with it. A package brings the sources of DUF's programs, but no pr
 Add it with the version after a `#`:
 
 ```
-https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.10
+https://github.com/NilsSve/Library-DUF.git/RDC-DUF-Library.sws#1.0.11
 ```
 
 Each release has a version tag (`1.0.0`, `1.0.1`, `1.0.2`, `1.0.3`, `1.0.4`, `1.0.5`, `1.0.6`, `1.0.7`, `1.0.8`,
-`1.0.9`, `1.0.10`, ...), listed under Tags on GitHub. Without the `#` part the workspace gets a commit. A
-workspace that also names RDCToolsLib or DFAbout itself lists them before DUF, in a version DUF accepts:
+`1.0.9`, `1.0.10`, `1.0.11`, ...), listed under Tags on GitHub. Without the `#` part the workspace gets a commit.
+A workspace that also names RDCToolsLib or DFAbout itself lists them before DUF, in a version DUF accepts:
 RDCToolsLib 1.0.14 or later, DFAbout 1.0.2 or later.
 
 The package puts **`BuildDUFUtilities.bat`** into the workspace folder. Start it there. It compiles
