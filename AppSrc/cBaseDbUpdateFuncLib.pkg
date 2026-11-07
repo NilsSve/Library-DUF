@@ -1213,7 +1213,9 @@ Class cBaseDbUpdateFuncLib is a cObject
         Get vFolderExists sDataPath to bExists
         If (bExists = True) Begin
 #IF (!@ > 191)
-            Move (Utf8ToAnsi(Trim(sDataPath))) to sDataPath
+            // DataFlex 20's "dir:" takes the path as the DataFlex string it is - UTF-8. After Utf8ToAnsi it listed
+            // nothing in a folder with any national letter, even one the ANSI code page has (measured 2026-11-07).
+            Move (Trim(sDataPath)) to sDataPath
 #ELSE
             Move (ToANSI(Trim(sDataPath))) to sDataPath
 #ENDIF
