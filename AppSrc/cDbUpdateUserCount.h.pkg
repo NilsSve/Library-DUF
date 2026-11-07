@@ -122,6 +122,40 @@ External_Function Win32_CreateFile "CreateFileA" KERNEL32.DLL ;
     Returns Handle
 #ENDIF
 
+// The wide entry points: cDbUpdateUserCount's ApplicationPath and OpenUserCountFile call them from DataFlex 20, the
+// text the address of a WString. ApplicationPath's GetModuleFileName and PathRemoveFileSpec are, in a DataFlex 20
+// program, DataFlex's own wrappers (Winkern.pkg, WinShell.pkg), which give the folder back as UTF-8 - and the user
+// count file was then opened by that UTF-8 path through Win32_CreateFile, the ANSI CreateFile, which read its bytes
+// as ANSI ones: a program folder with a national letter in its name was not found. CreateFileW takes the path as it
+// is; GetModuleFileNameW and PathRemoveFileSpecW make ApplicationPath independent of which declaration a program
+// got. Names of their own - Win32_CreateFile keeps its name for the programs that call it. Declared on every version -
+// Windows has them on all of them.
+#IFNDEF get_DUF_CreateFileW
+External_Function DUF_CreateFileW "CreateFileW" KERNEL32.DLL ;
+    Pointer lpFileName ;              // file name, the address of a WString
+    DWord dwDesiredAccess ;           // access mode
+    DWord dwShareMode ;               // share mode
+    Pointer lpSecurityAttributes ;    // SD
+    DWord dwCreationDisposition ;     // how to create
+    DWord dwFlagsAndAttributes ;      // file attributes
+    Handle hTemplateFile ;            // handle to template file
+    Returns Handle
+#ENDIF
+
+#IFNDEF get_DUF_GetModuleFileNameW
+External_Function DUF_GetModuleFileNameW "GetModuleFileNameW" KERNEL32.DLL ;
+    Handle hModule ;                  // 0: the program itself
+    Pointer lpFilename ;              // the address of a WString
+    UInteger nSize ;                  // its length in characters
+    Returns UInteger
+#ENDIF
+
+#IFNDEF get_DUF_PathRemoveFileSpecW
+External_Function DUF_PathRemoveFileSpecW "PathRemoveFileSpecW" Shlwapi.dll ;
+    Pointer pszPath ;                 // the address of a WString
+    Returns Integer
+#ENDIF
+
 #IFNDEF get_Win32_ReadFile
 External_Function Win32_ReadFile "ReadFile" KERNEL32.DLL ;
     Handle hFile ;                  // handle to file

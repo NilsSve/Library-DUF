@@ -166,15 +166,29 @@ Class cDbUpdateUserCount is a cObject
     End_Procedure
 
     // Returns the full path of the Application (no trailing "\")
+    // From DataFlex 20 the wide functions give it back as a DataFlex string, every character as it is. Before
+    // DataFlex 20 it is the ANSI path Windows gives, which OpenUserCountFile hands to the ANSI CreateFile as it is.
+    // (In a DataFlex 20 program GetModuleFileName was mostly DataFlex's own converting wrapper already - see
+    // cDbUpdateUserCount.h.pkg - so the wide calls change what comes back only where the ANSI declaration won.)
     Function ApplicationPath Returns String
         String sApplicationFileName sPath
         Integer iNumChars iRetval
+#IF (!@ >= 200)
+        WString wApplicationFileName
+#ENDIF
 
+#IF (!@ < 200)
         Move (Repeat(Character(0), 1024))    to sApplicationFileName
         Move (GetModuleFileName(0, AddressOf(sApplicationFileName), 1024)) to iNumChars
         Move (CString(sApplicationFileName)) to sApplicationFileName
         Move (PathRemoveFileSpec(AddressOf(sApplicationFileName))) to iRetval
         Move (CString(sApplicationFileName)) to sPath
+#ELSE
+        Move (ZeroString(1024)) to wApplicationFileName
+        Move (DUF_GetModuleFileNameW(0, AddressOf(wApplicationFileName), 1024)) to iNumChars
+        Move (DUF_PathRemoveFileSpecW(AddressOf(wApplicationFileName))) to iRetval
+        Move (CString(wApplicationFileName)) to sPath
+#ENDIF
 
         Function_Return sPath
     End_Function
@@ -182,12 +196,22 @@ Class cDbUpdateUserCount is a cObject
     Function OpenUserCountFile String sFileName Returns Handle
         Handle  hFile
         Pointer pFileName
+#IF (!@ >= 200)
+        WString wFileName
+#ENDIF
 
         // The file is opened, and made when it is not there yet, by one Windows call with the path as Windows gave
-        // it (ApplicationPath, an ANSI path). (It was made with Direct_Output, which reads the same path as a
-        // DataFlex string: UTF-8 from DataFlex 20, OEM before. A folder name with a national character then failed.)
+        // it (ApplicationPath). (It was made with Direct_Output, which reads the same path as a DataFlex string:
+        // UTF-8 from DataFlex 20, OEM before. A folder name with a national character then failed.)
+        // From DataFlex 20 that path is a DataFlex string - UTF-8 - and goes to CreateFileW, every character as it is.
+        // The ANSI CreateFile read its UTF-8 bytes as ANSI ones, so a folder with a national letter was not found.
+#IF (!@ < 200)
         Move (Addressof(sFileName)) to pFileName
         Move (Win32_CreateFile(pFileName, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_ALWAYS, (FILE_ATTRIBUTE_NORMAL ior FILE_FLAG_WRITE_THROUGH), 0)) to hFile
+#ELSE
+        Move sFileName to wFileName
+        Move (DUF_CreateFileW(AddressOf(wFileName), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_ALWAYS, (FILE_ATTRIBUTE_NORMAL ior FILE_FLAG_WRITE_THROUGH), 0)) to hFile
+#ENDIF
 
         Function_Return hFile
     End_Function
